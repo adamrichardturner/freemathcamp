@@ -38,19 +38,16 @@ Requirements: Node 22+, pnpm 10, Docker.
 
 ```bash
 pnpm install
-cp .env.example .env                 # then set POSTGRES_PASSWORD
-cp apps/api/.env.example apps/api/.env   # DATABASE_URL must use the same password
-pnpm db:up                           # Postgres on 127.0.0.1:5433
-pnpm db:migrate
-pnpm dev                             # API on :4100, web on :3000
+pnpm setup   # creates .env files with generated secrets, starts Postgres, runs migrations
+pnpm dev     # API on :4100, web on :3000
 ```
 
-Open http://localhost:3000. The web app proxies `/api/*` to the API, so cookies stay first-party.
+Open http://localhost:3000. The web app proxies `/api/*` to the API, so cookies stay first-party. `pnpm setup` never overwrites existing env files — back up `.env` and `.env.production`.
 
 ### Docker
 
-- **Development:** `docker compose up -d db` for just Postgres, or `docker compose --profile api up` to also run the API in a hot-reloading container.
-- **Production:** `docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build` runs Postgres on a private network, a one-shot migration job, and a read-only, non-root API container. Put a TLS-terminating proxy (or the Next.js app) in front.
+- **Development:** `pnpm db:up` for just Postgres, or `pnpm docker:dev` to also run the API in a hot-reloading container.
+- **Production:** `pnpm docker:prod` runs Postgres on a private network, a one-shot migration job, and a read-only, non-root API container. Put a TLS-terminating proxy (or the Next.js app) in front.
 
 ### Google sign-in (optional)
 
@@ -58,12 +55,27 @@ Create an OAuth client (type *Web application*) in Google Cloud Console with the
 
 ## Scripts
 
+Run from the repository root.
+
 | Command | What it does |
 | --- | --- |
-| `pnpm dev` | Run API and web in watch mode |
+| `pnpm setup` | First run: create missing env files with generated secrets, start Postgres, migrate |
+| `pnpm dev` | API and web in watch mode |
+| `pnpm dev:full` | Start Postgres, migrate, then `pnpm dev` |
+| `pnpm dev:api` / `pnpm dev:web` | Run one side only |
+| `pnpm build` | Production builds of the API and web app |
+| `pnpm start` | Run the production builds (`start:api` / `start:web` for one side) |
+| `pnpm check` | Typecheck, lint and test everything |
 | `pnpm test` | Curriculum fuzz tests, engine unit tests, API integration tests (needs the DB) |
-| `pnpm typecheck` | Type-check every package |
+| `pnpm test:engine` / `pnpm test:curriculum` | Fast, database-free test subsets |
+| `pnpm db:up` / `pnpm db:down` | Start (and wait for) or stop the dev Postgres |
 | `pnpm db:migrate` / `pnpm db:rollback` | Apply / revert migrations |
+| `pnpm db:psql` | Open a psql shell on the dev database |
+| `pnpm db:reset` | **Delete** the dev database volume, recreate it and migrate |
+| `pnpm docker:dev` / `pnpm docker:down` | Postgres + hot-reloading API in Docker |
+| `pnpm docker:prod` | Build and start the production stack (uses `.env.production`) |
+| `pnpm docker:prod:logs` / `pnpm docker:prod:down` | Follow API logs / stop the production stack |
+| `pnpm clean` | Remove build output |
 
 ## Security notes
 
