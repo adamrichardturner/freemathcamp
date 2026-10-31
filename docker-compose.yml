@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fmc
+      POSTGRES_PASSWORD: fmc_dev_password
+      POSTGRES_DB: freemathcamp
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - fmc-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fmc -d freemathcamp"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  fmc-db:

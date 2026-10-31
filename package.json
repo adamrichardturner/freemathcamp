@@ -1,0 +1,17 @@
+{
+  "name": "freemathcamp",
+  "private": true,
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @fmc/api --filter @fmc/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:up": "docker compose up -d db",
+    "db:migrate": "pnpm --filter @fmc/api migrate",
+    "db:rollback": "pnpm --filter @fmc/api migrate:down"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
