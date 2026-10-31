@@ -46,7 +46,7 @@ Open http://localhost:3000. The web app proxies `/api/*` to the API, so cookies 
 
 ### Docker
 
-- **Development:** `pnpm db:up` for just Postgres, or `pnpm docker:dev` to also run the API in a hot-reloading container.
+- **Development:** `pnpm db:up` for just Postgres, or `pnpm dev:docker` to also run the API in a hot-reloading container.
 - **Production:** `pnpm docker:prod` runs Postgres on a private network, a one-shot migration job, and a read-only, non-root API container. Put a TLS-terminating proxy (or the Next.js app) in front.
 
 ### Google sign-in (optional)
@@ -72,7 +72,7 @@ Run from the repository root.
 | `pnpm db:migrate` / `pnpm db:rollback` | Apply / revert migrations |
 | `pnpm db:psql` | Open a psql shell on the dev database |
 | `pnpm db:reset` | **Delete** the dev database volume, recreate it and migrate |
-| `pnpm docker:dev` / `pnpm docker:down` | Postgres + hot-reloading API in Docker |
+| `pnpm dev:docker` / `pnpm dev:docker:down` | Postgres + hot-reloading API in Docker (Ctrl+C stops; `down` removes the containers, keeps data) |
 | `pnpm docker:prod` | Build and start the production stack (uses `.env.production`) |
 | `pnpm docker:prod:logs` / `pnpm docker:prod:down` | Follow API logs / stop the production stack |
 | `pnpm clean` | Remove build output |
