@@ -1,0 +1,222 @@
+"use client";
+
+import { ArrowRight, BrainCircuit, CalendarClock, Check, Gauge, Network, Sparkles, TrendingUp } from "lucide-react";
+import { motion } from "motion/react";
+import Link from "next/link";
+import { ButtonLink } from "@/components/app/button-link";
+import { Logo } from "@/components/app/logo";
+import { UnitIcon } from "@/components/app/unit-icon";
+import { Tex } from "@/components/math/tex";
+import { Visual } from "@/components/visuals/visual";
+import { useMe } from "@/hooks/queries";
+import { course, graph } from "@/lib/course";
+
+const fadeUp = { initial: { opacity: 0, y: 24 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: "-80px" }, transition: { duration: 0.5 } };
+
+export function Landing() {
+  const { data: user } = useMe();
+  const cta = user ? { href: "/learn", label: "Continue learning" } : { href: "/register", label: "Start learning free" };
+  return (
+    <div className="overflow-x-clip">
+      <Hero cta={cta} />
+      <Features />
+      <Curriculum />
+      <Engine />
+      <FinalCta cta={cta} />
+      <footer className="border-t">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground sm:flex-row">
+          <Logo />
+          <p>Free maths education, built with care. © {new Date().getFullYear()} FreeMathCamp</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function Hero({ cta }: { cta: { href: string; label: string } }) {
+  return (
+    <section className="relative">
+      <div className="pointer-events-none absolute inset-0 bg-dots [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,black,transparent)]" />
+      <div className="pointer-events-none absolute -top-32 left-[10%] size-[32rem] rounded-full bg-primary/20 blur-3xl" />
+      <div className="pointer-events-none absolute top-40 right-[5%] size-[24rem] rounded-full bg-chart-2/15 blur-3xl" />
+      <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-20 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-24">
+        <div>
+          <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border bg-card/80 px-3 py-1 text-xs font-medium backdrop-blur">
+            <Sparkles className="size-3.5 text-primary" /> Free · Adaptive · Beautifully visual
+          </motion.span>
+          <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 font-display text-5xl leading-[1.02] tracking-tight text-balance sm:text-6xl lg:text-7xl">
+            All the maths you need <em className="bg-gradient-to-r from-primary to-chart-4 bg-clip-text text-transparent">before</em> calculus.
+          </motion.h1>
+          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="mt-5 max-w-xl text-lg text-muted-foreground">
+            {graph.refs.length} connected lessons — from place value to the unit circle — with interactive visuals and an engine that adapts every problem to you, spots where you struggle, and brings ideas back right before you forget them.
+          </motion.p>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-8 flex flex-wrap gap-3">
+            <ButtonLink href={cta.href} size="lg" className="h-12 px-6 text-base shadow-lg shadow-primary/25">
+              {cta.label} <ArrowRight />
+            </ButtonLink>
+            <ButtonLink href="/courses/foundations" variant="outline" size="lg" className="h-12 px-6 text-base">
+              Explore the course
+            </ButtonLink>
+          </motion.div>
+          <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }} className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            {[`${course.units.length} units`, `${graph.refs.length} lessons`, "Unlimited practice", "Light & dark mode"].map((x) => (
+              <li key={x} className="flex items-center gap-1.5">
+                <Check className="size-4 text-success" /> {x}
+              </li>
+            ))}
+          </motion.ul>
+        </div>
+        <HeroDemo />
+      </div>
+    </section>
+  );
+}
+
+function HeroDemo() {
+  return (
+    <motion.div initial={{ opacity: 0, y: 30, rotate: 1 }} animate={{ opacity: 1, y: 0, rotate: 0 }} transition={{ delay: 0.15, duration: 0.6 }} className="relative">
+      <div className="rounded-3xl border bg-card/90 p-4 shadow-2xl shadow-primary/10 backdrop-blur sm:p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex gap-1.5">
+            {[1, 1, 1, 0, 0, 0].map((d, i) => (
+              <span key={i} className={`h-1.5 w-7 rounded-full ${d ? "bg-success" : i === 3 ? "bg-primary/50" : "bg-muted"}`} />
+            ))}
+          </div>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">★★☆ Core</span>
+        </div>
+        <p className="font-medium">Solve. Enter all solutions.</p>
+        <div className="my-3 rounded-xl bg-muted/50 py-3 text-center">
+          <Tex tex="x^2 - x - 6 = 0" display className="text-2xl" />
+        </div>
+        <Visual
+          visual={{
+            type: "functionPlot",
+            functions: [{ fn: (x) => x * x - x - 6 }],
+            points: [
+              { x: -2, y: 0, label: "x = −2", tone: "accent" },
+              { x: 3, y: 0, label: "x = 3", tone: "accent" },
+            ],
+            viewBox: { x: [-5, 6], y: [-8, 6] },
+          }}
+        />
+      </div>
+      <motion.div animate={{ y: [0, -8, 0] }} transition={{ repeat: Infinity, duration: 4 }} className="absolute -top-4 -left-4 hidden items-center gap-2 rounded-2xl border bg-card px-3 py-2 text-sm font-semibold shadow-xl sm:flex">
+        <TrendingUp className="size-4 text-success" /> Mastery +14%
+      </motion.div>
+      <motion.div animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 5 }} className="absolute -right-3 -bottom-5 hidden items-center gap-2 rounded-2xl border bg-card px-3 py-2 text-sm shadow-xl sm:flex">
+        <span className="grid size-7 place-items-center rounded-lg bg-warning/20 text-warning">
+          <CalendarClock className="size-4" />
+        </span>
+        <span>
+          <span className="block text-xs text-muted-foreground">Next review</span>
+          <span className="font-semibold">in 3 days</span>
+        </span>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+const FEATURES = [
+  { icon: Gauge, title: "Difficulty that adapts", text: "Every problem is generated for you. Two clean solves and we step up; a struggle and we ease back — in real time.", color: "from-primary to-chart-5" },
+  { icon: BrainCircuit, title: "Knows when you struggle", text: "Wrong answers are weighted, time is compared to a baseline, hints count. Tricky topics land in your challenge queue.", color: "from-chart-4 to-chart-3" },
+  { icon: CalendarClock, title: "Reviews before you forget", text: "Spaced repetition schedules each topic so memory sticks, with intervals that stretch as you master it.", color: "from-chart-3 to-chart-2" },
+  { icon: Network, title: "Every idea is connected", text: "Each lesson links to the ideas it builds on. New to a topic? See exactly what background helps — never locked out.", color: "from-chart-2 to-primary" },
+];
+
+function Features() {
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+      <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center">
+        <h2 className="font-display text-4xl sm:text-5xl">Built around how people actually learn</h2>
+        <p className="mt-3 text-muted-foreground">Not a video library. A personal tutor that watches how you work and plans what&apos;s next.</p>
+      </motion.div>
+      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {FEATURES.map((f, i) => (
+          <motion.div key={f.title} {...fadeUp} transition={{ delay: i * 0.08, duration: 0.5 }} className="group rounded-2xl border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5">
+            <span className={`grid size-11 place-items-center rounded-xl bg-gradient-to-br ${f.color} text-white shadow-md`}>
+              <f.icon className="size-5" />
+            </span>
+            <h3 className="mt-4 font-semibold">{f.title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{f.text}</p>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Curriculum() {
+  return (
+    <section className="border-y bg-muted/30">
+      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+        <motion.div {...fadeUp} className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <div className="text-xs font-semibold tracking-widest text-primary uppercase">The Foundations course</div>
+            <h2 className="mt-2 font-display text-4xl sm:text-5xl">From counting to the unit circle</h2>
+          </div>
+          <ButtonLink href="/courses/foundations" variant="outline">
+            See every lesson <ArrowRight />
+          </ButtonLink>
+        </motion.div>
+        <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {course.units.map((u, i) => (
+            <motion.div key={u.id} {...fadeUp} transition={{ delay: (i % 4) * 0.05, duration: 0.4 }}>
+              <Link href="/courses/foundations" className="group flex h-full items-start gap-3 rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-md">
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                  <UnitIcon name={u.icon} className="size-5" />
+                </span>
+                <div>
+                  <div className="text-[11px] font-semibold text-muted-foreground">UNIT {i + 1}</div>
+                  <div className="leading-tight font-semibold">{u.title}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">{u.exercises.length} lessons</div>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Engine() {
+  const steps = [
+    { title: "You practise", text: "Problems are generated fresh at the level that suits you right now.", tex: "\\text{level} \\in \\{1, 2, 3\\}" },
+    { title: "We measure", text: "Accuracy, attempts, hints and time combine into a struggle score; mastery updates with Bayesian knowledge tracing.", tex: "s = 1 - (1-e)(1-h)(1-t)" },
+    { title: "Your plan updates", text: "Due reviews, weak spots and ready-to-learn lessons are interleaved into today's plan.", tex: "\\text{review} \\oplus \\text{repair} \\oplus \\text{new}" },
+  ];
+  return (
+    <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+      <motion.h2 {...fadeUp} className="text-center font-display text-4xl sm:text-5xl">
+        The engine behind every session
+      </motion.h2>
+      <div className="mt-12 grid gap-4 md:grid-cols-3">
+        {steps.map((s, i) => (
+          <motion.div key={s.title} {...fadeUp} transition={{ delay: i * 0.1, duration: 0.5 }} className="relative rounded-2xl border bg-card p-6">
+            <span className="font-display text-5xl text-primary/30">0{i + 1}</span>
+            <h3 className="mt-2 text-lg font-semibold">{s.title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{s.text}</p>
+            <div className="mt-4 rounded-lg bg-muted/60 px-3 py-2 text-center text-sm">
+              <Tex tex={s.tex} />
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FinalCta({ cta }: { cta: { href: string; label: string } }) {
+  return (
+    <section className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
+      <motion.div {...fadeUp} className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary to-chart-4 px-6 py-14 text-center text-primary-foreground shadow-2xl shadow-primary/20 sm:px-12">
+        <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:radial-gradient(white_1px,transparent_1px)] [background-size:22px_22px]" />
+        <h2 className="relative font-display text-4xl sm:text-5xl">Ready when you are.</h2>
+        <p className="relative mx-auto mt-3 max-w-lg opacity-90">Ten minutes a day. No ads, no paywall — just the clearest path to calculus we could build.</p>
+        <ButtonLink href={cta.href} size="lg" variant="secondary" className="relative mt-8 h-12 px-6 text-base">
+          {cta.label} <ArrowRight />
+        </ButtonLink>
+      </motion.div>
+    </section>
+  );
+}
