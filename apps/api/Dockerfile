@@ -17,7 +17,10 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 FROM deps AS dev
 ENV NODE_ENV=development
 EXPOSE 4100
-CMD ["sh", "-c", "pnpm --filter @fmc/api migrate && pnpm --filter @fmc/api dev"]
+# Config comes from compose environment variables, so skip the npm scripts'
+# local .env lookup and call tsx directly.
+WORKDIR /repo/apps/api
+CMD ["sh", "-c", "pnpm exec tsx src/infrastructure/db/migrate.ts up && exec pnpm exec tsx watch src/main.ts"]
 
 FROM deps AS build
 COPY tsconfig.base.json ./
