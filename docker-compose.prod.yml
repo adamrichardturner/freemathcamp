@@ -1,0 +1,66 @@
+# Production stack: Postgres (private network only) + compiled API.
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+# Put a TLS-terminating reverse proxy (or the Next.js app) in front of the API.
+name: freemathcamp-prod
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set in .env.production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:?set in .env.production}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      - fmc-db-prod:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    shm_size: 256mb
+
+  migrate:
+    build: &api-build
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: prod
+    image: freemathcamp-api:latest
+    command: ["node", "dist/migrate.js", "up"]
+    environment: &api-env
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      WEB_ORIGIN: ${WEB_ORIGIN:?set in .env.production}
+      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      TRUST_PROXY: ${TRUST_PROXY:-loopback, linklocal, uniquelocal}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+    restart: "no"
+
+  api:
+    build: *api-build
+    image: freemathcamp-api:latest
+    restart: always
+    environment: *api-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${API_PORT:-4100}:4100"
+    networks: [internal]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+
+networks:
+  internal:
+
+volumes:
+  fmc-db-prod:
