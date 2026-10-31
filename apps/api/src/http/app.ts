@@ -1,9 +1,10 @@
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import express from "express";
-import { rateLimit } from "express-rate-limit";
+import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import helmet from "helmet";
 import { loadUser } from "./middleware/auth";
+import { clientIp } from "./middleware/client-ip";
 import { csrfGuard, noStore } from "./middleware/security";
 import { authRoutes } from "./routes/auth";
 import { learningRoutes } from "./routes/learning";
@@ -13,6 +14,8 @@ export interface AppOptions {
   webOrigin: string;
   /** Secure cookies require HTTPS; on in production. */
   secureCookies: boolean;
+  /** Shared with the Next.js proxy so it can vouch for the client IP it forwards. */
+  proxySecret?: string;
 }
 
 export const createApp = (runtime: AppRuntime, opts: AppOptions) => {
@@ -25,7 +28,8 @@ export const createApp = (runtime: AppRuntime, opts: AppOptions) => {
   app.use(compression());
   app.use(express.json({ limit: "20kb" }));
   app.use(cookieParser());
-  app.use(rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: "draft-8", legacyHeaders: false }));
+  app.use(clientIp(opts.proxySecret));
+  app.use(rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: "draft-8", legacyHeaders: false, keyGenerator: (req) => ipKeyGenerator(req.clientIp) }));
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

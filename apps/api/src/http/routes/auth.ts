@@ -9,7 +9,7 @@ import { decode, LoginBody, ProfileBody, RegisterBody } from "../validation";
 
 const OAUTH_COOKIE = "fmc_oauth";
 
-const clientInfo = (req: Request) => ({ userAgent: req.get("user-agent") ?? null, ip: req.ip ?? null });
+const clientInfo = (req: Request) => ({ userAgent: req.get("user-agent") ?? null, ip: req.clientIp });
 
 const readFlow = (raw: unknown): OAuthFlowState | null => {
   if (typeof raw !== "string" || raw.length > 1000) return null;
@@ -31,7 +31,7 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
     limit: 10,
     standardHeaders: "draft-8",
     legacyHeaders: false,
-    keyGenerator: (req) => `${ipKeyGenerator(req.ip ?? "")}:${String(req.body?.email ?? "").toLowerCase().slice(0, 254)}`,
+    keyGenerator: (req) => `${ipKeyGenerator(req.clientIp)}:${String(req.body?.email ?? "").toLowerCase().slice(0, 254)}`,
     message: { error: { code: "RateLimited", message: "Too many attempts. Please wait a few minutes." } },
   });
   const signupLimiter = rateLimit({
@@ -39,6 +39,7 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
     limit: 10,
     standardHeaders: "draft-8",
     legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.clientIp),
     message: { error: { code: "RateLimited", message: "Too many sign-ups from this network. Try again later." } },
   });
 

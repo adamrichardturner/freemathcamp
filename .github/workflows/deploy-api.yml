@@ -1,0 +1,72 @@
+name: Deploy API
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/api/**"
+      - "packages/curriculum/**"
+      - "pnpm-lock.yaml"
+      - "docker-compose.prod.yml"
+      - "deploy/vps.sh"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: fmc
+          POSTGRES_PASSWORD: fmc
+          POSTGRES_DB: freemathcamp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fmc -d freemathcamp"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://fmc:fmc@127.0.0.1:5432/freemathcamp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @fmc/api... --filter @fmc/curriculum
+      - run: pnpm --filter @fmc/api typecheck
+      - run: pnpm --filter @fmc/api migrate
+      - run: pnpm --filter @fmc/curriculum test
+      - run: pnpm --filter @fmc/api test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy on the VPS
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: 91.99.168.103
+          username: arty88
+          key: ${{ secrets.VPS_SSH_KEY }}
+          fingerprint: "SHA256:MnUMEbPqBrldUR1LJOy77Yd7wE3e9Rax333RVgkDNU8"
+          command_timeout: 20m
+          script: |
+            set -eu
+            if [ ! -d /var/www/freemathcamp/.git ]; then
+              git clone https://github.com/adamrichardturner/freemathcamp.git /var/www/freemathcamp
+            fi
+            cd /var/www/freemathcamp
+            git fetch origin main
+            git reset --hard origin/main
+            sh deploy/vps.sh

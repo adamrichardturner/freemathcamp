@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "ignoreCommand": "sh ../../deploy/vercel-ignore.sh",
+  "redirects": [
+    { "source": "/:path*", "has": [{ "type": "host", "value": "www.freemathcamp.app" }], "destination": "https://freemathcamp.app/:path*", "permanent": true }
+  ]
+}

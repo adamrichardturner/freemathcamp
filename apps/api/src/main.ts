@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Option, Redacted } from "effect";
 import { AppConfig } from "./config/config";
 import { createApp } from "./http/app";
 import { makeRuntime } from "./http/runtime";
@@ -18,7 +18,11 @@ const main = Effect.gen(function* () {
     if (error) return yield* Effect.die(error);
   }
 
-  const app = createApp(runtime, { webOrigin: config.webOrigin, secureCookies: config.env === "production" });
+  const app = createApp(runtime, {
+    webOrigin: config.webOrigin,
+    secureCookies: config.env === "production",
+    proxySecret: Option.getOrUndefined(Option.map(config.proxySecret, Redacted.value)),
+  });
   const server = app.listen(config.port, () => console.log(`API listening on :${config.port} (${config.env})`));
 
   // Hourly sweep of expired sessions.

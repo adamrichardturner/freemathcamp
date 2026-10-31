@@ -24,7 +24,8 @@ const createFrom = (target, example, transform) => {
   console.log(`✓ created ${target}`);
 };
 
-const withPassword = (text) => text.replace(/^POSTGRES_PASSWORD=.*$/m, `POSTGRES_PASSWORD=${secret()}`);
+const withPassword = (text) =>
+  text.replace(/^POSTGRES_PASSWORD=.*$/m, `POSTGRES_PASSWORD=${secret()}`).replace(/^PROXY_SECRET=.*$/m, `PROXY_SECRET=${secret()}`);
 
 createFrom(".env", ".env.example", withPassword);
 createFrom(".env.production", ".env.production.example", withPassword);

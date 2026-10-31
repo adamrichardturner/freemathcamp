@@ -1,6 +1,7 @@
 # Production stack: Postgres (private network only) + compiled API.
 #   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
-# Put a TLS-terminating reverse proxy (or the Next.js app) in front of the API.
+# On the VPS, deploy/vps.sh runs this with /var/www/freemathcamp/.env.
+# Put a TLS-terminating reverse proxy (nginx) in front of the API.
 name: freemathcamp-prod
 
 services:
@@ -37,6 +38,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       TRUST_PROXY: ${TRUST_PROXY:-loopback, linklocal, uniquelocal}
+      PROXY_SECRET: ${PROXY_SECRET:?set in .env (shared with the web app)}
     depends_on:
       db:
         condition: service_healthy

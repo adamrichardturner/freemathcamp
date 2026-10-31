@@ -8,6 +8,8 @@ export interface AppConfigShape {
   readonly sessionTtlDays: number;
   /** Google sign-in is enabled only when both are set. */
   readonly google: Option.Option<{ clientId: string; clientSecret: Redacted.Redacted<string> }>;
+  /** Shared secret the Next.js proxy uses to vouch for forwarded client IPs. */
+  readonly proxySecret: Option.Option<Redacted.Redacted<string>>;
 }
 
 export class AppConfig extends Context.Tag("AppConfig")<AppConfig, AppConfigShape>() {}
@@ -30,6 +32,7 @@ const config = Config.all({
       clientSecret: Config.redacted("GOOGLE_CLIENT_SECRET"),
     }),
   ),
+  proxySecret: Config.option(Config.redacted("PROXY_SECRET")),
 });
 
 export const AppConfigLive = Layer.effect(AppConfig, Effect.map(config, (c) => c as AppConfigShape));
