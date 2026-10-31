@@ -105,7 +105,7 @@ export function Lesson({ blocks }: { blocks: Block[] }) {
   return (
     <div className="space-y-6">
       {blocks.map((b, i) => (
-        <motion.div key={i} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} transition={{ duration: 0.4 }}>
+        <motion.div key={i} initial={i < 3 ? false : { opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} transition={{ duration: 0.4 }}>
           <LessonBlock block={b} />
         </motion.div>
       ))}

@@ -8,10 +8,17 @@ import type { ItemSignal } from "./signals";
  */
 export const BKT = {
   prior: 0.15,
-  slip: 0.1,
-  guess: { numeric: 0.04, choice: 0.25 },
+  slip: 0.12,
+  /**
+   * Chance of a correct answer without the skill. Typed answers are hard to
+   * guess outright, but partial understanding and pattern-matching make it far
+   * likelier than chance; calibrated so one clean session lands near 90%.
+   */
+  guess: { numeric: 0.3, choice: 0.45 },
+  /** Fraction of the Bayesian update applied per problem, so no single answer dominates. */
+  evidenceWeight: 0.5,
   /** Chance of learning from one problem, by difficulty level. */
-  transit: { 1: 0.08, 2: 0.12, 3: 0.18 },
+  transit: { 1: 0.05, 2: 0.08, 3: 0.12 },
 } as const;
 
 export interface MasteryUpdate {
@@ -26,13 +33,13 @@ export const updateMastery = ({ previous, signal, level, multipleChoice }: Maste
   const guess = multipleChoice ? BKT.guess.choice : BKT.guess.numeric;
   // Harder problems are both harder to guess and stronger evidence.
   const slip = BKT.slip * (level === 3 ? 1.3 : 1);
-  const g = guess / level;
+  const g = guess / Math.sqrt(level);
 
   let posterior: number;
   if (signal.cleanSolve || (signal.components.errors === 0 && signal.struggle < 0.5)) {
     const evidenceCorrect = (p * (1 - slip)) / (p * (1 - slip) + (1 - p) * g);
     // A slow or hinted solve is weaker evidence: blend towards the prior.
-    const strength = 1 - signal.struggle;
+    const strength = BKT.evidenceWeight * (1 - signal.struggle);
     posterior = p + strength * (evidenceCorrect - p);
   } else {
     const evidenceWrong = (p * slip) / (p * slip + (1 - p) * (1 - g));
@@ -57,3 +64,5 @@ export const effectiveMastery = (mastery: number, elapsedDays: number, stability
 
 export const MASTERED_THRESHOLD = 0.85;
 export const STRUGGLING_THRESHOLD = 0.45;
+/** Don't label a topic a struggle on a single slip: wait for a few problems. */
+export const MIN_ITEMS_FOR_STRUGGLE = 3;

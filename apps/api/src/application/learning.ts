@@ -1,6 +1,6 @@
 import { getExercise, getGraph } from "@fmc/curriculum";
 import { Effect } from "effect";
-import { buildQueues, effectiveMastery, MASTERED_THRESHOLD, STRUGGLING_THRESHOLD, type ProgressSnapshot } from "../domain/engine";
+import { buildQueues, effectiveMastery, MASTERED_THRESHOLD, MIN_ITEMS_FOR_STRUGGLE, STRUGGLING_THRESHOLD, type ProgressSnapshot } from "../domain/engine";
 import { NotFound } from "../domain/errors";
 import type { ExerciseProgress } from "../infrastructure/db/schema";
 import { round } from "../utils/math";
@@ -26,7 +26,7 @@ const toSnapshot = (p: ExerciseProgress): ProgressSnapshot => ({
 
 export const statusOf = (p: ExerciseProgress | undefined, now = new Date()): ExerciseStatus => {
   if (!p || p.items_seen === 0) return "new";
-  if (p.struggle >= STRUGGLING_THRESHOLD) return "struggling";
+  if (p.items_seen >= MIN_ITEMS_FOR_STRUGGLE && p.struggle >= STRUGGLING_THRESHOLD) return "struggling";
   if (p.sessions_completed > 0 && p.due_at && p.due_at.getTime() <= now.getTime()) return "review";
   if (p.mastery >= MASTERED_THRESHOLD && p.sessions_completed > 0) return "mastered";
   return "learning";

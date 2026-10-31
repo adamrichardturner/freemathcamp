@@ -8,13 +8,13 @@ import { Logo } from "@/components/app/logo";
 import { UnitIcon } from "@/components/app/unit-icon";
 import { Tex } from "@/components/math/tex";
 import { Visual } from "@/components/visuals/visual";
-import { useMe } from "@/hooks/queries";
+import { useSession } from "@/hooks/queries";
 import { course, graph } from "@/lib/course";
 
 const fadeUp = { initial: { opacity: 0, y: 24 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: "-80px" }, transition: { duration: 0.5 } };
 
 export function Landing() {
-  const { data: user } = useMe();
+  const { user } = useSession();
   const cta = user ? { href: "/learn", label: "Continue learning" } : { href: "/register", label: "Start learning free" };
   return (
     <div className="overflow-x-clip">
@@ -26,7 +26,7 @@ export function Landing() {
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground sm:flex-row">
           <Logo />
-          <p>Free maths education, built with care. © {new Date().getFullYear()} FreeMathCamp</p>
+          <p>Free maths education, built with care.</p>
         </div>
       </footer>
     </div>

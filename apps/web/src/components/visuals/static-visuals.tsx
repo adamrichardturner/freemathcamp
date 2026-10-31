@@ -408,7 +408,7 @@ export function FactorTree({ value }: V<"factorTree">) {
   return (
     <VisualFrame>
       <svg viewBox={`${minX} 0 ${maxX - minX} ${maxY}`} className="mx-auto max-h-80 w-full max-w-lg" role="img" aria-label={`Factor tree of ${value}`}>
-        {nodes.map((n, i) => n.px !== undefined && <motion.line key={`l${i}`} x1={n.px} y1={n.py! + 16} x2={n.x} y2={n.y - 16} stroke="var(--border)" strokeWidth={2} initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: i * 0.08 }} />)}
+        {nodes.map((n, i) => n.px !== undefined && <motion.line key={`l${i}`} x1={n.px} y1={n.py! + 16} x2={n.x} y2={n.y - 16} stroke="var(--muted-foreground)" strokeOpacity={0.45} strokeWidth={2} initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: i * 0.08 }} />)}
         {nodes.map((n, i) => (
           <motion.g key={i} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
             <circle cx={n.x} cy={n.y} r={19} fill={n.prime ? "var(--primary)" : "var(--card)"} stroke={n.prime ? "var(--primary)" : "var(--border)"} strokeWidth={2} />

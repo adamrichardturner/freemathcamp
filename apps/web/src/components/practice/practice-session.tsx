@@ -360,10 +360,12 @@ function ResolvedPanel({ problem, state }: { problem: Problem; state: Extract<It
             </div>
           )}
         </div>
-        <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums", delta >= 0 ? "bg-success/15 text-success" : "bg-danger/15 text-danger")}>
-          mastery {delta >= 0 ? "+" : ""}
-          {Math.round(delta * 100)}%
-        </span>
+        {/* A second-try solve is weak evidence, so mastery can dip slightly: say so kindly. */}
+        {delta >= 0.005 ? (
+          <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-semibold text-success tabular-nums">mastery +{Math.round(delta * 100)}%</span>
+        ) : (
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{state.correct ? "Solve it first time to grow mastery" : "We'll revisit this"}</span>
+        )}
       </div>
       <details open={!state.correct} className="group rounded-xl border bg-background/60 px-4 py-3">
         <summary className="cursor-pointer text-sm font-semibold text-muted-foreground select-none">Worked solution</summary>

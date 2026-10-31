@@ -1,6 +1,6 @@
 import { ancestors, unlockWeight, type CourseGraph } from "@fmc/curriculum";
 import { mean, round } from "../../utils/math";
-import { effectiveMastery, MASTERED_THRESHOLD, STRUGGLING_THRESHOLD } from "./mastery";
+import { effectiveMastery, MASTERED_THRESHOLD, MIN_ITEMS_FOR_STRUGGLE, STRUGGLING_THRESHOLD } from "./mastery";
 
 /** The subset of stored progress the recommender needs. */
 export interface ProgressSnapshot {
@@ -77,7 +77,7 @@ export const buildQueues = (graph: CourseGraph, progress: Map<string, ProgressSn
       continue;
     }
 
-    const isStruggling = p.struggle >= STRUGGLING_THRESHOLD || (p.mastery < 0.5 && p.itemsSeen >= 4);
+    const isStruggling = p.itemsSeen >= MIN_ITEMS_FOR_STRUGGLE && (p.struggle >= STRUGGLING_THRESHOLD || (p.mastery < 0.5 && p.itemsSeen >= 6));
     if (isStruggling) {
       const brushUp = ancestors(graph, id)
         .filter((pre) => eff(progress.get(pre)) < 0.7)

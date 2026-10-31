@@ -68,7 +68,7 @@ export function DashboardView() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue={queues.review.length ? "review" : queues.challenge.length ? "challenge" : "next"}>
-              <TabsList className="w-full overflow-x-auto">
+              <TabsList className="w-full overflow-x-auto [scrollbar-width:none]">
                 {(["review", "challenge", "next", "continue"] as QueueKind[]).map((k) => (
                   <TabsTrigger key={k} value={k} className="gap-1.5">
                     {queueMeta[k].label}

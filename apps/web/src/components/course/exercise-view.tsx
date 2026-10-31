@@ -15,7 +15,7 @@ import { PracticeSession } from "@/components/practice/practice-session";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { keys, useCourseProgress, useExerciseDetail, useMe } from "@/hooks/queries";
+import { keys, useCourseProgress, useExerciseDetail, useSession } from "@/hooks/queries";
 import { api, type ExerciseStatus, type PracticeMode } from "@/lib/api";
 import { COURSE_ID, exerciseRef, graph, lessonHref } from "@/lib/course";
 import { pct, relative } from "@/lib/format";
@@ -27,12 +27,13 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
   const params = useSearchParams();
   const router = useRouter();
   const qc = useQueryClient();
-  const { data: user } = useMe();
+  const { user, ready } = useSession();
   const { data: detail } = useExerciseDetail(exerciseId, !!user);
   const { data: courseProgress } = useCourseProgress(!!user);
   const requestedMode = params.get("mode") as PracticeMode | null;
   const [tab, setTab] = useState(requestedMode ? "practice" : "lesson");
-  const [practising, setPractising] = useState<PracticeMode | null>(null);
+  // Arriving from a recommendation (?mode=…) drops straight into practice.
+  const [practising, setPractising] = useState<PracticeMode | null>(requestedMode);
   const statusById = new Map(courseProgress?.exercises.map((e) => [e.exerciseId, e.status]) ?? []);
 
   const viewed = useMutation({
@@ -126,7 +127,9 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
           </TabsContent>
 
           <TabsContent value="practice">
-            {!user ? (
+            {!ready ? (
+              <div className="h-64 animate-pulse rounded-2xl border bg-card" />
+            ) : !user ? (
               <SignInToPractice exerciseId={exerciseId} />
             ) : practising ? (
               <PracticeSession

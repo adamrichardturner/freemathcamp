@@ -56,7 +56,10 @@ describe("struggle signal", () => {
 describe("mastery (BKT)", () => {
   it("rises with clean solves and falls with failures", () => {
     let m = 0.15;
-    for (let i = 0; i < 6; i++) m = updateMastery({ previous: m, signal: itemSignal(outcome()), level: 2, multipleChoice: false });
+    for (let i = 0; i < 3; i++) m = updateMastery({ previous: m, signal: itemSignal(outcome()), level: 2, multipleChoice: false });
+    // Three easy wins are encouraging, not proof of mastery.
+    expect(m).toBeLessThan(0.8);
+    for (let i = 0; i < 3; i++) m = updateMastery({ previous: m, signal: itemSignal(outcome()), level: 2, multipleChoice: false });
     expect(m).toBeGreaterThan(0.85);
     const after = updateMastery({ previous: m, signal: itemSignal(outcome({ revealed: true })), level: 2, multipleChoice: false });
     expect(after).toBeLessThan(m);
@@ -110,6 +113,11 @@ describe("queues", () => {
     dueAt: new Date(now.getTime() + 3 * 86_400_000),
     lastPracticedAt: now,
     ...p,
+  });
+
+  it("waits for several problems before calling something a struggle", () => {
+    const early = buildQueues(graph, new Map([["place-value", snap("place-value", { itemsSeen: 1, struggle: 0.5, mastery: 0.12, sessionsCompleted: 0, dueAt: null })]]), now);
+    expect(early.challenge).toHaveLength(0);
   });
 
   it("recommends prerequisite-free lessons to a new learner", () => {

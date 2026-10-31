@@ -10,7 +10,7 @@ import { UnitIcon } from "@/components/app/unit-icon";
 import { Md } from "@/components/math/md";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useCourseProgress, useMe } from "@/hooks/queries";
+import { useCourseProgress, useSession } from "@/hooks/queries";
 import type { ExerciseStatus } from "@/lib/api";
 import { course, graph, lessonHref } from "@/lib/course";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 const PrereqGraph = dynamic(() => import("./prereq-graph").then((m) => m.PrereqGraph), { ssr: false, loading: () => <Skeleton className="h-[70vh] rounded-2xl" /> });
 
 export function CourseMap() {
-  const { data: user } = useMe();
+  const { user } = useSession();
   const { data: progress } = useCourseProgress(!!user);
   const [view, setView] = useState<"list" | "graph">("list");
   const byId = new Map(progress?.exercises.map((e) => [e.exerciseId, e]) ?? []);
@@ -88,7 +88,7 @@ export function CourseMap() {
           {course.units.map((unit, ui) => {
             const up = progress?.units.find((u) => u.unitId === unit.id);
             return (
-              <motion.section key={unit.id} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }}>
+              <motion.section key={unit.id} initial={ui < 2 ? false : { opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }}>
                 <div className="mb-4 flex items-start gap-4">
                   <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-chart-5 text-primary-foreground shadow-md shadow-primary/20">
                     <UnitIcon name={unit.icon} className="size-6" />

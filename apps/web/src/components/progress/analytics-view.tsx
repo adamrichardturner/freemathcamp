@@ -47,7 +47,7 @@ export function AnalyticsView() {
         <Kpi icon={Target} label="Problems solved" value={t.problems.toLocaleString()} sub={`${t.sessions} sessions`} />
         <Kpi icon={TrendingUp} label="First-try accuracy" value={pct(t.accuracy)} sub={`${t.cleanSolves} clean solves`} />
         <Kpi icon={Clock} label="Time learning" value={duration(t.timeMs)} sub={`${t.hintsUsed} hints · ${t.reveals} reveals`} />
-        <Kpi icon={Flame} label="Streak" value={`${t.streak.current} days`} sub={`Longest ${t.streak.longest}`} />
+        <Kpi icon={Flame} label="Streak" value={`${t.streak.current} day${t.streak.current === 1 ? "" : "s"}`} sub={`Longest ${t.streak.longest}`} />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -98,7 +98,7 @@ export function AnalyticsView() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <LessonList title="Strongest topics" icon={Brain} items={data.strongest} metric={(v) => pct(v.effectiveMastery)} empty="Keep practising to build strengths." />
-        <LessonList title="Needs attention" icon={Lightbulb} items={data.weakest.filter((w) => w.struggle > 0.15)} metric={(v) => `struggle ${pct(v.struggle)}`} empty="No trouble spots — impressive!" warn />
+        <LessonList title="Needs attention" icon={Lightbulb} items={data.weakest.filter((w) => w.struggle > 0.15 && w.itemsSeen >= 3)} metric={(v) => `struggle ${pct(v.struggle)}`} empty="No trouble spots — impressive!" warn />
         <Card>
           <CardHeader>
             <CardTitle>By difficulty</CardTitle>

@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useLogout, useMe } from "@/hooks/queries";
+import { useLogout, useSession } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
 
 export const NAV = [
@@ -23,7 +23,7 @@ const isActive = (pathname: string, href: string) => pathname === href || (href 
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { data: user, isLoading } = useMe();
+  const { user, ready } = useSession();
   const logout = useLogout();
   const items = NAV.filter((n) => !n.auth || user);
 
@@ -47,7 +47,7 @@ export function SiteHeader() {
         </nav>
         <div className="ml-auto flex items-center gap-1.5">
           <ThemeToggle />
-          {isLoading ? (
+          {!ready ? (
             <Skeleton className="size-8 rounded-full" />
           ) : user ? (
             <DropdownMenu>
@@ -87,7 +87,7 @@ export function SiteHeader() {
 /** Thumb-reachable navigation on phones. */
 export function MobileTabBar() {
   const pathname = usePathname();
-  const { data: user } = useMe();
+  const { user } = useSession();
   if (!user) return null;
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
