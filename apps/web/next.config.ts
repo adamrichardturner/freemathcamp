@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   transpilePackages: ["@fmc/curriculum"],
+  // Share images read these at render time; make sure they ship with the server functions.
+  outputFileTracingIncludes: {
+    "/**": ["./node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-*.woff", "./public/logo.svg"],
+  },
   turbopack: {
     rules: {
       "*.css": {

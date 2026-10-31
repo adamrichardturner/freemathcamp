@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BrainCircuit, CalendarClock, Check, Gauge, Network, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, BrainCircuit, CalendarClock, Check, ChevronDown, Gauge, Network, Sparkles, TrendingUp } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { ButtonLink } from "@/components/app/button-link";
@@ -10,6 +10,7 @@ import { Tex } from "@/components/math/tex";
 import { Visual } from "@/components/visuals/visual";
 import { useSession } from "@/hooks/queries";
 import { course, graph } from "@/lib/course";
+import { FAQS } from "@/lib/faq";
 
 const fadeUp = { initial: { opacity: 0, y: 24 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: "-80px" }, transition: { duration: 0.5 } };
 
@@ -22,6 +23,7 @@ export function Landing() {
       <Features />
       <Curriculum />
       <Engine />
+      <Faq />
       <FinalCta cta={cta} />
       <footer className="border-t">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground sm:flex-row">
@@ -42,7 +44,7 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
       <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-20 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-24">
         <div>
           <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border bg-card/80 px-3 py-1 text-xs font-medium backdrop-blur">
-            <Sparkles className="size-3.5 text-primary" /> Free · Adaptive · Beautifully visual
+            <Sparkles className="size-3.5 text-primary" /> Free Math Camp · adaptive · beautifully visual
           </motion.span>
           <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 font-display text-5xl leading-[1.02] tracking-tight text-balance sm:text-6xl lg:text-7xl">
             All the maths you need <em className="bg-gradient-to-r from-primary to-chart-4 bg-clip-text text-transparent">before</em> calculus.
@@ -200,6 +202,27 @@ function Engine() {
               <Tex tex={s.tex} />
             </div>
           </motion.div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Faq() {
+  return (
+    <section className="mx-auto max-w-3xl px-4 pb-20 sm:px-6" aria-labelledby="faq-heading">
+      <motion.h2 {...fadeUp} id="faq-heading" className="text-center font-display text-4xl sm:text-5xl">
+        Free Math Camp, answered
+      </motion.h2>
+      <div className="mt-10 divide-y rounded-2xl border bg-card">
+        {FAQS.map((f, i) => (
+          <details key={f.q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden" open={i === 0}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
+              <h3 className="text-base">{f.q}</h3>
+              <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+            </summary>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+          </details>
         ))}
       </div>
     </section>

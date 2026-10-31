@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ExerciseView } from "@/components/course/exercise-view";
+import { JsonLd } from "@/components/seo/json-ld";
+import { lessonDescription, lessonPath } from "@/lib/site";
+import { breadcrumbs, graph, lessonSchema } from "@/lib/structured-data";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type Props = PageProps<"/courses/[courseId]/[exerciseId]">;
@@ -13,13 +16,35 @@ export const generateStaticParams = () =>
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { courseId, exerciseId } = await params;
   const ref = getExercise(courseId, exerciseId);
-  return ref ? { title: ref.exercise.title, description: ref.exercise.summary.replace(/\$/g, "") } : {};
+  if (!ref) return {};
+  const description = lessonDescription(ref);
+  return {
+    title: `${ref.exercise.title} — Free ${ref.unit.title} Lesson`,
+    description,
+    alternates: { canonical: lessonPath(ref) },
+    openGraph: { type: "article", title: `${ref.exercise.title} · Free Math Camp`, description, url: lessonPath(ref), section: ref.unit.title },
+  };
 }
 
 async function Exercise({ params }: Pick<Props, "params">) {
   const { courseId, exerciseId } = await params;
-  if (!getExercise(courseId, exerciseId)) notFound();
-  return <ExerciseView exerciseId={exerciseId} />;
+  const ref = getExercise(courseId, exerciseId);
+  if (!ref) notFound();
+  return (
+    <>
+      <JsonLd
+        data={graph(
+          lessonSchema(ref),
+          breadcrumbs([
+            { name: "Free Math Camp", path: "/" },
+            { name: ref.course.title, path: `/courses/${ref.course.id}` },
+            { name: ref.exercise.title, path: lessonPath(ref) },
+          ]),
+        )}
+      />
+      <ExerciseView exerciseId={exerciseId} />
+    </>
+  );
 }
 
 export default function ExercisePage({ params }: Props) {
