@@ -4,6 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
+    "declaration": false,
     "types": ["node"],
     "noUnusedLocals": true,
     "noUnusedParameters": true
