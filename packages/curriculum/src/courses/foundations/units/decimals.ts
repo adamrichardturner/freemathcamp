@@ -1,4 +1,4 @@
-import { example, key, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
+import { example, math, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
 import { round, texFrac } from "../../../core/math";
 import type { Unit } from "../../../core/types";
 
@@ -78,7 +78,7 @@ export const decimals: Unit = {
         const ans = op === "+" ? a + b : op === "-" ? a - b : a * b;
         return {
           prompt: "Compute.",
-          tex: `${a} ${op === "×" ? r"\times" : op} ${b}`,
+          tex: `${a} ${op === "×" ? r`\times` : op} ${b}`,
           answer: numberAnswer(round(ans, 6), { tolerance: 1e-6 }),
           hints: op === "×" ? ["Multiply as whole numbers.", "Count decimal places in both factors."] : ["Line up the decimal points."],
           solution: [step("Compute carefully, keeping track of the decimal point.", `${round(ans, 6)}`)],

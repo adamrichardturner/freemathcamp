@@ -24,7 +24,7 @@ export type Visual =
   | { type: "areaModel"; a: number; b: number }
   | { type: "arrayGrid"; rows: number; cols: number; groupBy?: "rows" | "cols" }
   | { type: "percentGrid"; percent: number }
-  | { type: "placeValue"; value: number }
+  | { type: "placeValue"; value: number; highlight?: number }
   | { type: "tapeDiagram"; parts: { label: string; value: number; tone?: Tone }[]; totalLabel?: string }
   | { type: "balance"; left: string; right: string; note?: string }
   | { type: "factorTree"; value: number }

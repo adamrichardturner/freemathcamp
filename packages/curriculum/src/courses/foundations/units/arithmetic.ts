@@ -37,7 +37,7 @@ export const arithmetic: Unit = {
         const names = ["ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands", "millions"];
         return {
           prompt: `What is the value of the digit **${digit}** in the highlighted position of $${formatThousands(n).replace(/,/g, "{,}")}$? (It is ${ordinal(pos + 1)} from the left.)`,
-          visual: { type: "placeValue", value: n },
+          visual: { type: "placeValue", value: n, highlight: pos },
           answer: numberAnswer(digit * place),
           hints: [`The ${ordinal(pos + 1)} digit from the left is in the **${names[str.length - 1 - pos]}** place.`, `Multiply the digit by ${formatThousands(place)}.`],
           solution: [step(`The digit sits in the ${names[str.length - 1 - pos]} place, worth ${formatThousands(place)}.`, r`${digit}\times ${place} = ${digit * place}`)],

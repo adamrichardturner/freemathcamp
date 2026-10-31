@@ -1,5 +1,5 @@
 import { example, key, math, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { gcd, lcm, reduce, texFrac, textFrac } from "../../../core/math";
+import { gcd, lcm, reduce, texFrac } from "../../../core/math";
 import type { Rng } from "../../../core/rng";
 import type { Level, Unit } from "../../../core/types";
 
@@ -258,5 +258,3 @@ export const fractions: Unit = {
     },
   ],
 };
-
-export { textFrac };
