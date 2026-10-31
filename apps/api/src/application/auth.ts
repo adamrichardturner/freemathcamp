@@ -16,6 +16,7 @@ export interface PublicUser {
   avatarUrl: string | null;
   hasPassword: boolean;
   emailVerified: boolean;
+  dailyGoal: number;
   createdAt: string;
 }
 
@@ -26,6 +27,7 @@ export const toPublicUser = (u: User): PublicUser => ({
   avatarUrl: u.avatar_url,
   hasPassword: u.password_hash !== null,
   emailVerified: u.email_verified_at !== null,
+  dailyGoal: u.daily_goal,
   createdAt: u.created_at.toISOString(),
 });
 
@@ -115,6 +117,3 @@ export const authenticate = (token: string) =>
     if (renewed) yield* sessions.extend(session.id, renewed);
     return { user, renewedUntil: renewed };
   });
-
-export const updateProfile = (userId: string, displayName: string) =>
-  Effect.flatMap(UserRepository, (users) => users.updateDisplayName(userId, displayName.trim())).pipe(Effect.map(toPublicUser));

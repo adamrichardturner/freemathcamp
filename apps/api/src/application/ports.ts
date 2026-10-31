@@ -1,6 +1,6 @@
 import { Context, type Effect } from "effect";
 import type { Conflict, DatabaseError, EmailDeliveryError } from "../domain/errors";
-import type { ExerciseProgress, ExerciseProgressUpdate, ItemResult, PracticeItem, PracticeSession, User } from "../infrastructure/db/schema";
+import type { AccountEventKind, ExerciseProgress, ExerciseProgressUpdate, ItemResult, PracticeItem, PracticeSession, User } from "../infrastructure/db/schema";
 
 /*
  * Ports: what the use cases need from persistence. Implementations live in
@@ -19,6 +19,10 @@ export interface UserRepositoryShape {
   /** Links a provider identity to a user (creating the user if needed) atomically. */
   upsertOAuthUser(input: { provider: "google"; providerUserId: string; email: string; displayName: string; avatarUrl: string | null }): Db<User>;
   markEmailVerified(id: string): Db<User>;
+  updateDailyGoal(id: string, dailyGoal: number): Db<User>;
+  updatePasswordHash(id: string, passwordHash: string): Db<User>;
+  /** Deletes the user; every owned row cascades with it. */
+  delete(id: string): Db<void>;
 }
 export class UserRepository extends Context.Tag("UserRepository")<UserRepository, UserRepositoryShape>() {}
 
@@ -33,6 +37,9 @@ export interface SessionRepositoryShape {
   extend(id: string, expiresAt: Date): Db<void>;
   delete(id: string): Db<void>;
   deleteExpired(): Db<number>;
+  countActive(userId: string): Db<number>;
+  /** Signs out every other device, keeping the given session. Returns how many were removed. */
+  deleteOthers(userId: string, keepId: string): Db<number>;
 }
 export class SessionRepository extends Context.Tag("SessionRepository")<SessionRepository, SessionRepositoryShape>() {}
 
@@ -43,6 +50,17 @@ export interface EmailTokenRepositoryShape {
   countSince(userId: string, since: Date): Db<number>;
 }
 export class EmailTokenRepository extends Context.Tag("EmailTokenRepository")<EmailTokenRepository, EmailTokenRepositoryShape>() {}
+
+export interface AccountRepositoryShape {
+  recordEvent(userId: string, kind: AccountEventKind): Db<void>;
+  /** Events of a kind since a time, oldest first. */
+  eventsSince(userId: string, kind: AccountEventKind, since: Date): Db<Date[]>;
+  resetCourse(userId: string, courseId: string): Db<void>;
+  linkedProviders(userId: string): Db<string[]>;
+  /** Everything stored about a learner, for the data export. */
+  exportData(userId: string): Db<Record<string, unknown>>;
+}
+export class AccountRepository extends Context.Tag("AccountRepository")<AccountRepository, AccountRepositoryShape>() {}
 
 export interface OutgoingEmail {
   to: string;

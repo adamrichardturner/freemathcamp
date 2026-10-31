@@ -6,6 +6,7 @@ import helmet from "helmet";
 import { loadUser } from "./middleware/auth";
 import { clientIp } from "./middleware/client-ip";
 import { csrfGuard, noStore } from "./middleware/security";
+import { accountRoutes } from "./routes/account";
 import { authRoutes } from "./routes/auth";
 import { learningRoutes } from "./routes/learning";
 import type { AppRuntime } from "./runtime";
@@ -35,6 +36,7 @@ export const createApp = (runtime: AppRuntime, opts: AppOptions) => {
 
   app.use("/api", noStore, csrfGuard(opts.webOrigin), loadUser(runtime, opts.secureCookies));
   app.use("/api/auth", authRoutes(runtime, { secure: opts.secureCookies, webOrigin: opts.webOrigin }));
+  app.use("/api/me", accountRoutes(runtime, { secure: opts.secureCookies }));
   app.use("/api", learningRoutes(runtime));
 
   app.use((_req, res) => res.status(404).json({ error: { code: "NotFound", message: "Not found." } }));

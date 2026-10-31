@@ -1,12 +1,12 @@
 import { Cause, Effect, Exit } from "effect";
 import { Router, type Request } from "express";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
-import { login, loginWithGoogle, logout, register, signInVerified, toPublicUser, updateProfile } from "../../application/auth";
+import { login, loginWithGoogle, logout, register, signInVerified, toPublicUser } from "../../application/auth";
 import { sendVerificationEmail, verifyEmail } from "../../application/email-verification";
 import { beginGoogleFlow, completeGoogleFlow, isGoogleEnabled, type OAuthFlowState } from "../../infrastructure/oauth/google";
 import { clearSessionCookie, cookieOptions, currentUser, requireUser, setSessionCookie } from "../middleware/auth";
 import { handle, type AppRuntime } from "../runtime";
-import { decode, LoginBody, ProfileBody, RegisterBody, VerifyEmailBody } from "../validation";
+import { decode, LoginBody, RegisterBody, VerifyEmailBody } from "../validation";
 
 const OAUTH_COOKIE = "fmc_oauth";
 
@@ -108,18 +108,6 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
   );
 
   router.get("/me", h((req) => Effect.succeed({ user: req.user ? toPublicUser(req.user) : null })));
-
-  router.patch(
-    "/me",
-    requireUser,
-    h((req) =>
-      Effect.gen(function* () {
-        const user = yield* currentUser(req);
-        const body = yield* decode(ProfileBody, req.body);
-        return { user: yield* updateProfile(user.id, body.displayName) };
-      }),
-    ),
-  );
 
   // Google OAuth: a top-level browser navigation, so it redirects instead of returning JSON.
   router.get("/google", loginLimiter, async (req, res) => {

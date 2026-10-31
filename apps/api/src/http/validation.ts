@@ -27,6 +27,18 @@ export const DisplayName = trimmed(60).pipe(Schema.minLength(1, { message: () =>
 export const RegisterBody = Schema.Struct({ email: Email, password: Password, displayName: DisplayName });
 export const LoginBody = Schema.Struct({ email: Email, password: Schema.String.pipe(Schema.maxLength(128)) });
 export const ProfileBody = Schema.Struct({ displayName: DisplayName });
+export const PreferencesBody = Schema.Struct({
+  dailyGoal: Schema.Int.pipe(Schema.between(1, 100, { message: () => "Pick a daily goal between 1 and 100 problems." })),
+});
+export const ChangePasswordBody = Schema.Struct({
+  currentPassword: Schema.optional(Schema.String.pipe(Schema.maxLength(128))),
+  newPassword: Password,
+});
+export const ResetProgressBody = Schema.Struct({ courseId: Schema.String.pipe(Schema.pattern(/^[a-z0-9-]{1,64}$/)) });
+export const DeleteAccountBody = Schema.Struct({
+  confirmEmail: Schema.String.pipe(Schema.maxLength(254)),
+  password: Schema.optional(Schema.String.pipe(Schema.maxLength(128))),
+});
 export const VerifyEmailBody = Schema.Struct({ token: Schema.String.pipe(Schema.minLength(20), Schema.maxLength(100)) });
 
 const Slug = Schema.String.pipe(Schema.pattern(/^[a-z0-9-]{1,64}$/));

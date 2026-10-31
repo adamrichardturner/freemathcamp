@@ -31,6 +31,7 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, json: unknown = {}) => request<T>(path, { method: "POST", json }),
   patch: <T>(path: string, json: unknown) => request<T>(path, { method: "PATCH", json }),
+  delete: <T>(path: string, json: unknown = {}) => request<T>(path, { method: "DELETE", json }),
 };
 
 /* ---- Response types ---- */
@@ -42,7 +43,14 @@ export interface User {
   avatarUrl: string | null;
   hasPassword: boolean;
   emailVerified: boolean;
+  dailyGoal: number;
   createdAt: string;
+}
+
+export interface AccountSettings {
+  user: User;
+  security: { activeSessions: number; otherSessions: number; linkedProviders: string[] };
+  nameChanges: { remaining: number; limit: number; nextAllowedAt: string | null };
 }
 
 export type ExerciseStatus = "new" | "learning" | "struggling" | "review" | "mastered";
@@ -102,6 +110,7 @@ export interface Dashboard {
     exercisesTotal: number;
     exercisesStarted: number;
     exercisesMastered: number;
+    problemsSolved: number;
     reviewsDue: number;
   };
 }

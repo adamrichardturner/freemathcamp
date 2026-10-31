@@ -50,6 +50,7 @@ export const dashboard = (userId: string, courseId: string) =>
         exercisesTotal: total,
         exercisesStarted: rows.filter((r) => r.items_seen > 0).length,
         exercisesMastered: rows.filter((r) => statusOf(r) === "mastered").length,
+        problemsSolved: rows.reduce((a, r) => a + r.items_seen, 0),
         reviewsDue: queues.review.length,
       },
     };

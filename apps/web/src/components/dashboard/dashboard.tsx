@@ -13,7 +13,7 @@ import { VerifyEmailCard } from "@/components/app/verify-email-card";
 import { useCourseProgress, useDashboard, useSession } from "@/hooks/queries";
 import type { QueueKind, Recommendation } from "@/lib/api";
 import { course, exerciseRef, lessonHref } from "@/lib/course";
-import { greeting, pct } from "@/lib/format";
+import { greeting } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function DashboardView() {
@@ -48,7 +48,14 @@ export function DashboardView() {
         <StatCard icon={GraduationCap} label="Mastered" value={`${stats.exercisesMastered}`} sub={`of ${stats.exercisesTotal} lessons`} tone="text-success" />
         <StatCard icon={Sparkles} label="Started" value={`${stats.exercisesStarted}`} sub="lessons in progress or done" tone="text-primary" />
         <StatCard icon={CalendarCheck} label="Reviews due" value={`${stats.reviewsDue}`} sub="spaced for memory" tone="text-warning" />
-        <StatCard icon={Target} label="Today" value={`${stats.today.problems}`} sub={stats.today.problems ? `${pct(stats.today.cleanSolves / stats.today.problems)} first-try` : "problems solved"} tone="text-info" />
+        <StatCard
+          icon={Target}
+          label="Today"
+          value={`${stats.today.problems}/${user?.dailyGoal ?? 10}`}
+          sub={stats.today.problems >= (user?.dailyGoal ?? 10) ? "Daily goal reached 🎉" : "problems toward your daily goal"}
+          tone="text-info"
+          progress={Math.min(1, stats.today.problems / (user?.dailyGoal ?? 10))}
+        />
       </section>
 
       <section>
@@ -157,7 +164,7 @@ function StreakBadge({ current, longest, activeToday }: { current: number; longe
   );
 }
 
-function StatCard({ icon: Icon, label, value, sub, tone }: { icon: typeof Flame; label: string; value: string; sub: string; tone: string }) {
+function StatCard({ icon: Icon, label, value, sub, tone, progress }: { icon: typeof Flame; label: string; value: string; sub: string; tone: string; progress?: number }) {
   return (
     <Card className="gap-0 py-4">
       <CardContent className="px-4">
@@ -166,6 +173,11 @@ function StatCard({ icon: Icon, label, value, sub, tone }: { icon: typeof Flame;
         </div>
         <div className="mt-1 text-3xl font-semibold tabular-nums">{value}</div>
         <div className="text-xs text-muted-foreground">{sub}</div>
+        {progress !== undefined && (
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+            <motion.div className="h-full rounded-full bg-info" initial={{ width: 0 }} animate={{ width: `${progress * 100}%` }} transition={{ duration: 0.8 }} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

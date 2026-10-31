@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect";
 import { sql } from "kysely";
 import {
+  AccountRepository,
   AnalyticsRepository,
   EmailTokenRepository,
   PracticeRepository,
@@ -76,6 +77,11 @@ export const UserRepositoryLive = repo(UserRepository, (run) => ({
         return user;
       }),
     ),
+  updateDailyGoal: (id, dailyGoal) =>
+    run((db) => db.updateTable("users").set({ daily_goal: dailyGoal }).where("id", "=", id).returningAll().executeTakeFirstOrThrow()),
+  updatePasswordHash: (id, passwordHash) =>
+    run((db) => db.updateTable("users").set({ password_hash: passwordHash }).where("id", "=", id).returningAll().executeTakeFirstOrThrow()),
+  delete: (id) => run((db) => db.deleteFrom("users").where("id", "=", id).execute()).pipe(Effect.asVoid),
   markEmailVerified: (id) =>
     run((db) =>
       db
@@ -122,6 +128,57 @@ export const SessionRepositoryLive = repo(SessionRepository, (run) => ({
   delete: (id) => run((db) => db.deleteFrom("sessions").where("id", "=", id).execute()).pipe(Effect.asVoid),
   deleteExpired: () =>
     run((db) => db.deleteFrom("sessions").where("expires_at", "<", new Date()).executeTakeFirst()).pipe(Effect.map((r) => Number(r.numDeletedRows))),
+  countActive: (userId) =>
+    run((db) =>
+      db
+        .selectFrom("sessions")
+        .select((eb) => eb.fn.countAll<string>().as("n"))
+        .where("user_id", "=", userId)
+        .where("expires_at", ">", new Date())
+        .executeTakeFirstOrThrow(),
+    ).pipe(Effect.map((r) => Number(r.n))),
+  deleteOthers: (userId, keepId) =>
+    run((db) => db.deleteFrom("sessions").where("user_id", "=", userId).where("id", "!=", keepId).executeTakeFirst()).pipe(
+      Effect.map((r) => Number(r.numDeletedRows)),
+    ),
+}));
+
+export const AccountRepositoryLive = repo(AccountRepository, (run) => ({
+  recordEvent: (userId, kind) => run((db) => db.insertInto("account_events").values({ user_id: userId, kind }).execute()).pipe(Effect.asVoid),
+  eventsSince: (userId, kind, since) =>
+    run((db) =>
+      db
+        .selectFrom("account_events")
+        .select("created_at")
+        .where("user_id", "=", userId)
+        .where("kind", "=", kind)
+        .where("created_at", ">=", since)
+        .orderBy("created_at")
+        .execute(),
+    ).pipe(Effect.map((rows) => rows.map((r) => r.created_at))),
+  linkedProviders: (userId) =>
+    run((db) => db.selectFrom("oauth_accounts").select("provider").where("user_id", "=", userId).execute()).pipe(Effect.map((r) => r.map((x) => x.provider))),
+  resetCourse: (userId, courseId) =>
+    run((db) =>
+      db.transaction().execute(async (trx) => {
+        // Item results and attempts cascade from practice sessions.
+        await trx.deleteFrom("practice_sessions").where("user_id", "=", userId).where("course_id", "=", courseId).execute();
+        await trx.deleteFrom("exercise_progress").where("user_id", "=", userId).where("course_id", "=", courseId).execute();
+      }),
+    ),
+  exportData: (userId) =>
+    run(async (db) => {
+      const [account, linkedAccounts, progress, sessions, results, attempts, events] = await Promise.all([
+        db.selectFrom("users").select(["id", "email", "display_name", "avatar_url", "email_verified_at", "daily_goal", "created_at", "last_active_at"]).where("id", "=", userId).executeTakeFirst(),
+        db.selectFrom("oauth_accounts").select(["provider", "email", "created_at"]).where("user_id", "=", userId).execute(),
+        db.selectFrom("exercise_progress").selectAll().where("user_id", "=", userId).execute(),
+        db.selectFrom("practice_sessions").selectAll().where("user_id", "=", userId).orderBy("started_at").execute(),
+        db.selectFrom("item_results").selectAll().where("user_id", "=", userId).orderBy("resolved_at").execute(),
+        db.selectFrom("attempts").select(["session_id", "item_index", "answer", "correct", "time_ms", "created_at"]).where("user_id", "=", userId).orderBy("created_at").execute(),
+        db.selectFrom("account_events").select(["kind", "created_at"]).where("user_id", "=", userId).orderBy("created_at").execute(),
+      ]);
+      return { exportedAt: new Date().toISOString(), account, linkedAccounts, progress, practiceSessions: sessions, problemResults: results, attempts, accountEvents: events };
+    }),
 }));
 
 export const ProgressRepositoryLive = repo(ProgressRepository, (run) => ({
@@ -337,6 +394,7 @@ export const AnalyticsRepositoryLive = repo(AnalyticsRepository, (run) => ({
 
 export const RepositoriesLive = Layer.mergeAll(
   UserRepositoryLive,
+  AccountRepositoryLive,
   EmailTokenRepositoryLive,
   SessionRepositoryLive,
   ProgressRepositoryLive,

@@ -10,8 +10,18 @@ export interface UsersTable {
   password_hash: string | null;
   avatar_url: string | null;
   email_verified_at: Timestamp | null;
+  daily_goal: Generated<number>;
   created_at: Generated<Date>;
   last_active_at: Timestamp | null;
+}
+
+export type AccountEventKind = "name_changed" | "password_changed" | "progress_reset" | "sessions_revoked";
+
+export interface AccountEventsTable {
+  id: Generated<string>;
+  user_id: string;
+  kind: AccountEventKind;
+  created_at: Generated<Date>;
 }
 
 export interface EmailVerificationTokensTable {
@@ -116,6 +126,7 @@ export interface DB {
   users: UsersTable;
   oauth_accounts: OAuthAccountsTable;
   email_verification_tokens: EmailVerificationTokensTable;
+  account_events: AccountEventsTable;
   sessions: SessionsTable;
   exercise_progress: ExerciseProgressTable;
   practice_sessions: PracticeSessionsTable;

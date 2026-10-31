@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
-import { api, type Analytics, type CourseProgress, type Dashboard, type ExerciseDetail, type User } from "@/lib/api";
+import { api, type AccountSettings, type Analytics, type CourseProgress, type Dashboard, type ExerciseDetail, type User } from "@/lib/api";
 import { COURSE_ID } from "@/lib/course";
 
 export const keys = {
@@ -13,6 +13,7 @@ export const keys = {
   dashboard: ["dashboard", COURSE_ID] as const,
   analytics: ["analytics", COURSE_ID] as const,
   exercise: (id: string) => ["exercise", COURSE_ID, id] as const,
+  settings: ["settings"] as const,
 };
 
 export const useMe = () =>
@@ -32,6 +33,8 @@ export const useSession = () => {
   // Learner data (progress, practice) is only available once the email is confirmed.
   return { user, ready: hydrated && !me.isPending, verified: !!user?.emailVerified };
 };
+
+export const useAccountSettings = () => useQuery({ queryKey: keys.settings, queryFn: () => api.get<AccountSettings>("/me/settings") });
 
 export const useProviders = () =>
   useQuery({ queryKey: keys.providers, queryFn: () => api.get<{ google: boolean; password: boolean }>("/auth/providers"), staleTime: Infinity });
