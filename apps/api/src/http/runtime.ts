@@ -4,10 +4,11 @@ import { AppConfigLive } from "../config/config";
 import type { AppError } from "../domain/errors";
 import { DatabaseLive } from "../infrastructure/db/database";
 import { RepositoriesLive } from "../infrastructure/repositories/postgres";
+import { EmailSenderLive } from "../infrastructure/email/senders";
 import { PasswordHasherLive } from "../infrastructure/security/password";
 
 /** Everything the application layer needs, wired once at startup. */
-export const AppLayer = Layer.mergeAll(RepositoriesLive, PasswordHasherLive).pipe(
+export const AppLayer = Layer.mergeAll(RepositoriesLive, PasswordHasherLive, EmailSenderLive).pipe(
   Layer.provideMerge(DatabaseLive),
   Layer.provideMerge(AppConfigLive),
 );
@@ -22,6 +23,9 @@ const STATUS: Record<AppError["_tag"], number> = {
   Unauthorized: 401,
   NotFound: 404,
   Conflict: 409,
+  RateLimited: 429,
+  EmailNotVerified: 403,
+  EmailDeliveryError: 502,
   DatabaseError: 500,
 };
 
@@ -30,16 +34,20 @@ const publicMessage = (e: AppError) => {
     case "ValidationError":
     case "Unauthorized":
     case "Conflict":
+    case "RateLimited":
+    case "EmailNotVerified":
       return e.message;
     case "NotFound":
       return `That ${e.resource} doesn't exist.`;
+    case "EmailDeliveryError":
+      return "We couldn't send the email just now. Please try again in a minute.";
     case "DatabaseError":
       return "Something went wrong on our side. Please try again.";
   }
 };
 
 export const sendError = (res: Response, e: AppError) => {
-  if (e._tag === "DatabaseError") console.error("[db]", e.cause);
+  if (e._tag === "DatabaseError" || e._tag === "EmailDeliveryError") console.error(`[${e._tag}]`, e.cause);
   res.status(STATUS[e._tag]).json({ error: { code: e._tag, message: publicMessage(e), ...(e._tag === "ValidationError" && e.issues ? { issues: e.issues } : {}) } });
 };
 

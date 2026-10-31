@@ -1,9 +1,10 @@
 import { Effect } from "effect";
 import { AppConfig } from "../config/config";
-import { Conflict, Unauthorized } from "../domain/errors";
+import { Unauthorized } from "../domain/errors";
 import { PasswordHasher } from "../infrastructure/security/password";
 import { hashToken, newSessionToken } from "../infrastructure/security/tokens";
 import type { User } from "../infrastructure/db/schema";
+import { sendVerificationEmail } from "./email-verification";
 import { SessionRepository, UserRepository } from "./ports";
 import { addDays } from "../domain/engine";
 import type { GoogleIdentity } from "../infrastructure/oauth/google";
@@ -14,6 +15,7 @@ export interface PublicUser {
   displayName: string;
   avatarUrl: string | null;
   hasPassword: boolean;
+  emailVerified: boolean;
   createdAt: string;
 }
 
@@ -23,6 +25,7 @@ export const toPublicUser = (u: User): PublicUser => ({
   displayName: u.display_name,
   avatarUrl: u.avatar_url,
   hasPassword: u.password_hash !== null,
+  emailVerified: u.email_verified_at !== null,
   createdAt: u.created_at.toISOString(),
 });
 
@@ -49,8 +52,13 @@ export const register = (input: { email: string; password: string; displayName: 
     const hasher = yield* PasswordHasher;
     const passwordHash = yield* hasher.hash(input.password);
     const user = yield* users.create({ email: input.email.trim().toLowerCase(), displayName: input.displayName.trim(), passwordHash });
+    // A delivery hiccup shouldn't lose the sign-up; the learner can resend from the app.
+    yield* sendVerificationEmail(user).pipe(Effect.catchAll((e) => Effect.logWarning("verification email failed", e)));
     return yield* startSession(user, client);
   });
+
+/** Starts a session for a user who just proved control of their email. */
+export const signInVerified = (user: User, client: ClientInfo) => startSession(user, client);
 
 export const login = (input: { email: string; password: string }, client: ClientInfo) =>
   Effect.gen(function* () {
@@ -72,13 +80,8 @@ export const loginWithGoogle = (identity: GoogleIdentity, client: ClientInfo) =>
   Effect.gen(function* () {
     const users = yield* UserRepository;
     const existing = yield* users.findByOAuth("google", identity.sub);
-    if (!existing) {
-      // Never silently link to a password account: our emails aren't verified, so
-      // that would let someone who pre-registered a victim's email keep access.
-      const byEmail = yield* users.findByEmail(identity.email.toLowerCase());
-      if (byEmail?.password_hash)
-        return yield* Effect.fail(new Conflict({ message: "An account with this email already exists. Sign in with your password instead." }));
-    }
+    // Linking by email is safe: Google verified it. An unverified password account
+    // with the same email is reclaimed (password cleared, sessions ended) in the repository.
     const user =
       existing ??
       (yield* users.upsertOAuthUser({

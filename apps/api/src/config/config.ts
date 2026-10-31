@@ -10,6 +10,9 @@ export interface AppConfigShape {
   readonly google: Option.Option<{ clientId: string; clientSecret: Redacted.Redacted<string> }>;
   /** Shared secret the Next.js proxy uses to vouch for forwarded client IPs. */
   readonly proxySecret: Option.Option<Redacted.Redacted<string>>;
+  /** Without a key, emails are logged instead of sent (development and tests). */
+  readonly resendApiKey: Option.Option<Redacted.Redacted<string>>;
+  readonly emailFrom: string;
 }
 
 export class AppConfig extends Context.Tag("AppConfig")<AppConfig, AppConfigShape>() {}
@@ -33,6 +36,8 @@ const config = Config.all({
     }),
   ),
   proxySecret: Config.option(Config.redacted("PROXY_SECRET")),
+  resendApiKey: Config.option(Config.redacted("RESEND_API_KEY")),
+  emailFrom: Config.string("EMAIL_FROM").pipe(Config.withDefault("FreeMathCamp <noreply@freemathcamp.app>")),
 });
 
 export const AppConfigLive = Layer.effect(AppConfig, Effect.map(config, (c) => c as AppConfigShape));

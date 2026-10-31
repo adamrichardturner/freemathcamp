@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect";
 import { sql } from "kysely";
 import {
   AnalyticsRepository,
+  EmailTokenRepository,
   PracticeRepository,
   ProgressRepository,
   SessionRepository,
@@ -46,13 +47,24 @@ export const UserRepositoryLive = repo(UserRepository, (run) => ({
   upsertOAuthUser: ({ provider, providerUserId, email, displayName, avatarUrl }) =>
     run((db) =>
       db.transaction().execute(async (trx) => {
-        // Only reached with a provider-verified email, so linking to an existing account by email is safe.
-        const existing = await trx.selectFrom("users").selectAll().where("email", "=", email).executeTakeFirst();
+        // Only reached with a provider-verified email, which proves ownership.
+        let existing = await trx.selectFrom("users").selectAll().where("email", "=", email).executeTakeFirst();
+        if (existing && !existing.email_verified_at) {
+          // An unverified password account may have been pre-registered by someone else
+          // with this email. The real owner just proved it, so revoke that access.
+          await trx.deleteFrom("sessions").where("user_id", "=", existing.id).execute();
+          existing = await trx
+            .updateTable("users")
+            .set({ password_hash: null, email_verified_at: new Date() })
+            .where("id", "=", existing.id)
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        }
         const user =
           existing ??
           (await trx
             .insertInto("users")
-            .values({ email, display_name: displayName.slice(0, 60), password_hash: null, avatar_url: avatarUrl })
+            .values({ email, display_name: displayName.slice(0, 60), password_hash: null, avatar_url: avatarUrl, email_verified_at: new Date() })
             .returningAll()
             .executeTakeFirstOrThrow());
         await trx
@@ -64,6 +76,33 @@ export const UserRepositoryLive = repo(UserRepository, (run) => ({
         return user;
       }),
     ),
+  markEmailVerified: (id) =>
+    run((db) =>
+      db
+        .updateTable("users")
+        .set((eb) => ({ email_verified_at: eb.fn.coalesce("email_verified_at", sql<Date>`now()`) }))
+        .where("id", "=", id)
+        .returningAll()
+        .executeTakeFirstOrThrow(),
+    ),
+}));
+
+export const EmailTokenRepositoryLive = repo(EmailTokenRepository, (run) => ({
+  create: ({ id, userId, expiresAt }) =>
+    run((db) => db.insertInto("email_verification_tokens").values({ id, user_id: userId, expires_at: expiresAt }).execute()).pipe(Effect.asVoid),
+  consume: (id) =>
+    run((db) =>
+      db.deleteFrom("email_verification_tokens").where("id", "=", id).where("expires_at", ">", new Date()).returning("user_id").executeTakeFirst(),
+    ).pipe(Effect.map((r) => r?.user_id)),
+  countSince: (userId, since) =>
+    run((db) =>
+      db
+        .selectFrom("email_verification_tokens")
+        .select((eb) => eb.fn.countAll<string>().as("n"))
+        .where("user_id", "=", userId)
+        .where("created_at", ">=", since)
+        .executeTakeFirstOrThrow(),
+    ).pipe(Effect.map((r) => Number(r.n))),
 }));
 
 export const SessionRepositoryLive = repo(SessionRepository, (run) => ({
@@ -298,6 +337,7 @@ export const AnalyticsRepositoryLive = repo(AnalyticsRepository, (run) => ({
 
 export const RepositoriesLive = Layer.mergeAll(
   UserRepositoryLive,
+  EmailTokenRepositoryLive,
   SessionRepositoryLive,
   ProgressRepositoryLive,
   PracticeRepositoryLive,

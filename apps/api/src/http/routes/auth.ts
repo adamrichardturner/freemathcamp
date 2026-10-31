@@ -1,11 +1,12 @@
 import { Cause, Effect, Exit } from "effect";
 import { Router, type Request } from "express";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
-import { login, loginWithGoogle, logout, register, toPublicUser, updateProfile } from "../../application/auth";
+import { login, loginWithGoogle, logout, register, signInVerified, toPublicUser, updateProfile } from "../../application/auth";
+import { sendVerificationEmail, verifyEmail } from "../../application/email-verification";
 import { beginGoogleFlow, completeGoogleFlow, isGoogleEnabled, type OAuthFlowState } from "../../infrastructure/oauth/google";
 import { clearSessionCookie, cookieOptions, currentUser, requireUser, setSessionCookie } from "../middleware/auth";
 import { handle, type AppRuntime } from "../runtime";
-import { decode, LoginBody, ProfileBody, RegisterBody } from "../validation";
+import { decode, LoginBody, ProfileBody, RegisterBody, VerifyEmailBody } from "../validation";
 
 const OAUTH_COOKIE = "fmc_oauth";
 
@@ -81,6 +82,29 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
         return { ok: true };
       }),
     ),
+  );
+
+  router.post(
+    "/verify-email",
+    loginLimiter,
+    h((req, res) =>
+      Effect.gen(function* () {
+        const { token } = yield* decode(VerifyEmailBody, req.body);
+        const user = yield* verifyEmail(token);
+        // The link proves control of the inbox, so sign in whoever opened it.
+        if (req.user?.id !== user.id) {
+          const s = yield* signInVerified(user, clientInfo(req));
+          setSessionCookie(res, opts.secure, s.token, s.expiresAt);
+        }
+        return { user: toPublicUser(user) };
+      }),
+    ),
+  );
+
+  router.post(
+    "/resend-verification",
+    requireUser,
+    h((req) => Effect.flatMap(currentUser(req), (user) => sendVerificationEmail(user))),
   );
 
   router.get("/me", h((req) => Effect.succeed({ user: req.user ? toPublicUser(req.user) : null })));

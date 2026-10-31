@@ -51,5 +51,12 @@ export const requireUser: RequestHandler = (req, res, next) => {
   next();
 };
 
+/** Learner features need a confirmed email (Google accounts are confirmed on sign-up). */
+export const requireVerified: RequestHandler = (req, res, next) => {
+  if (!req.user?.email_verified_at)
+    return res.status(403).json({ error: { code: "EmailNotVerified", message: "Confirm your email to start practising." } });
+  next();
+};
+
 /** For use inside handlers after requireUser. */
 export const currentUser = (req: Request) => Effect.sync(() => req.user!);

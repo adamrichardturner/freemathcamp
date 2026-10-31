@@ -28,7 +28,9 @@ const noopSubscribe = () => () => {};
 export const useSession = () => {
   const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const me = useMe();
-  return { user: hydrated ? (me.data ?? null) : null, ready: hydrated && !me.isPending };
+  const user = hydrated ? (me.data ?? null) : null;
+  // Learner data (progress, practice) is only available once the email is confirmed.
+  return { user, ready: hydrated && !me.isPending, verified: !!user?.emailVerified };
 };
 
 export const useProviders = () =>
@@ -37,9 +39,11 @@ export const useProviders = () =>
 export const useCourseProgress = (enabled = true) =>
   useQuery({ queryKey: keys.progress, queryFn: () => api.get<CourseProgress>(`/courses/${COURSE_ID}/progress`), enabled });
 
-export const useDashboard = () => useQuery({ queryKey: keys.dashboard, queryFn: () => api.get<Dashboard>(`/courses/${COURSE_ID}/dashboard`) });
+export const useDashboard = (enabled = true) =>
+  useQuery({ queryKey: keys.dashboard, queryFn: () => api.get<Dashboard>(`/courses/${COURSE_ID}/dashboard`), enabled });
 
-export const useAnalytics = () => useQuery({ queryKey: keys.analytics, queryFn: () => api.get<Analytics>(`/courses/${COURSE_ID}/analytics`) });
+export const useAnalytics = (enabled = true) =>
+  useQuery({ queryKey: keys.analytics, queryFn: () => api.get<Analytics>(`/courses/${COURSE_ID}/analytics`), enabled });
 
 export const useExerciseDetail = (id: string, enabled = true) =>
   useQuery({ queryKey: keys.exercise(id), queryFn: () => api.get<ExerciseDetail>(`/courses/${COURSE_ID}/exercises/${id}`), enabled });

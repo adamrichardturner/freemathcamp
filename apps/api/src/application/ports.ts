@@ -1,5 +1,5 @@
 import { Context, type Effect } from "effect";
-import type { Conflict, DatabaseError } from "../domain/errors";
+import type { Conflict, DatabaseError, EmailDeliveryError } from "../domain/errors";
 import type { ExerciseProgress, ExerciseProgressUpdate, ItemResult, PracticeItem, PracticeSession, User } from "../infrastructure/db/schema";
 
 /*
@@ -18,6 +18,7 @@ export interface UserRepositoryShape {
   findByOAuth(provider: "google", providerUserId: string): Db<User | undefined>;
   /** Links a provider identity to a user (creating the user if needed) atomically. */
   upsertOAuthUser(input: { provider: "google"; providerUserId: string; email: string; displayName: string; avatarUrl: string | null }): Db<User>;
+  markEmailVerified(id: string): Db<User>;
 }
 export class UserRepository extends Context.Tag("UserRepository")<UserRepository, UserRepositoryShape>() {}
 
@@ -34,6 +35,25 @@ export interface SessionRepositoryShape {
   deleteExpired(): Db<number>;
 }
 export class SessionRepository extends Context.Tag("SessionRepository")<SessionRepository, SessionRepositoryShape>() {}
+
+export interface EmailTokenRepositoryShape {
+  create(input: { id: string; userId: string; expiresAt: Date }): Db<void>;
+  /** Deletes and returns the owner of an unexpired token, so each link works once. */
+  consume(id: string): Db<string | undefined>;
+  countSince(userId: string, since: Date): Db<number>;
+}
+export class EmailTokenRepository extends Context.Tag("EmailTokenRepository")<EmailTokenRepository, EmailTokenRepositoryShape>() {}
+
+export interface OutgoingEmail {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+export interface EmailSenderShape {
+  send(email: OutgoingEmail): Effect.Effect<void, EmailDeliveryError>;
+}
+export class EmailSender extends Context.Tag("EmailSender")<EmailSender, EmailSenderShape>() {}
 
 export interface ProgressRepositoryShape {
   listForCourse(userId: string, courseId: string): Db<ExerciseProgress[]>;

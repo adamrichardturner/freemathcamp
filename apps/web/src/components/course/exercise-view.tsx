@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { ButtonLink } from "@/components/app/button-link";
 import { MasteryRing, StatusBadge, StatusDot, statusMeta } from "@/components/app/status";
 import { UnitIcon } from "@/components/app/unit-icon";
+import { VerifyEmailCard } from "@/components/app/verify-email-card";
 import { Lesson } from "@/components/course/lesson-blocks";
 import { Md } from "@/components/math/md";
 import { PracticeSession } from "@/components/practice/practice-session";
@@ -27,9 +28,9 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
   const params = useSearchParams();
   const router = useRouter();
   const qc = useQueryClient();
-  const { user, ready } = useSession();
-  const { data: detail } = useExerciseDetail(exerciseId, !!user);
-  const { data: courseProgress } = useCourseProgress(!!user);
+  const { user, ready, verified } = useSession();
+  const { data: detail } = useExerciseDetail(exerciseId, verified);
+  const { data: courseProgress } = useCourseProgress(verified);
   const requestedMode = params.get("mode") as PracticeMode | null;
   const [tab, setTab] = useState(requestedMode ? "practice" : "lesson");
   // Arriving from a recommendation (?mode=…) drops straight into practice.
@@ -43,11 +44,11 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
   const markedRef = useRef(false);
   const { mutate: markViewed } = viewed;
   useEffect(() => {
-    if (user && !markedRef.current) {
+    if (verified && !markedRef.current) {
       markedRef.current = true;
       markViewed();
     }
-  }, [user, markViewed]);
+  }, [verified, markViewed]);
 
   const progress = detail?.progress;
   const prev = graph.refs[ref.order - 1];
@@ -131,6 +132,8 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
               <div className="h-64 animate-pulse rounded-2xl border bg-card" />
             ) : !user ? (
               <SignInToPractice exerciseId={exerciseId} />
+            ) : !verified ? (
+              <VerifyEmailCard user={user} compact />
             ) : practising ? (
               <PracticeSession
                 key={practising}

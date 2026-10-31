@@ -3,6 +3,16 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createApp } from "../src/http/app";
 import { makeRuntime, type AppRuntime } from "../src/http/runtime";
+import { Effect } from "effect";
+import { SessionRepository, UserRepository } from "../src/application/ports";
+import { outbox } from "../src/infrastructure/email/senders";
+import { hashToken } from "../src/infrastructure/security/tokens";
+
+/** Token from the newest verification email sent to an address. */
+const latestToken = (to: string) => {
+  const mail = [...outbox].reverse().find((m) => m.to === to);
+  return mail && new URL(/https?:\/\/\S+verify-email\?token=\S+/.exec(mail.text)![0]).searchParams.get("token")!;
+};
 
 /**
  * End-to-end through Express, Effect and Postgres. Needs DATABASE_URL pointing
@@ -52,6 +62,23 @@ describe.skipIf(!enabled)("API", () => {
     const other = request(createApp(runtime, { webOrigin: ORIGIN, secureCookies: false }));
     const res = await other.post("/api/auth/login").set("Origin", ORIGIN).send({ email, password: "wrong-password-1" });
     expect(res.status).toBe(401);
+  });
+
+  it("keeps learner features behind email verification", async () => {
+    const res = await agent.get("/api/courses/foundations/dashboard");
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("EmailNotVerified");
+    expect((await agent.get("/api/auth/me")).body.user.emailVerified).toBe(false);
+  });
+
+  it("verifies the email from the emailed link, once", async () => {
+    const token = latestToken(email);
+    expect(token).toBeTruthy();
+    const ok = await post("/api/auth/verify-email", { token });
+    expect(ok.status).toBe(200);
+    expect(ok.body.user.emailVerified).toBe(true);
+    expect((await post("/api/auth/verify-email", { token })).status).toBe(401);
+    expect((await agent.get("/api/courses/foundations/dashboard")).status).toBe(200);
   });
 
   it("runs an adaptive practice session end to end and updates progress", async () => {
@@ -106,5 +133,46 @@ describe.skipIf(!enabled)("API", () => {
     await post("/api/auth/logout");
     expect((await agent.get("/api/auth/me")).body.user).toBeNull();
     expect((await agent.get("/api/courses/foundations/dashboard")).status).toBe(401);
+  });
+});
+
+describe.skipIf(!enabled)("email verification edge cases", () => {
+  let runtime: AppRuntime;
+  beforeAll(() => {
+    runtime = makeRuntime();
+  });
+  afterAll(() => runtime.dispose());
+
+  it("signs in whoever opens the link, and rate limits resends", async () => {
+    const email = `resend+${Date.now()}@example.com`;
+    const app = createApp(runtime, { webOrigin: ORIGIN, secureCookies: false });
+    const signup = request.agent(app);
+    await signup.post("/api/auth/register").set("Origin", ORIGIN).send({ email, password: "correct-horse-42", displayName: "Grace" });
+    // Two resends are allowed (three emails per hour including the sign-up one), then 429.
+    for (const expected of [200, 200, 429]) expect((await signup.post("/api/auth/resend-verification").set("Origin", ORIGIN).send({})).status).toBe(expected);
+
+    const otherDevice = request.agent(app);
+    const res = await otherDevice.post("/api/auth/verify-email").set("Origin", ORIGIN).send({ token: latestToken(email) });
+    expect(res.status).toBe(200);
+    expect(res.headers["set-cookie"]?.[0]).toMatch(/fmc_session=/);
+    expect((await otherDevice.get("/api/courses/foundations/dashboard")).status).toBe(200);
+  });
+
+  it("reclaims an unverified password account when Google proves the email", async () => {
+    const email = `claim+${Date.now()}@example.com`;
+    const program = Effect.gen(function* () {
+      const users = yield* UserRepository;
+      const sessions = yield* SessionRepository;
+      const squatter = yield* users.create({ email, displayName: "Squatter", passwordHash: "argon2-hash" });
+      const sessionId = hashToken(`squatter-session-${Date.now()}-padding`);
+      yield* sessions.create({ id: sessionId, userId: squatter.id, expiresAt: new Date(Date.now() + 86_400_000), userAgent: null, ip: null });
+      const owner = yield* users.upsertOAuthUser({ provider: "google", providerUserId: `g-${Date.now()}`, email, displayName: "Owner", avatarUrl: null });
+      return { squatter, owner, leftover: yield* sessions.find(sessionId) };
+    });
+    const { squatter, owner, leftover } = await runtime.runPromise(program);
+    expect(leftover).toBeUndefined();
+    expect(owner.id).toBe(squatter.id);
+    expect(owner.password_hash).toBeNull();
+    expect(owner.email_verified_at).not.toBeNull();
   });
 });

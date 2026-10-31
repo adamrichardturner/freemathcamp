@@ -9,8 +9,17 @@ export interface UsersTable {
   display_name: string;
   password_hash: string | null;
   avatar_url: string | null;
+  email_verified_at: Timestamp | null;
   created_at: Generated<Date>;
   last_active_at: Timestamp | null;
+}
+
+export interface EmailVerificationTokensTable {
+  /** SHA-256 of the token in the emailed link. */
+  id: string;
+  user_id: string;
+  expires_at: Timestamp;
+  created_at: Generated<Date>;
 }
 
 export interface OAuthAccountsTable {
@@ -106,6 +115,7 @@ export interface AttemptsTable {
 export interface DB {
   users: UsersTable;
   oauth_accounts: OAuthAccountsTable;
+  email_verification_tokens: EmailVerificationTokensTable;
   sessions: SessionsTable;
   exercise_progress: ExerciseProgressTable;
   practice_sessions: PracticeSessionsTable;

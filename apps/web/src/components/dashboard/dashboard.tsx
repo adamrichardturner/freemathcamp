@@ -9,17 +9,19 @@ import { UnitIcon } from "@/components/app/unit-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useCourseProgress, useDashboard, useMe } from "@/hooks/queries";
+import { VerifyEmailCard } from "@/components/app/verify-email-card";
+import { useCourseProgress, useDashboard, useSession } from "@/hooks/queries";
 import type { QueueKind, Recommendation } from "@/lib/api";
 import { course, exerciseRef, lessonHref } from "@/lib/course";
 import { greeting, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function DashboardView() {
-  const { data: user } = useMe();
-  const { data, isLoading } = useDashboard();
-  const { data: progress } = useCourseProgress();
+  const { user, ready, verified } = useSession();
+  const { data, isLoading } = useDashboard(verified);
+  const { data: progress } = useCourseProgress(verified);
 
+  if (ready && user && !verified) return <VerifyEmailCard user={user} />;
   if (isLoading || !data) return <DashboardSkeleton />;
   const { queues, stats } = data;
   const firstName = user?.displayName.split(" ")[0] ?? "there";

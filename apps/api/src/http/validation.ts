@@ -27,6 +27,7 @@ export const DisplayName = trimmed(60).pipe(Schema.minLength(1, { message: () =>
 export const RegisterBody = Schema.Struct({ email: Email, password: Password, displayName: DisplayName });
 export const LoginBody = Schema.Struct({ email: Email, password: Schema.String.pipe(Schema.maxLength(128)) });
 export const ProfileBody = Schema.Struct({ displayName: DisplayName });
+export const VerifyEmailBody = Schema.Struct({ token: Schema.String.pipe(Schema.minLength(20), Schema.maxLength(100)) });
 
 const Slug = Schema.String.pipe(Schema.pattern(/^[a-z0-9-]{1,64}$/));
 const Index = Schema.Int.pipe(Schema.between(0, 50));

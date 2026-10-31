@@ -39,6 +39,8 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       TRUST_PROXY: ${TRUST_PROXY:-loopback, linklocal, uniquelocal}
       PROXY_SECRET: ${PROXY_SECRET:?set in .env (shared with the web app)}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-FreeMathCamp <noreply@freemathcamp.app>}
     depends_on:
       db:
         condition: service_healthy

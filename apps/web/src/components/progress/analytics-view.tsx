@@ -10,7 +10,8 @@ import { MasteryRing, statusMeta } from "@/components/app/status";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAnalytics } from "@/hooks/queries";
+import { VerifyEmailCard } from "@/components/app/verify-email-card";
+import { useAnalytics, useSession } from "@/hooks/queries";
 import type { Analytics } from "@/lib/api";
 import { lessonHref } from "@/lib/course";
 import { duration, pct, relative } from "@/lib/format";
@@ -20,7 +21,9 @@ const DAY = 86_400_000;
 const isoDay = (t: number) => new Date(t).toISOString().slice(0, 10);
 
 export function AnalyticsView() {
-  const { data, isLoading } = useAnalytics();
+  const { user, ready, verified } = useSession();
+  const { data, isLoading } = useAnalytics(verified);
+  if (ready && user && !verified) return <VerifyEmailCard user={user} />;
   if (isLoading || !data) return <Skeleton className="h-[80vh] rounded-2xl" />;
   const t = data.totals;
 

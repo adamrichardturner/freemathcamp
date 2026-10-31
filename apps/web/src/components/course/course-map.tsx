@@ -18,8 +18,8 @@ import { cn } from "@/lib/utils";
 const PrereqGraph = dynamic(() => import("./prereq-graph").then((m) => m.PrereqGraph), { ssr: false, loading: () => <Skeleton className="h-[70vh] rounded-2xl" /> });
 
 export function CourseMap() {
-  const { user } = useSession();
-  const { data: progress } = useCourseProgress(!!user);
+  const { user, verified } = useSession();
+  const { data: progress } = useCourseProgress(verified);
   const [view, setView] = useState<"list" | "graph">("list");
   const byId = new Map(progress?.exercises.map((e) => [e.exerciseId, e]) ?? []);
   const statusOf = (id: string): ExerciseStatus => byId.get(id)?.status ?? "new";

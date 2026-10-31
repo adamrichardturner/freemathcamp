@@ -41,6 +41,7 @@ export interface User {
   displayName: string;
   avatarUrl: string | null;
   hasPassword: boolean;
+  emailVerified: boolean;
   createdAt: string;
 }
 

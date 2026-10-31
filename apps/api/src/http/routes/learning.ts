@@ -4,7 +4,7 @@ import { Router } from "express";
 import { analytics, dashboard } from "../../application/analytics";
 import { courseProgress, exerciseDetail, markLessonViewed } from "../../application/learning";
 import { completePractice, revealAnswer, startPractice, submitAttempt } from "../../application/practice";
-import { currentUser, requireUser } from "../middleware/auth";
+import { currentUser, requireUser, requireVerified } from "../middleware/auth";
 import { handle, type AppRuntime } from "../runtime";
 import { AttemptBody, CourseParams, decode, ExerciseParams, RevealBody, SessionParams, StartPracticeBody } from "../validation";
 
@@ -14,7 +14,7 @@ export const learningRoutes = (runtime: AppRuntime) => {
 
   router.get("/courses", h(() => Effect.succeed({ courses: courses.map((c) => ({ id: c.id, title: c.title, tagline: c.tagline, units: c.units.length, exercises: c.units.reduce((a, u) => a + u.exercises.length, 0) })) })));
 
-  router.use(requireUser);
+  router.use(requireUser, requireVerified);
 
   const withUser = <A, E, R>(req: Parameters<Parameters<typeof h>[0]>[0], f: (userId: string) => Effect.Effect<A, E, R>) =>
     Effect.flatMap(currentUser(req), (u) => f(u.id));
