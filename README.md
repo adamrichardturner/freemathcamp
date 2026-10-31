@@ -49,9 +49,27 @@ Open http://localhost:3000. The web app proxies `/api/*` to the API, so cookies 
 - **Development:** `pnpm db:up` for just Postgres, or `pnpm dev:docker` to also run the API in a hot-reloading container.
 - **Production:** `pnpm docker:prod` runs Postgres on a private network, a one-shot migration job, and a read-only, non-root API container. Put a TLS-terminating proxy (or the Next.js app) in front.
 
+### Production deployment
+
+Pushes to `main` deploy the two halves separately, the same way as the other projects on the VPS.
+
+**Web → Vercel.** The Vercel project `freemathcamp` (root directory `apps/web`) is connected to this repository and serves [freemathcamp.app](https://freemathcamp.app); `www` redirects to the apex. `deploy/vercel-ignore.sh` skips builds unless `apps/web`, `packages/curriculum` or the lockfile changed. Environment variables: `API_URL=https://api.freemathcamp.app` and `PROXY_SECRET`.
+
+**API + Postgres → VPS.** `.github/workflows/deploy-api.yml` runs on pushes touching `apps/api`, `packages/curriculum`, the lockfile, `docker-compose.prod.yml` or `deploy/vps.sh`:
+
+1. Typecheck, migrate and run all tests against a Postgres service container.
+2. SSH to the VPS (secret `VPS_SSH_KEY`, host key pinned), update `/var/www/freemathcamp` to `origin/main`, and run `deploy/vps.sh`.
+3. `vps.sh` builds the image, starts Postgres, runs migrations as a one-shot job, then swaps the API container once it's healthy. The API listens on `127.0.0.1:4003`; Postgres isn't published at all.
+
+Nginx terminates TLS for `api.freemathcamp.app` (certbot) and proxies to the API — see `deploy/nginx/api.freemathcamp.app`. Server secrets live in `/var/www/freemathcamp/.env` (from `.env.production`).
+
+The browser only ever talks to `freemathcamp.app`: the Next.js proxy forwards `/api/*` to the API, signed with `PROXY_SECRET` and carrying the visitor's IP. The API trusts that IP only when the signature matches, so rate limits apply per learner rather than per Vercel edge. `PROXY_SECRET` must match on Vercel and the VPS.
+
+DNS for `freemathcamp.app` is on Cloudflare, all records DNS-only: `api` → the VPS, apex and `www` → Vercel.
+
 ### Google sign-in (optional)
 
-Create an OAuth client (type *Web application*) in Google Cloud Console with the redirect URI `${WEB_ORIGIN}/api/auth/google/callback`, then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The "Continue with Google" button appears automatically once both are set.
+Create an OAuth client (type *Web application*) in Google Cloud Console with the redirect URI `${WEB_ORIGIN}/api/auth/google/callback` (production: `https://freemathcamp.app/api/auth/google/callback`), then set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The "Continue with Google" button appears automatically once both are set.
 
 ## Scripts
 
