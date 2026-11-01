@@ -100,7 +100,7 @@ export function CourseMap() {
           {course.units.map((unit, ui) => {
             const up = progress?.units.find((u) => u.unitId === unit.id);
             return (
-              <motion.section key={unit.id} initial={ui < 2 ? false : { opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }}>
+              <motion.section key={unit.id} id={unit.id} className="scroll-mt-20" initial={ui < 2 ? false : { opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }}>
                 <div className="mb-4 flex items-start gap-4">
                   <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-chart-5 text-primary-foreground shadow-md shadow-primary/20">
                     <UnitIcon name={unit.icon} className="size-6" />
@@ -120,7 +120,7 @@ export function CourseMap() {
                       <LessonLink
                         key={e.id}
                         id={e.id}
-                        className="group flex items-center gap-3 rounded-xl border bg-card p-3.5 transition-all"
+                        className="group flex min-w-0 items-center gap-3 rounded-xl border bg-card p-3.5 transition-all"
                         openClassName="hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
                       >
                         {(locked) => (

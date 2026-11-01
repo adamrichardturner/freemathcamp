@@ -20,8 +20,6 @@ const LEGAL_LINKS = [
   { href: "/privacy#united-states", label: "Do not sell or share" },
 ] as const;
 
-const TAB_BAR_PREFIXES = ["/learn", "/progress", "/settings", "/courses"] as const;
-
 const linkClass = "text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline";
 
 function FooterColumn({ label, links, pathname }: { label: string; links: readonly { href: string; label: string }[]; pathname: string }) {
@@ -44,7 +42,6 @@ function FooterColumn({ label, links, pathname }: { label: string; links: readon
   );
 }
 
-const showsTabBar = (pathname: string) => TAB_BAR_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
 export function SiteFooter() {
   const pathname = usePathname();
@@ -61,10 +58,9 @@ export function SiteFooter() {
         { href: "/login", label: "Sign in" },
       ];
   const onHome = pathname === "/";
-  const clearTabBar = Boolean(user) && showsTabBar(pathname);
 
   return (
-    <footer className={cn("mt-auto border-t", clearTabBar && "max-md:pb-[calc(4.5rem+env(safe-area-inset-bottom))]")}>
+    <footer className="mt-auto border-t">
       <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="space-y-5 lg:col-span-5">

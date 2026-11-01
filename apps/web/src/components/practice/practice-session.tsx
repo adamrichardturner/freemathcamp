@@ -190,7 +190,7 @@ function ProblemCard({
     nextRef.current?.focus({ preventScroll: true });
     // Resolving swaps the question for the solution, which changes the card's height. Once the
     // new layout has settled, bring the solution and the Next button to the bottom of the
-    // viewport (the card's scroll margin keeps a small gap, and clears the mobile tab bar).
+    // viewport (the card's scroll margin keeps a small gap).
     // The solution keeps settling for a moment (typeset maths, visuals), so re-align as it grows.
     const card = cardRef.current;
     if (!card) return;
@@ -251,7 +251,7 @@ function ProblemCard({
   const preview = !isChoice && answer.trim() ? evaluate(answer.replace(/%\s*$/, "")) : null;
 
   return (
-    <motion.div ref={cardRef} animate={shake} className="scroll-mb-[calc(5rem+env(safe-area-inset-bottom))] overflow-hidden rounded-2xl border bg-card shadow-sm md:scroll-mb-6">
+    <motion.div ref={cardRef} animate={shake} className="scroll-mb-6 overflow-hidden rounded-2xl border bg-card shadow-sm">
       <div className="space-y-5 p-5 sm:p-7">
         <Md md={problem.prompt} className="text-lg font-medium" />
         {problem.tex && (

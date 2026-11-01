@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ButtonLink } from "@/components/app/button-link";
 import { Logo } from "@/components/app/logo";
+import { MobileMenu } from "@/components/app/mobile-menu";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { UserMenu } from "@/components/app/user-menu";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,7 +43,7 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto hidden items-center gap-1.5 md:flex">
           <ThemeToggle />
           {!ready ? (
             <Skeleton className="size-8 rounded-full" />
@@ -59,26 +60,10 @@ export function SiteHeader() {
             </>
           )}
         </div>
+        <div className="ml-auto md:hidden">
+          <MobileMenu />
+        </div>
       </div>
     </header>
-  );
-}
-
-/** Thumb-reachable navigation on phones. */
-export function MobileTabBar() {
-  const pathname = usePathname();
-  const { user } = useSession();
-  if (!user) return null;
-  return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
-      <div className="grid grid-cols-3">
-        {NAV.map((n) => (
-          <Link key={n.href} href={n.href} className={cn("flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-muted-foreground", isActive(pathname, n.href) && "text-primary")}>
-            <n.icon className="size-5" />
-            {n.label}
-          </Link>
-        ))}
-      </div>
-    </nav>
   );
 }
