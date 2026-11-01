@@ -81,15 +81,29 @@ export const useExerciseDetail = (id: string, enabled = true) =>
 
 export const useLeague = (enabled = true) => useQuery({ queryKey: keys.league, queryFn: () => api.get<League>("/leagues/me"), enabled });
 
+/**
+ * Puts an updated user everywhere it's cached (the session and the settings page),
+ * then refetches settings. Return or await it from `onSuccess` so the mutation stays
+ * pending until every view agrees, and controls never flash the old value.
+ */
+export const useApplyUser = () => {
+  const qc = useQueryClient();
+  return (user: User) => {
+    qc.setQueryData(keys.me, user);
+    qc.setQueryData<AccountSettings>(keys.settings, (s) => s && { ...s, user });
+    return qc.invalidateQueries({ queryKey: keys.settings });
+  };
+};
+
 /** Joins or leaves leagues, keeping the user and the league view in step wherever the switch is. */
 export const useLeagueOptIn = () => {
   const qc = useQueryClient();
+  const applyUser = useApplyUser();
   return useMutation({
     mutationFn: (optIn: boolean) => api.put<{ user: User }>("/me/league", { optIn }),
-    onSuccess: ({ user }) => {
-      qc.setQueryData(keys.me, user);
-      void qc.invalidateQueries({ queryKey: keys.league });
-      void qc.invalidateQueries({ queryKey: keys.settings });
+    // Pending until the league has refetched, so the switch doesn't flick back to the old state.
+    onSuccess: async ({ user }) => {
+      await Promise.all([applyUser(user), qc.invalidateQueries({ queryKey: keys.league })]);
       toast.success(user.leagueOptIn ? "You're in this week's league" : "You've left the leagues");
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn't update your league setting."),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, BookOpen, CalendarCheck, Route, Trophy } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, CalendarCheck, Loader2, Route, Trophy } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -159,7 +159,8 @@ function LeagueJoin({ user }: { user: User }) {
         <span className="block text-sm font-medium">Join the weekly leagues</span>
         <span className="block text-xs text-muted-foreground">As @{user.username}. You can leave any time from the dashboard or Settings.</span>
       </span>
-      <Switch id="tour-league" aria-label="Join the weekly leagues" checked={optIn.isPending ? optIn.variables : user.leagueOptIn} disabled={optIn.isPending} onCheckedChange={(on) => optIn.mutate(on)} />
+      {optIn.isPending && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+      <Switch id="tour-league" aria-label="Join the weekly leagues" checked={optIn.isPending ? optIn.variables : user.leagueOptIn} disabled={optIn.isPending} aria-busy={optIn.isPending} onCheckedChange={(on) => optIn.mutate(on)} />
     </label>
   );
 }

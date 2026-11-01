@@ -16,7 +16,8 @@ export function VerifyEmailCard({ user, compact = false }: { user: User; compact
   const resend = useMutation({
     mutationFn: () => api.post<{ sent: boolean; alreadyVerified: boolean }>("/auth/resend-verification"),
     onSuccess: (r) => {
-      if (r.alreadyVerified) return void qc.invalidateQueries({ queryKey: keys.me });
+      // Stay busy until the refreshed user swaps this card out.
+      if (r.alreadyVerified) return qc.invalidateQueries({ queryKey: keys.me });
       toast.success(`New link sent to ${user.email}`);
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn't send the email."),

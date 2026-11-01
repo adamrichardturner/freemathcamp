@@ -1,12 +1,12 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { AtSign, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { keys, useSession } from "@/hooks/queries";
+import { useApplyUser, useSession } from "@/hooks/queries";
 import { api, ApiError, type User } from "@/lib/api";
 import { suggestUsername, UsernameInput, useUsernameCheck } from "./username-field";
 
@@ -40,12 +40,12 @@ export function UsernamePrompt() {
 
 /** Starts from a suggestion based on their email, which they can keep or change. */
 function UsernameForm({ email }: { email: string }) {
-  const qc = useQueryClient();
+  const applyUser = useApplyUser();
   const [value, setValue] = useState(() => suggestUsername(email));
   const check = useUsernameCheck(value);
   const save = useMutation({
     mutationFn: () => api.patch<{ user: User }>("/me/username", { username: value.trim() }),
-    onSuccess: ({ user: u }) => qc.setQueryData(keys.me, u),
+    onSuccess: ({ user: u }) => applyUser(u),
   });
   const serverError = save.error instanceof ApiError ? save.error.message : save.error ? "Couldn't save your username. Try again." : undefined;
   const canSave = check.status === "available" && !save.isPending;

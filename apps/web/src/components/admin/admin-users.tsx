@@ -336,10 +336,10 @@ function PasswordActions({ user }: { user: AdminUserDetail["user"] }) {
   const problem = passwordProblem(password);
   const set = useMutation({
     mutationFn: (body: { password?: string }) => api.post<{ signedOutSessions: number; temporaryPassword: string | null }>(`/admin/users/${user.id}/password`, body),
-    onSuccess: (r) => {
+    onSuccess: async (r) => {
+      await refresh();
       setPassword("");
       setTemporary(r.temporaryPassword);
-      void refresh();
       toast.success(`${r.temporaryPassword ? "Temporary password created" : "Password set"} · signed out ${r.signedOutSessions} session${r.signedOutSessions === 1 ? "" : "s"}`);
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't change the password.")),
@@ -359,9 +359,11 @@ function PasswordActions({ user }: { user: AdminUserDetail["user"] }) {
           if (password && !problem) set.mutate({ password });
         }}
       >
-        <Field id="adminNewPassword" label="Set a new password" error={problem}>
-          <PasswordInput id="adminNewPassword" value={password} onChange={setPassword} autoComplete="new-password" />
-        </Field>
+        <fieldset disabled={set.isPending} className="min-w-0">
+          <Field id="adminNewPassword" label="Set a new password" error={problem}>
+            <PasswordInput id="adminNewPassword" value={password} onChange={setPassword} autoComplete="new-password" />
+          </Field>
+        </fieldset>
         <div className="flex flex-wrap gap-2">
           <Button type="submit" size="sm" disabled={!password || !!problem || set.isPending}>
             {set.isPending && set.variables?.password && <Loader2 className="animate-spin" />} Set password
@@ -394,8 +396,8 @@ function DangerActions({ user, onDeleted }: { user: AdminUserDetail["user"]; onD
   const refresh = useRefreshAdmin();
   const reset = useMutation({
     mutationFn: () => api.post(`/admin/users/${user.id}/reset-progress`, { courseId: COURSE_ID }),
-    onSuccess: () => {
-      void refresh();
+    onSuccess: async () => {
+      await refresh();
       toast.success(`Reset ${user.displayName}'s progress`);
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't reset progress.")),
