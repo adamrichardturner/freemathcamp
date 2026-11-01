@@ -2,12 +2,12 @@
 
 import { ArrowRight, CalendarClock, Clock, RotateCcw, Target, Trophy } from "lucide-react";
 import { motion } from "motion/react";
-import Link from "next/link";
 import { ButtonLink } from "@/components/app/button-link";
 import { MasteryRing, queueMeta } from "@/components/app/status";
+import { LessonLink } from "@/components/course/lesson-link";
 import { Button } from "@/components/ui/button";
 import type { SessionSummary } from "@/lib/api";
-import { exerciseTitle, lessonHref } from "@/lib/course";
+import { exerciseTitle } from "@/lib/course";
 import { duration, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -72,9 +72,9 @@ export function SessionSummaryView({ summary, onAgain, onExit }: { summary: Sess
             <div className="text-sm font-semibold">This looked tricky. These earlier ideas might help:</div>
             <div className="mt-2 flex flex-wrap gap-2">
               {summary.brushUp.map((id) => (
-                <Link key={id} href={lessonHref(id)} className="rounded-full border bg-background px-3 py-1 text-sm font-medium transition-colors hover:border-primary hover:text-primary">
+                <LessonLink key={id} id={id} className="rounded-full border bg-background px-3 py-1 text-sm font-medium transition-colors" openClassName="hover:border-primary hover:text-primary">
                   {exerciseTitle(id)}
-                </Link>
+                </LessonLink>
               ))}
             </div>
           </div>
@@ -87,12 +87,12 @@ export function SessionSummaryView({ summary, onAgain, onExit }: { summary: Sess
               {summary.upNext.map((r) => {
                 const m = queueMeta[r.kind];
                 return (
-                  <Link key={r.exerciseId} href={`${lessonHref(r.exerciseId)}?mode=${m.mode}`} className="group rounded-xl border p-3 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm">
+                  <LessonLink key={r.exerciseId} id={r.exerciseId} query={`mode=${m.mode}`} className="group rounded-xl border p-3 transition-all" openClassName="hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm">
                     <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", m.className)}>
                       <m.icon className="size-3" /> {m.label}
                     </span>
                     <div className="mt-1.5 text-sm font-semibold group-hover:text-primary">{exerciseTitle(r.exerciseId)}</div>
-                  </Link>
+                  </LessonLink>
                 );
               })}
             </div>

@@ -1,18 +1,19 @@
 "use client";
 
-import { ChevronRight, List, Waypoints } from "lucide-react";
+import { ChevronRight, List, Lock, Waypoints } from "lucide-react";
 import { motion } from "motion/react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useState } from "react";
 import { MasteryRing, StatusDot, statusMeta } from "@/components/app/status";
 import { UnitIcon } from "@/components/app/unit-icon";
 import { Md } from "@/components/math/md";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useCourseProgress, useSession } from "@/hooks/queries";
+import { useCourseProgress, useLessonAccess, useSession } from "@/hooks/queries";
 import type { ExerciseStatus } from "@/lib/api";
-import { course, graph, lessonHref } from "@/lib/course";
+import { course, graph } from "@/lib/course";
+import { LearningModeSwitch, MODE_META } from "./learning-mode";
+import { LessonLink } from "./lesson-link";
 import { cn } from "@/lib/utils";
 
 const PrereqGraph = dynamic(() => import("./prereq-graph").then((m) => m.PrereqGraph), { ssr: false, loading: () => <Skeleton className="h-[70vh] rounded-2xl" /> });
@@ -20,6 +21,7 @@ const PrereqGraph = dynamic(() => import("./prereq-graph").then((m) => m.PrereqG
 export function CourseMap() {
   const { user, verified } = useSession();
   const { data: progress } = useCourseProgress(verified);
+  const access = useLessonAccess();
   const [view, setView] = useState<"list" | "graph">("list");
   const byId = new Map(progress?.exercises.map((e) => [e.exerciseId, e]) ?? []);
   const statusOf = (id: string): ExerciseStatus => byId.get(id)?.status ?? "new";
@@ -60,6 +62,16 @@ export function CourseMap() {
         </div>
       </section>
 
+      {access.canChooseMode && (
+        <div className="flex flex-col gap-3 rounded-2xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">How do you want to take this course?</div>
+            <p className="text-sm text-muted-foreground">{MODE_META[access.mode].short}</p>
+          </div>
+          <LearningModeSwitch mode={access.mode} className="self-start sm:self-auto" />
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
           {(Object.keys(statusMeta) as ExerciseStatus[]).map((s) => (
@@ -80,8 +92,8 @@ export function CourseMap() {
 
       {view === "graph" ? (
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">Hover a lesson to light up everything it builds on. Click to open it.</p>
-          <PrereqGraph statusOf={statusOf} masteryOf={masteryOf} />
+          <p className="text-sm text-muted-foreground">Hover a lesson to light up everything it builds on. Click to open it{access.mode === "path" && access.canChooseMode ? " — dashed lessons unlock as you complete the ones before them" : ""}.</p>
+          <PrereqGraph statusOf={statusOf} masteryOf={masteryOf} isLocked={access.isLocked} />
         </div>
       ) : (
         <div className="space-y-10">
@@ -105,25 +117,42 @@ export function CourseMap() {
                     const p = byId.get(e.id);
                     const status = p?.status ?? "new";
                     return (
-                      <Link
+                      <LessonLink
                         key={e.id}
-                        href={lessonHref(e.id)}
-                        className="group flex items-center gap-3 rounded-xl border bg-card p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+                        id={e.id}
+                        className="group flex items-center gap-3 rounded-xl border bg-card p-3.5 transition-all"
+                        openClassName="hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
                       >
-                        <span
-                          className={cn("grid size-9 shrink-0 place-items-center rounded-full border-2 text-sm font-semibold tabular-nums", status === "new" && "text-muted-foreground")}
-                          style={{ borderColor: statusMeta[status].ring, backgroundColor: status === "mastered" ? statusMeta[status].ring : undefined, color: status === "mastered" ? "white" : undefined }}
-                        >
-                          {status === "mastered" ? "✓" : i + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium group-hover:text-primary">{e.title}</div>
-                          <div className="truncate text-xs text-muted-foreground">
-                            {p && p.itemsSeen > 0 ? `${statusMeta[status].label} · ${Math.round(p.effectiveMastery * 100)}%` : <Md md={e.summary} inline />}
-                          </div>
-                        </div>
-                        <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                      </Link>
+                        {(locked) => (
+                          <>
+                            {locked ? (
+                              <span className="grid size-9 shrink-0 place-items-center rounded-full border-2 border-dashed border-muted-foreground/40">
+                                <Lock className="size-4" />
+                              </span>
+                            ) : (
+                              <span
+                                className={cn("grid size-9 shrink-0 place-items-center rounded-full border-2 text-sm font-semibold tabular-nums", status === "new" && "text-muted-foreground")}
+                                style={{ borderColor: statusMeta[status].ring, backgroundColor: status === "mastered" ? statusMeta[status].ring : undefined, color: status === "mastered" ? "white" : undefined }}
+                              >
+                                {status === "mastered" ? "✓" : i + 1}
+                              </span>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className={cn("truncate font-medium", !locked && "group-hover:text-primary")}>{e.title}</div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {locked ? (
+                                  <>Complete {access.lockedBy(e.id)?.title} to unlock</>
+                                ) : p && p.itemsSeen > 0 ? (
+                                  `${statusMeta[status].label} · ${Math.round(p.effectiveMastery * 100)}%`
+                                ) : (
+                                  <Md md={e.summary} inline />
+                                )}
+                              </div>
+                            </div>
+                            {!locked && <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />}
+                          </>
+                        )}
+                      </LessonLink>
                     );
                   })}
                 </div>

@@ -1,3 +1,4 @@
+import { LEARNING_MODES } from "@fmc/curriculum";
 import { Effect, ParseResult, Schema } from "effect";
 import { ValidationError } from "../domain/errors";
 
@@ -28,7 +29,8 @@ export const RegisterBody = Schema.Struct({ email: Email, password: Password, di
 export const LoginBody = Schema.Struct({ email: Email, password: Schema.String.pipe(Schema.maxLength(128)) });
 export const ProfileBody = Schema.Struct({ displayName: DisplayName });
 export const PreferencesBody = Schema.Struct({
-  dailyGoal: Schema.Int.pipe(Schema.between(1, 100, { message: () => "Pick a daily goal between 1 and 100 problems." })),
+  dailyGoal: Schema.optional(Schema.Int.pipe(Schema.between(1, 100, { message: () => "Pick a daily goal between 1 and 100 problems." }))),
+  learningMode: Schema.optional(Schema.Literal(...LEARNING_MODES)),
 });
 export const ChangePasswordBody = Schema.Struct({
   currentPassword: Schema.optional(Schema.String.pipe(Schema.maxLength(128))),

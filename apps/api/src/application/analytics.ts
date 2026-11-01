@@ -1,4 +1,4 @@
-import { getGraph } from "@fmc/curriculum";
+import { getGraph, type LearningMode } from "@fmc/curriculum";
 import { Effect } from "effect";
 import { NotFound } from "../domain/errors";
 import { round } from "../utils/math";
@@ -32,9 +32,9 @@ export const streaks = (activeDays: string[], today = new Date()) => {
   return { current, longest, activeToday: days.has(isoDay(today)) };
 };
 
-export const dashboard = (userId: string, courseId: string) =>
+export const dashboard = (userId: string, courseId: string, mode: LearningMode) =>
   Effect.gen(function* () {
-    const queues = yield* learnerQueues(userId, courseId);
+    const queues = yield* learnerQueues(userId, courseId, mode);
     const analyticsRepo = yield* AnalyticsRepository;
     const rows = yield* Effect.flatMap(ProgressRepository, (r) => r.listForCourse(userId, courseId));
     const activeDays = yield* analyticsRepo.activeDays(userId);
@@ -56,7 +56,7 @@ export const dashboard = (userId: string, courseId: string) =>
     };
   });
 
-export const analytics = (userId: string, courseId: string) =>
+export const analytics = (userId: string, courseId: string, mode: LearningMode) =>
   Effect.gen(function* () {
     const graph = getGraph(courseId);
     if (!graph) return yield* Effect.fail(new NotFound({ resource: "course", id: courseId }));
@@ -118,6 +118,6 @@ export const analytics = (userId: string, courseId: string) =>
         masteryBefore: round(s.mastery_before),
         masteryAfter: s.mastery_after === null ? null : round(s.mastery_after),
       })),
-      queues: yield* learnerQueues(userId, courseId),
+      queues: yield* learnerQueues(userId, courseId, mode),
     };
   });

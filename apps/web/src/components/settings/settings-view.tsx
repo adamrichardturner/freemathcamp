@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/app/user-menu";
+import { LearningModeSwitch } from "@/components/course/learning-mode";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ export function SettingsView() {
             <EmailCard user={data.user} />
           </Section>
           <Section id="learning" title="Learning">
+            <CourseModeCard user={data.user} />
             <DailyGoalCard user={data.user} />
             <AppearanceCard />
           </Section>
@@ -191,6 +193,18 @@ function EmailCard({ user }: { user: User }) {
 }
 
 /* ---------------- Learning ---------------- */
+
+function CourseModeCard({ user }: { user: User }) {
+  return (
+    <SettingsCard
+      id="course-mode"
+      title="Course mode"
+      description="Choose whether lessons unlock one at a time or are all open. You'll be asked to confirm before it changes."
+    >
+      <LearningModeSwitch mode={user.learningMode} variant="cards" />
+    </SettingsCard>
+  );
+}
 
 const GOALS = [5, 10, 15, 20, 30, 50];
 

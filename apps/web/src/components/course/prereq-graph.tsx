@@ -5,13 +5,14 @@ import "@xyflow/react/dist/style.css";
 import { ancestors } from "@fmc/curriculum";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
+import { Lock } from "lucide-react";
 import { useMemo, useState } from "react";
 import { statusMeta } from "@/components/app/status";
 import type { ExerciseStatus } from "@/lib/api";
 import { graph, lessonHref } from "@/lib/course";
 import { cn } from "@/lib/utils";
 
-type LessonNode = Node<{ title: string; unit: string; status: ExerciseStatus; mastery: number; dim: boolean; focus: boolean }, "lesson">;
+type LessonNode = Node<{ title: string; unit: string; status: ExerciseStatus; mastery: number; dim: boolean; focus: boolean; locked: boolean }, "lesson">;
 
 function LessonNodeView({ data }: NodeProps<LessonNode>) {
   const m = statusMeta[data.status];
@@ -19,14 +20,17 @@ function LessonNodeView({ data }: NodeProps<LessonNode>) {
     <div
       className={cn(
         "w-[190px] cursor-pointer rounded-xl border-2 bg-card px-3 py-2 shadow-sm transition-all",
+        data.locked && "cursor-not-allowed border-dashed bg-muted text-muted-foreground shadow-none grayscale",
         data.dim && "opacity-25",
         data.focus && "ring-4 ring-primary/30",
       )}
       style={{ borderColor: data.status === "new" ? "var(--border)" : m.ring }}
     >
       <Handle type="target" position={Position.Top} className="!size-1.5 !border-0 !bg-muted-foreground/40" />
-      <div className="truncate text-[10px] text-muted-foreground">{data.unit}</div>
-      <div className="text-[13px] leading-tight font-semibold">{data.title}</div>
+      <div className="flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+        {data.locked && <Lock className="size-2.5 shrink-0" />} {data.unit}
+      </div>
+      <div className={cn("text-[13px] leading-tight font-semibold", data.locked && "opacity-70")}>{data.title}</div>
       <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
         <div className="h-full rounded-full" style={{ width: `${data.mastery * 100}%`, backgroundColor: m.ring }} />
       </div>
@@ -58,7 +62,15 @@ const layout = () => {
   return pos;
 };
 
-export function PrereqGraph({ statusOf, masteryOf }: { statusOf: (id: string) => ExerciseStatus; masteryOf: (id: string) => number }) {
+export function PrereqGraph({
+  statusOf,
+  masteryOf,
+  isLocked,
+}: {
+  statusOf: (id: string) => ExerciseStatus;
+  masteryOf: (id: string) => number;
+  isLocked: (id: string) => boolean;
+}) {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [hover, setHover] = useState<string | null>(null);
@@ -76,6 +88,7 @@ export function PrereqGraph({ statusOf, masteryOf }: { statusOf: (id: string) =>
       mastery: masteryOf(r.exercise.id),
       dim: !!chain && !chain.has(r.exercise.id),
       focus: hover === r.exercise.id,
+      locked: isLocked(r.exercise.id),
     },
   }));
   const edges: Edge[] = graph.refs.flatMap((r) =>
@@ -107,7 +120,7 @@ export function PrereqGraph({ statusOf, masteryOf }: { statusOf: (id: string) =>
         nodesConnectable={false}
         onNodeMouseEnter={(_, n) => setHover(n.id)}
         onNodeMouseLeave={() => setHover(null)}
-        onNodeClick={(_, n) => router.push(lessonHref(n.id))}
+        onNodeClick={(_, n) => !isLocked(n.id) && router.push(lessonHref(n.id))}
         proOptions={{ hideAttribution: true }}
       >
         <Background gap={22} size={1} />

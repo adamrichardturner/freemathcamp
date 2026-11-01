@@ -1,11 +1,12 @@
 "use client";
 
-import { BadgeCheck, ChartLine, Flame, GraduationCap, LayoutDashboard, LogOut, Settings, Target } from "lucide-react";
+import { BadgeCheck, ChartLine, Compass, Flame, GraduationCap, LayoutDashboard, LogOut, Settings, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { openOnboarding } from "./onboarding";
 import { useDashboard, useLogout, useSession } from "@/hooks/queries";
 import type { User } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -75,6 +76,9 @@ export function UserMenu({ user }: { user: User }) {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push("/settings")}>
             <Settings /> Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={openOnboarding}>
+            <Compass /> Take the tour
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="my-0" />

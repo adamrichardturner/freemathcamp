@@ -77,8 +77,17 @@ export const UserRepositoryLive = repo(UserRepository, (run) => ({
         return user;
       }),
     ),
-  updateDailyGoal: (id, dailyGoal) =>
-    run((db) => db.updateTable("users").set({ daily_goal: dailyGoal }).where("id", "=", id).returningAll().executeTakeFirstOrThrow()),
+  updatePreferences: (id, { dailyGoal, learningMode }) =>
+    run((db) =>
+      db
+        .updateTable("users")
+        .set({ ...(dailyGoal !== undefined && { daily_goal: dailyGoal }), ...(learningMode && { learning_mode: learningMode }) })
+        .where("id", "=", id)
+        .returningAll()
+        .executeTakeFirstOrThrow(),
+    ),
+  markOnboarded: (id) =>
+    run((db) => db.updateTable("users").set({ onboarded_at: new Date() }).where("id", "=", id).returningAll().executeTakeFirstOrThrow()),
   updatePasswordHash: (id, passwordHash) =>
     run((db) => db.updateTable("users").set({ password_hash: passwordHash }).where("id", "=", id).returningAll().executeTakeFirstOrThrow()),
   delete: (id) => run((db) => db.deleteFrom("users").where("id", "=", id).execute()).pipe(Effect.asVoid),
@@ -169,7 +178,7 @@ export const AccountRepositoryLive = repo(AccountRepository, (run) => ({
   exportData: (userId) =>
     run(async (db) => {
       const [account, linkedAccounts, progress, sessions, results, attempts, events] = await Promise.all([
-        db.selectFrom("users").select(["id", "email", "display_name", "avatar_url", "email_verified_at", "daily_goal", "created_at", "last_active_at"]).where("id", "=", userId).executeTakeFirst(),
+        db.selectFrom("users").select(["id", "email", "display_name", "avatar_url", "email_verified_at", "daily_goal", "learning_mode", "onboarded_at", "created_at", "last_active_at"]).where("id", "=", userId).executeTakeFirst(),
         db.selectFrom("oauth_accounts").select(["provider", "email", "created_at"]).where("user_id", "=", userId).execute(),
         db.selectFrom("exercise_progress").selectAll().where("user_id", "=", userId).execute(),
         db.selectFrom("practice_sessions").selectAll().where("user_id", "=", userId).orderBy("started_at").execute(),

@@ -1,7 +1,7 @@
-import { getExercise, getGraph } from "@fmc/curriculum";
+import { getExercise, getGraph, unlockedLessons, unlockedBy, type LearningMode } from "@fmc/curriculum";
 import { Effect } from "effect";
 import { buildQueues, effectiveMastery, MASTERED_THRESHOLD, MIN_ITEMS_FOR_STRUGGLE, STRUGGLING_THRESHOLD, type ProgressSnapshot } from "../domain/engine";
-import { NotFound } from "../domain/errors";
+import { LessonLocked, NotFound } from "../domain/errors";
 import type { ExerciseProgress } from "../infrastructure/db/schema";
 import { round } from "../utils/math";
 import { AnalyticsRepository, PracticeRepository, ProgressRepository } from "./ports";
@@ -50,11 +50,30 @@ export const progressView = (p: ExerciseProgress, now = new Date()) => {
   };
 };
 
-export const learnerQueues = (userId: string, courseId: string) =>
+const openLessons = (graph: NonNullable<ReturnType<typeof getGraph>>, mode: LearningMode, rows: readonly ExerciseProgress[]) => {
+  const byId = new Map(rows.map((r) => [r.exercise_id, { itemsSeen: r.items_seen, sessionsCompleted: r.sessions_completed }]));
+  return unlockedLessons(graph, mode, (id) => byId.get(id));
+};
+
+export const learnerQueues = (userId: string, courseId: string, mode: LearningMode) =>
   Effect.gen(function* () {
     const graph = yield* findGraph(courseId);
     const rows = yield* Effect.flatMap(ProgressRepository, (r) => r.listForCourse(userId, courseId));
-    return buildQueues(graph, new Map(rows.map((r) => [r.exercise_id, toSnapshot(r)])), new Date());
+    const open = openLessons(graph, mode, rows);
+    return buildQueues(graph, new Map(rows.map((r) => [r.exercise_id, toSnapshot(r)])), new Date(), undefined, (id) => open.has(id));
+  });
+
+/** Fails with LessonLocked when path mode hasn't reached this lesson yet. */
+export const assertLessonOpen = (userId: string, courseId: string, exerciseId: string, mode: LearningMode) =>
+  Effect.gen(function* () {
+    if (mode === "audit") return;
+    const graph = yield* findGraph(courseId);
+    const rows = yield* Effect.flatMap(ProgressRepository, (r) => r.listForCourse(userId, courseId));
+    if (openLessons(graph, mode, rows).has(exerciseId)) return;
+    const before = unlockedBy(graph, exerciseId);
+    return yield* Effect.fail(
+      new LessonLocked({ message: `Complete "${before?.exercise.title ?? "the previous lesson"}" to unlock this lesson, or switch to Audit mode in Settings.` }),
+    );
   });
 
 export const courseProgress = (userId: string, courseId: string) =>

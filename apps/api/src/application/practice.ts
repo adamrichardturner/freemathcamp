@@ -1,4 +1,4 @@
-import { checkAnswer, formatAnswer, generateProblem, getExercise, type ExerciseRef } from "@fmc/curriculum";
+import { checkAnswer, formatAnswer, generateProblem, getExercise, type ExerciseRef, type LearningMode } from "@fmc/curriculum";
 import { Effect } from "effect";
 import {
   addDays,
@@ -19,7 +19,7 @@ import { Conflict, NotFound } from "../domain/errors";
 import type { PracticeItem, PracticeSession } from "../infrastructure/db/schema";
 import { newSeed } from "../infrastructure/security/tokens";
 import { mean, round } from "../utils/math";
-import { learnerQueues } from "./learning";
+import { assertLessonOpen, learnerQueues } from "./learning";
 import { PracticeRepository, ProgressRepository } from "./ports";
 
 const MAX_TIME_MS = 30 * 60_000;
@@ -41,9 +41,10 @@ const loadActive = (userId: string, sessionId: string, index: number) =>
     return { session, item: items[index]!, ref };
   });
 
-export const startPractice = (userId: string, courseId: string, exerciseId: string, mode: PracticeMode) =>
+export const startPractice = (userId: string, courseId: string, exerciseId: string, mode: PracticeMode, learningMode: LearningMode) =>
   Effect.gen(function* () {
     const ref = yield* findExercise(courseId, exerciseId);
+    yield* assertLessonOpen(userId, courseId, exerciseId, learningMode);
     const progressRepo = yield* ProgressRepository;
     const practice = yield* PracticeRepository;
     const progress = yield* progressRepo.ensure(userId, courseId, exerciseId);
@@ -172,7 +173,7 @@ export const revealAnswer = (userId: string, sessionId: string, input: { index: 
     return { answer: formatAnswer(problem.answer, problem.choices), ...resolution };
   });
 
-export const completePractice = (userId: string, sessionId: string) =>
+export const completePractice = (userId: string, sessionId: string, learningMode: LearningMode) =>
   Effect.gen(function* () {
     const practice = yield* PracticeRepository;
     const progressRepo = yield* ProgressRepository;
@@ -201,7 +202,7 @@ export const completePractice = (userId: string, sessionId: string) =>
     });
     yield* practice.completeSession(sessionId, progress.mastery);
 
-    const queues = yield* learnerQueues(userId, session.course_id);
+    const queues = yield* learnerQueues(userId, session.course_id, learningMode);
     const struggledOn = meanStruggle >= 0.45;
     return {
       sessionId,

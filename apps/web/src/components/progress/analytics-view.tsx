@@ -2,7 +2,6 @@
 
 import { Activity, Brain, Clock, Eye, Flame, Lightbulb, Target, TrendingUp } from "lucide-react";
 import { motion } from "motion/react";
-import Link from "next/link";
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ComposedChart, Line, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, XAxis, YAxis, Area } from "recharts";
 import { ButtonLink } from "@/components/app/button-link";
@@ -11,9 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VerifyEmailCard } from "@/components/app/verify-email-card";
+import { LessonLink } from "@/components/course/lesson-link";
 import { useAnalytics, useSession } from "@/hooks/queries";
 import type { Analytics } from "@/lib/api";
-import { lessonHref } from "@/lib/course";
 import { duration, pct, relative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -123,7 +122,7 @@ export function AnalyticsView() {
               const delta = (s.masteryAfter ?? s.masteryBefore) - s.masteryBefore;
               return (
                 <li key={s.id}>
-                  <Link href={lessonHref(s.exerciseId)} className="flex items-center gap-3 py-2.5 text-sm hover:text-primary">
+                  <LessonLink id={s.exerciseId} className="flex items-center gap-3 border-0 py-2.5 text-sm" openClassName="hover:text-primary" lockedClassName="bg-transparent">
                     <span className="w-20 shrink-0 rounded-full bg-muted px-2 py-0.5 text-center text-xs font-medium capitalize">{s.mode}</span>
                     <span className="min-w-0 flex-1 truncate font-medium">{s.title}</span>
                     <span className={cn("text-xs font-semibold tabular-nums", delta >= 0 ? "text-success" : "text-danger")}>
@@ -131,7 +130,7 @@ export function AnalyticsView() {
                       {Math.round(delta * 100)}%
                     </span>
                     <span className="hidden w-24 text-right text-xs text-muted-foreground sm:block">{s.completedAt ? relative(s.completedAt) : ""}</span>
-                  </Link>
+                  </LessonLink>
                 </li>
               );
             })}
@@ -287,13 +286,13 @@ function LessonList({ title, icon: Icon, items, metric, empty, warn }: { title: 
           <ul className="space-y-1">
             {items.map((v) => (
               <li key={v.exerciseId}>
-                <Link href={`${lessonHref(v.exerciseId)}${warn ? "?mode=challenge" : ""}`} className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-muted">
+                <LessonLink id={v.exerciseId} query={warn ? "mode=challenge" : undefined} className="flex items-center gap-3 rounded-lg border-0 px-2 py-1.5 text-sm" openClassName="hover:bg-muted">
                   <MasteryRing value={v.effectiveMastery} size={28} stroke={3} color={statusMeta[v.status].ring}>
                     {""}
                   </MasteryRing>
                   <span className="min-w-0 flex-1 truncate font-medium">{v.title}</span>
                   <span className="text-xs text-muted-foreground tabular-nums">{metric(v)}</span>
-                </Link>
+                </LessonLink>
               </li>
             ))}
           </ul>

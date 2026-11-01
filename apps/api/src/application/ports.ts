@@ -1,3 +1,4 @@
+import type { LearningMode } from "@fmc/curriculum";
 import { Context, type Effect } from "effect";
 import type { Conflict, DatabaseError, EmailDeliveryError } from "../domain/errors";
 import type { AccountEventKind, ExerciseProgress, ExerciseProgressUpdate, ItemResult, PracticeItem, PracticeSession, User } from "../infrastructure/db/schema";
@@ -19,7 +20,8 @@ export interface UserRepositoryShape {
   /** Links a provider identity to a user (creating the user if needed) atomically. */
   upsertOAuthUser(input: { provider: "google"; providerUserId: string; email: string; displayName: string; avatarUrl: string | null }): Db<User>;
   markEmailVerified(id: string): Db<User>;
-  updateDailyGoal(id: string, dailyGoal: number): Db<User>;
+  updatePreferences(id: string, prefs: { dailyGoal?: number | undefined; learningMode?: LearningMode | undefined }): Db<User>;
+  markOnboarded(id: string): Db<User>;
   updatePasswordHash(id: string, passwordHash: string): Db<User>;
   /** Deletes the user; every owned row cascades with it. */
   delete(id: string): Db<void>;

@@ -5,6 +5,7 @@ import {
   accountSettings,
   changeDisplayName,
   changePassword,
+  completeOnboarding,
   deleteAccount,
   exportAccountData,
   resetCourseProgress,
@@ -53,6 +54,8 @@ export const accountRoutes = (runtime: AppRuntime, opts: { secure: boolean }) =>
       }),
     ),
   );
+
+  router.post("/onboarding/complete", h((req) => Effect.flatMap(currentUser(req), (u) => completeOnboarding(u).pipe(Effect.map((user) => ({ user }))))));
 
   router.post(
     "/password",

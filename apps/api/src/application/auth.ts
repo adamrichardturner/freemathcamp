@@ -1,3 +1,4 @@
+import type { LearningMode } from "@fmc/curriculum";
 import { Effect } from "effect";
 import { AppConfig } from "../config/config";
 import { Unauthorized } from "../domain/errors";
@@ -17,6 +18,8 @@ export interface PublicUser {
   hasPassword: boolean;
   emailVerified: boolean;
   dailyGoal: number;
+  learningMode: LearningMode;
+  onboarded: boolean;
   createdAt: string;
 }
 
@@ -28,6 +31,8 @@ export const toPublicUser = (u: User): PublicUser => ({
   hasPassword: u.password_hash !== null,
   emailVerified: u.email_verified_at !== null,
   dailyGoal: u.daily_goal,
+  learningMode: u.learning_mode,
+  onboarded: u.onboarded_at !== null,
   createdAt: u.created_at.toISOString(),
 });
 

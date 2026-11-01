@@ -10,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VerifyEmailCard } from "@/components/app/verify-email-card";
+import { LessonLink } from "@/components/course/lesson-link";
 import { useCourseProgress, useDashboard, useSession } from "@/hooks/queries";
 import type { QueueKind, Recommendation } from "@/lib/api";
-import { course, exerciseRef, lessonHref } from "@/lib/course";
+import { course, exerciseRef } from "@/lib/course";
 import { greeting } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -189,12 +190,15 @@ function PlanCard({ rec, index, featured }: { rec: Recommendation; index: number
   const m = queueMeta[rec.kind];
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.07 }}>
-      <Link
-        href={`${lessonHref(rec.exerciseId)}?mode=${m.mode}`}
+      <LessonLink
+        id={rec.exerciseId}
+        query={`mode=${m.mode}`}
         className={cn(
-          "group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5",
+          "group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card p-5 transition-all",
           featured && "border-primary/30 bg-gradient-to-br from-primary/[0.09] via-card to-card",
         )}
+        openClassName="hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
+        lockedClassName="bg-none"
       >
         <div className="flex items-start justify-between gap-2">
           <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", m.className)}>
@@ -216,7 +220,7 @@ function PlanCard({ rec, index, featured }: { rec: Recommendation; index: number
             {featured ? "Start here" : "Start"} <ArrowRight className="size-3.5" />
           </span>
         </div>
-      </Link>
+      </LessonLink>
     </motion.div>
   );
 }
@@ -237,7 +241,7 @@ function QueueList({ items, kind }: { items: Recommendation[]; kind: QueueKind }
         const ref = exerciseRef(r.exerciseId)!;
         return (
           <li key={r.exerciseId}>
-            <Link href={`${lessonHref(r.exerciseId)}?mode=${m.mode}`} className="group flex items-center gap-3 py-3">
+            <LessonLink id={r.exerciseId} query={`mode=${m.mode}`} className="group flex items-center gap-3 border-0 py-3" lockedClassName="bg-transparent">
               {kind === "next" ? (
                 <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10">
                   <UnitIcon name={ref.unit.icon} className="size-4 text-primary" />
@@ -250,7 +254,7 @@ function QueueList({ items, kind }: { items: Recommendation[]; kind: QueueKind }
                 <div className="truncate text-xs text-muted-foreground">{r.reason}</div>
               </div>
               <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
-            </Link>
+            </LessonLink>
           </li>
         );
       })}

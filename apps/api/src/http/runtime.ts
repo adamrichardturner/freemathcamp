@@ -25,6 +25,7 @@ const STATUS: Record<AppError["_tag"], number> = {
   Conflict: 409,
   RateLimited: 429,
   EmailNotVerified: 403,
+  LessonLocked: 403,
   EmailDeliveryError: 502,
   DatabaseError: 500,
 };
@@ -36,6 +37,7 @@ const publicMessage = (e: AppError) => {
     case "Conflict":
     case "RateLimited":
     case "EmailNotVerified":
+    case "LessonLocked":
       return e.message;
     case "NotFound":
       return `That ${e.resource} doesn't exist.`;

@@ -2,9 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { unlockedBy, unlockedLessons } from "@fmc/curriculum";
+import { useMemo, useSyncExternalStore } from "react";
 import { api, type AccountSettings, type Analytics, type CourseProgress, type Dashboard, type ExerciseDetail, type User } from "@/lib/api";
-import { COURSE_ID } from "@/lib/course";
+import { COURSE_ID, graph } from "@/lib/course";
 
 export const keys = {
   me: ["me"] as const,
@@ -32,6 +33,31 @@ export const useSession = () => {
   const user = hydrated ? (me.data ?? null) : null;
   // Learner data (progress, practice) is only available once the email is confirmed.
   return { user, ready: hydrated && !me.isPending, verified: !!user?.emailVerified };
+};
+
+/**
+ * Which lessons the learner can open. Path mode opens them in order; audit mode
+ * (and signed-out browsing) opens everything. Until progress loads nothing is
+ * shown as locked, so links never flash a lock that isn't real.
+ */
+export const useLessonAccess = () => {
+  const { user, verified } = useSession();
+  const { data } = useCourseProgress(verified);
+  const mode = user?.learningMode ?? "path";
+  const open = useMemo(() => {
+    if (!verified || !data || mode === "audit") return null;
+    const byId = new Map(data.exercises.map((e) => [e.exerciseId, e]));
+    return unlockedLessons(graph, mode, (id) => byId.get(id));
+  }, [verified, data, mode]);
+  return {
+    mode,
+    /** Whether the switch between modes can be shown (it needs a verified account to save). */
+    canChooseMode: verified,
+    /** False while a signed-in learner's progress is still loading, i.e. locks aren't known yet. */
+    known: !verified || !!data,
+    isLocked: (id: string) => !!open && !open.has(id),
+    lockedBy: (id: string) => unlockedBy(graph, id)?.exercise,
+  };
 };
 
 export const useAccountSettings = () => useQuery({ queryKey: keys.settings, queryFn: () => api.get<AccountSettings>("/me/settings") });

@@ -3,6 +3,7 @@ import { createRng } from "./core/rng";
 import type { Course, ExerciseRef, Level, Problem } from "./core/types";
 import { foundations } from "./courses/foundations";
 
+export * from "./core/access";
 export * from "./core/answers";
 export * from "./core/graph";
 export * from "./core/rng";

@@ -1,3 +1,4 @@
+import type { LearningMode } from "@fmc/curriculum";
 import type { ColumnType, Generated, Insertable, Selectable, Updateable } from "kysely";
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
@@ -11,11 +12,13 @@ export interface UsersTable {
   avatar_url: string | null;
   email_verified_at: Timestamp | null;
   daily_goal: Generated<number>;
+  learning_mode: Generated<LearningMode>;
+  onboarded_at: Timestamp | null;
   created_at: Generated<Date>;
   last_active_at: Timestamp | null;
 }
 
-export type AccountEventKind = "name_changed" | "password_changed" | "progress_reset" | "sessions_revoked";
+export type AccountEventKind = "name_changed" | "password_changed" | "progress_reset" | "sessions_revoked" | "mode_changed";
 
 export interface AccountEventsTable {
   id: Generated<string>;

@@ -81,6 +81,24 @@ describe.skipIf(!enabled)("API", () => {
     expect((await agent.get("/api/courses/foundations/dashboard")).status).toBe(200);
   });
 
+  it("locks lessons in path mode until the one before is complete", async () => {
+    expect((await agent.get("/api/auth/me")).body.user).toMatchObject({ learningMode: "path", onboarded: false });
+    const locked = await post("/api/practice", { courseId: "foundations", exerciseId: "add-subtract" });
+    expect(locked.status).toBe(403);
+    expect(locked.body.error.code).toBe("LessonLocked");
+    const dash = await agent.get("/api/courses/foundations/dashboard");
+    expect(dash.body.queues.next.map((r: { exerciseId: string }) => r.exerciseId)).toEqual(["place-value"]);
+    expect((await post("/api/practice", { courseId: "foundations", exerciseId: "place-value" })).status).toBe(201);
+  });
+
+  it("opens every lesson in audit mode", async () => {
+    const res = await agent.patch("/api/me/preferences").set("Origin", ORIGIN).send({ learningMode: "audit" });
+    expect(res.body.user.learningMode).toBe("audit");
+    expect((await agent.patch("/api/me/preferences").set("Origin", ORIGIN).send({ learningMode: "sideways" })).status).toBe(400);
+    const dash = await agent.get("/api/courses/foundations/dashboard");
+    expect(dash.body.queues.next.length).toBeGreaterThan(1);
+  });
+
   it("runs an adaptive practice session end to end and updates progress", async () => {
     const ref = getExercise("foundations", "add-subtract")!;
     const start = await post("/api/practice", { courseId: "foundations", exerciseId: "add-subtract" });
@@ -122,6 +140,9 @@ describe.skipIf(!enabled)("API", () => {
   it("serves dashboard queues and analytics", async () => {
     const dash = await agent.get("/api/courses/foundations/dashboard");
     expect(dash.status).toBe(200);
+    // Back in path mode, a lesson already started stays open.
+    await agent.patch("/api/me/preferences").set("Origin", ORIGIN).send({ learningMode: "path" });
+    expect((await post("/api/practice", { courseId: "foundations", exerciseId: "add-subtract" })).status).toBe(201);
     expect(dash.body.queues.plan.length).toBeGreaterThan(0);
     expect(dash.body.stats.streak.current).toBe(1);
     const stats = await agent.get("/api/courses/foundations/analytics");

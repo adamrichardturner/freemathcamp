@@ -4,6 +4,7 @@ import { Router } from "express";
 import { analytics, dashboard } from "../../application/analytics";
 import { courseProgress, exerciseDetail, markLessonViewed } from "../../application/learning";
 import { completePractice, revealAnswer, startPractice, submitAttempt } from "../../application/practice";
+import type { User } from "../../infrastructure/db/schema";
 import { currentUser, requireUser, requireVerified } from "../middleware/auth";
 import { handle, type AppRuntime } from "../runtime";
 import { AttemptBody, CourseParams, decode, ExerciseParams, RevealBody, SessionParams, StartPracticeBody } from "../validation";
@@ -16,8 +17,8 @@ export const learningRoutes = (runtime: AppRuntime) => {
 
   router.use(requireUser, requireVerified);
 
-  const withUser = <A, E, R>(req: Parameters<Parameters<typeof h>[0]>[0], f: (userId: string) => Effect.Effect<A, E, R>) =>
-    Effect.flatMap(currentUser(req), (u) => f(u.id));
+  const withUser = <A, E, R>(req: Parameters<Parameters<typeof h>[0]>[0], f: (userId: string, user: User) => Effect.Effect<A, E, R>) =>
+    Effect.flatMap(currentUser(req), (u) => f(u.id, u));
 
   router.get(
     "/courses/:courseId/progress",
@@ -25,11 +26,11 @@ export const learningRoutes = (runtime: AppRuntime) => {
   );
   router.get(
     "/courses/:courseId/dashboard",
-    h((req) => Effect.flatMap(decode(CourseParams, req.params), (p) => withUser(req, (uid) => dashboard(uid, p.courseId)))),
+    h((req) => Effect.flatMap(decode(CourseParams, req.params), (p) => withUser(req, (uid, u) => dashboard(uid, p.courseId, u.learning_mode)))),
   );
   router.get(
     "/courses/:courseId/analytics",
-    h((req) => Effect.flatMap(decode(CourseParams, req.params), (p) => withUser(req, (uid) => analytics(uid, p.courseId)))),
+    h((req) => Effect.flatMap(decode(CourseParams, req.params), (p) => withUser(req, (uid, u) => analytics(uid, p.courseId, u.learning_mode)))),
   );
   router.get(
     "/courses/:courseId/exercises/:exerciseId",
@@ -45,7 +46,7 @@ export const learningRoutes = (runtime: AppRuntime) => {
     h((req, res) =>
       Effect.gen(function* () {
         const body = yield* decode(StartPracticeBody, req.body);
-        const result = yield* withUser(req, (uid) => startPractice(uid, body.courseId, body.exerciseId, body.mode));
+        const result = yield* withUser(req, (uid, u) => startPractice(uid, body.courseId, body.exerciseId, body.mode, u.learning_mode));
         res.status(201);
         return result;
       }),
@@ -73,7 +74,7 @@ export const learningRoutes = (runtime: AppRuntime) => {
   );
   router.post(
     "/practice/:sessionId/complete",
-    h((req) => Effect.flatMap(decode(SessionParams, req.params), ({ sessionId }) => withUser(req, (uid) => completePractice(uid, sessionId)))),
+    h((req) => Effect.flatMap(decode(SessionParams, req.params), ({ sessionId }) => withUser(req, (uid, u) => completePractice(uid, sessionId, u.learning_mode)))),
   );
 
   return router;

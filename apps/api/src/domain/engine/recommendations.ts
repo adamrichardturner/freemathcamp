@@ -38,7 +38,8 @@ export interface Queues {
 
 const DAY = 86_400_000;
 
-export const buildQueues = (graph: CourseGraph, progress: Map<string, ProgressSnapshot>, now: Date, limit = 8): Queues => {
+/** `isOpen` hides lessons the learner can't start yet (path mode), so new material is only suggested once unlocked. */
+export const buildQueues = (graph: CourseGraph, progress: Map<string, ProgressSnapshot>, now: Date, limit = 8, isOpen: (id: string) => boolean = () => true): Queues => {
   const titleOf = (id: string) => graph.byId.get(id)?.exercise.title ?? id;
   const eff = (p: ProgressSnapshot | undefined) => {
     if (!p || p.itemsSeen === 0) return 0;
@@ -59,6 +60,7 @@ export const buildQueues = (graph: CourseGraph, progress: Map<string, ProgressSn
     const started = !!p && p.itemsSeen > 0;
 
     if (!started) {
+      if (!isOpen(id)) continue;
       const prereqs = ref.exercise.prerequisites;
       const readiness = prereqs.length === 0 ? 1 : mean(prereqs.map((pre) => eff(progress.get(pre))));
       const unlock = unlockWeight(graph, id) / maxUnlock;

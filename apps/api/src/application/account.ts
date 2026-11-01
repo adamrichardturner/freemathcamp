@@ -1,3 +1,4 @@
+import type { LearningMode } from "@fmc/curriculum";
 import { Effect } from "effect";
 import { RateLimited, Unauthorized, ValidationError } from "../domain/errors";
 import type { User } from "../infrastructure/db/schema";
@@ -45,8 +46,17 @@ export const changeDisplayName = (user: User, displayName: string) =>
     return toPublicUser(updated);
   });
 
-export const updatePreferences = (user: User, prefs: { dailyGoal: number }) =>
-  Effect.flatMap(UserRepository, (u) => u.updateDailyGoal(user.id, prefs.dailyGoal)).pipe(Effect.map(toPublicUser));
+export const updatePreferences = (user: User, prefs: { dailyGoal?: number | undefined; learningMode?: LearningMode | undefined }) =>
+  Effect.gen(function* () {
+    if (prefs.dailyGoal === undefined && prefs.learningMode === undefined) return toPublicUser(user);
+    const updated = yield* Effect.flatMap(UserRepository, (u) => u.updatePreferences(user.id, prefs));
+    if (prefs.learningMode && prefs.learningMode !== user.learning_mode) yield* Effect.flatMap(AccountRepository, (a) => a.recordEvent(user.id, "mode_changed"));
+    return toPublicUser(updated);
+  });
+
+/** Marks the welcome tour as seen (finished or skipped) so it isn't shown again. */
+export const completeOnboarding = (user: User) =>
+  user.onboarded_at ? Effect.succeed(toPublicUser(user)) : Effect.flatMap(UserRepository, (u) => u.markOnboarded(user.id)).pipe(Effect.map(toPublicUser));
 
 /** Changes (or, for Google-only accounts, sets) the password and signs out other devices. */
 export const changePassword = (user: User, sessionToken: string, input: { currentPassword?: string | undefined; newPassword: string }) =>

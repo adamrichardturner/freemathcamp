@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, BookOpen, ChevronRight, Clock, Dumbbell, Dices, Lock, Repeat, Sparkles, Waypoints } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, ChevronRight, Clock, Dumbbell, Dices, Lock, LockKeyhole, Repeat, Sparkles, Waypoints } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,11 +16,13 @@ import { PracticeSession } from "@/components/practice/practice-session";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { keys, useCourseProgress, useExerciseDetail, useSession } from "@/hooks/queries";
+import { keys, useCourseProgress, useExerciseDetail, useLessonAccess, useSession } from "@/hooks/queries";
 import { api, type ExerciseStatus, type PracticeMode } from "@/lib/api";
 import { COURSE_ID, exerciseRef, graph, lessonHref } from "@/lib/course";
 import { pct, relative } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LearningModeSwitch } from "./learning-mode";
+import { LessonLink } from "./lesson-link";
 
 export function ExerciseView({ exerciseId }: { exerciseId: string }) {
   const ref = exerciseRef(exerciseId)!;
@@ -31,6 +33,8 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
   const { user, ready, verified } = useSession();
   const { data: detail } = useExerciseDetail(exerciseId, verified);
   const { data: courseProgress } = useCourseProgress(verified);
+  const access = useLessonAccess();
+  const locked = access.isLocked(exerciseId);
   const requestedMode = params.get("mode") as PracticeMode | null;
   const [tab, setTab] = useState(requestedMode ? "practice" : "lesson");
   // Arriving from a recommendation (?mode=…) drops straight into practice.
@@ -44,11 +48,11 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
   const markedRef = useRef(false);
   const { mutate: markViewed } = viewed;
   useEffect(() => {
-    if (verified && !markedRef.current) {
+    if (verified && access.known && !locked && !markedRef.current) {
       markedRef.current = true;
       markViewed();
     }
-  }, [verified, markViewed]);
+  }, [verified, access.known, locked, markViewed]);
 
   const progress = detail?.progress;
   const prev = graph.refs[ref.order - 1];
@@ -101,6 +105,9 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
         )}
       </header>
 
+      {locked ? (
+        <LockedLesson exerciseId={exerciseId} />
+      ) : (
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
         <Tabs value={tab} onValueChange={(v) => setTab(v as string)} className="min-w-0">
           <TabsList className="mb-4">
@@ -194,22 +201,64 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
           {detail && detail.timeline.length > 1 && <MasteryTimeline points={detail.timeline} />}
         </aside>
       </div>
+      )}
 
       <div className="flex items-center justify-between gap-3 border-t pt-6">
-        {prev ? (
-          <ButtonLink href={lessonHref(prev.exercise.id)} variant="ghost" className="max-w-[45%]">
-            <ArrowLeft /> <span className="truncate">{prev.exercise.title}</span>
-          </ButtonLink>
-        ) : (
-          <span />
-        )}
-        {next && (
-          <ButtonLink href={lessonHref(next.exercise.id)} variant="ghost" className="max-w-[45%]">
-            <span className="truncate">{next.exercise.title}</span> <ArrowRight />
-          </ButtonLink>
-        )}
+        {prev ? <SiblingLink id={prev.exercise.id} direction="prev" /> : <span />}
+        {next && <SiblingLink id={next.exercise.id} direction="next" />}
       </div>
     </div>
+  );
+}
+
+/** Previous / next lesson button; a locked neighbour renders as a disabled button with a padlock. */
+function SiblingLink({ id, direction }: { id: string; direction: "prev" | "next" }) {
+  const { isLocked } = useLessonAccess();
+  const title = exerciseRef(id)?.exercise.title;
+  if (isLocked(id))
+    return (
+      <Button variant="ghost" disabled className="max-w-[45%]" title="Complete this lesson to unlock the next one">
+        <span className="truncate">{title}</span> <Lock />
+      </Button>
+    );
+  return (
+    <ButtonLink href={lessonHref(id)} variant="ghost" className="max-w-[45%]">
+      {direction === "prev" && <ArrowLeft />} <span className="truncate">{title}</span> {direction === "next" && <ArrowRight />}
+    </ButtonLink>
+  );
+}
+
+function LockedLesson({ exerciseId }: { exerciseId: string }) {
+  const { lockedBy, mode } = useLessonAccess();
+  const before = lockedBy(exerciseId);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative overflow-hidden rounded-3xl border border-dashed bg-muted/30 px-6 py-12 text-center sm:py-16"
+    >
+      <div className="pointer-events-none absolute inset-0 bg-dots opacity-50" />
+      <div className="relative mx-auto flex max-w-md flex-col items-center gap-4">
+        <span className="grid size-16 place-items-center rounded-2xl border bg-card text-muted-foreground shadow-sm">
+          <LockKeyhole className="size-8" />
+        </span>
+        <div>
+          <h2 className="text-2xl font-semibold">This lesson is locked</h2>
+          <p className="mt-1 text-muted-foreground">
+            You&apos;re in Path mode, so lessons open in order. Finish a practice session on <span className="font-medium text-foreground">{before?.title}</span> to unlock it.
+          </p>
+        </div>
+        {before && (
+          <ButtonLink href={lessonHref(before.id)} size="lg" className="h-11 px-6">
+            Go to {before.title} <ArrowRight />
+          </ButtonLink>
+        )}
+        <div className="mt-2 flex flex-col items-center gap-2 border-t pt-5">
+          <p className="text-xs text-muted-foreground">Prefer to explore freely? Audit mode opens every lesson.</p>
+          <LearningModeSwitch mode={mode} />
+        </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -222,9 +271,9 @@ function PrereqNudge({ ids }: { ids: string[] }) {
         {ids.map((id, i) => (
           <span key={id}>
             {i > 0 && (i === ids.length - 1 ? " and " : ", ")}
-            <Link href={lessonHref(id)} className="font-medium text-info underline-offset-2 hover:underline">
+            <LessonLink id={id} className="font-medium text-info underline-offset-2" openClassName="hover:underline" lockedClassName="border-0 bg-transparent hover:bg-transparent">
               {exerciseRef(id)?.exercise.title}
-            </Link>
+            </LessonLink>
           </span>
         ))}
         . Feel free to dive in anyway.
@@ -242,11 +291,15 @@ function LinkList({ ids, statusOf }: { ids: string[]; statusOf: (id: string) => 
         const status = statusOf(id) ?? "new";
         return (
           <li key={id}>
-            <Link href={lessonHref(id)} className="group flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm hover:bg-muted">
-              <StatusDot status={status} />
-              <span className="min-w-0 flex-1 truncate group-hover:text-primary">{r.exercise.title}</span>
-              <ChevronRight className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-            </Link>
+            <LessonLink id={id} className="group flex items-center gap-2.5 rounded-lg border border-transparent px-2 py-1.5 text-sm" openClassName="hover:bg-muted">
+              {(locked) => (
+                <>
+                  {locked ? <Lock className="size-3 shrink-0" /> : <StatusDot status={status} />}
+                  <span className={cn("min-w-0 flex-1 truncate", !locked && "group-hover:text-primary")}>{r.exercise.title}</span>
+                  {!locked && <ChevronRight className="size-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />}
+                </>
+              )}
+            </LessonLink>
           </li>
         );
       })}

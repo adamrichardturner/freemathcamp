@@ -7,7 +7,8 @@ export class NotFound extends Data.TaggedError("NotFound")<{ resource: string; i
 export class Conflict extends Data.TaggedError("Conflict")<{ message: string }> {}
 export class RateLimited extends Data.TaggedError("RateLimited")<{ message: string }> {}
 export class EmailNotVerified extends Data.TaggedError("EmailNotVerified")<{ message: string }> {}
+export class LessonLocked extends Data.TaggedError("LessonLocked")<{ message: string }> {}
 export class EmailDeliveryError extends Data.TaggedError("EmailDeliveryError")<{ cause: unknown }> {}
 export class DatabaseError extends Data.TaggedError("DatabaseError")<{ cause: unknown }> {}
 
-export type AppError = ValidationError | Unauthorized | NotFound | Conflict | RateLimited | EmailNotVerified | EmailDeliveryError | DatabaseError;
+export type AppError = ValidationError | Unauthorized | NotFound | Conflict | RateLimited | EmailNotVerified | LessonLocked | EmailDeliveryError | DatabaseError;

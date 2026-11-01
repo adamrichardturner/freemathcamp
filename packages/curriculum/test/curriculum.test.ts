@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkAnswer, courses, createRng, evaluate, generateProblem, getGraph, type Answer, type Level } from "../src";
+import { checkAnswer, courses, createRng, evaluate, generateProblem, getGraph, unlockedLessons, type Answer, type Level } from "../src";
 
 /** The text a perfect learner would type for an answer. */
 const idealInput = (a: Answer): string => {
@@ -87,5 +87,23 @@ describe.each(courses)("course $id", (course) => {
 
   it("rng is stable", () => {
     expect(createRng(42).next()).toBe(createRng(42).next());
+  });
+});
+
+describe("lesson access", () => {
+  const graph = getGraph("foundations")!;
+  const [first, second, third] = graph.refs.map((r) => r.exercise.id);
+  const done = { itemsSeen: 6, sessionsCompleted: 1 };
+
+  it("opens lessons in order in path mode", () => {
+    expect([...unlockedLessons(graph, "path", () => undefined)]).toEqual([first]);
+    const open = unlockedLessons(graph, "path", (id) => (id === first ? done : undefined));
+    expect(open.has(second!)).toBe(true);
+    expect(open.has(third!)).toBe(false);
+  });
+
+  it("keeps started lessons open and opens everything in audit mode", () => {
+    expect(unlockedLessons(graph, "path", (id) => (id === third ? { itemsSeen: 2, sessionsCompleted: 0 } : undefined)).has(third!)).toBe(true);
+    expect(unlockedLessons(graph, "audit", () => undefined).size).toBe(graph.refs.length);
   });
 });

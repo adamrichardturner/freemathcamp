@@ -49,6 +49,8 @@ describe.skipIf(!enabled)("account settings", () => {
     const { send } = await signUp();
     expect((await send("patch", "/api/me/preferences", { dailyGoal: 0 })).status).toBe(400);
     expect((await send("patch", "/api/me/preferences", { dailyGoal: 20 })).body.user.dailyGoal).toBe(20);
+    const onboarded = await send("post", "/api/me/onboarding/complete");
+    expect(onboarded.body.user.onboarded).toBe(true);
   });
 
   it("changes the password, requiring the current one, and signs out other devices", async () => {

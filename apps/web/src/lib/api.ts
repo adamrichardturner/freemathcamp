@@ -1,5 +1,7 @@
 /** Typed client for the FreeMathCamp API (proxied same-origin under /api). */
 
+import type { LearningMode } from "@fmc/curriculum";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -44,6 +46,8 @@ export interface User {
   hasPassword: boolean;
   emailVerified: boolean;
   dailyGoal: number;
+  learningMode: LearningMode;
+  onboarded: boolean;
   createdAt: string;
 }
 
