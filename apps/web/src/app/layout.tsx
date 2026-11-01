@@ -37,6 +37,14 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
   },
+  // Google Search only indexes raster favicons. icon.svg stays for the web manifest.
+  icons: {
+    icon: [
+      { url: "/favicon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48 192x192", type: "image/x-icon" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   formatDetection: { telephone: false, address: false, email: false },
   other: { "llms-txt": "/llms.txt" },
 };
