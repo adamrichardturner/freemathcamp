@@ -104,6 +104,9 @@ export default function PrivacyPage() {
         <p>Practice is generated for you. For each session we store the course, the lesson, the mode (learn, review or challenge), the problem seeds and difficulty, when it started and finished, and the mastery estimate before and after.</p>
         <p>For each problem we store your answer, whether it was right, how long it took, how many attempts were wrong, whether you used a hint or revealed the solution, a struggle score, and the mastery estimate after that problem. Across a lesson we store mastery, struggle, items seen, clean solves, review timing, and when you last opened the lesson.</p>
         <p>
+          While you are signed in, the site measures time on the site. Time counts only while the page is open in front of you and you have used the mouse, keyboard, touch or scroll in the last two minutes. For each visit we store when it started, when it was last active, and the active time. A new visit starts after 30 minutes away. It is shown to you on your dashboard and progress page, and to the FreeMathCamp team in the admin panel, as time per day, week and month.
+        </p>
+        <p>
           The progress page is calculated from that record: what you have practised, where you struggle, and what to do next. The daily plan, the difficulty steps, and the review dates are teaching tools. They are not a profile we sell, and they are not used to decide anything outside the course. We do not publish your answers, and we do not offer them as training data.
         </p>
         <LegalSubhead>Notifications</LegalSubhead>
@@ -170,6 +173,9 @@ export default function PrivacyPage() {
           </li>
           <li>
             <span className="text-foreground">theme</span> in the browser’s local storage. Light, dark, or match the system. It stays on the device. We do not receive it as a field on your account.
+          </li>
+          <li>
+            <span className="text-foreground">fmc-visit</span> in local storage, while you are signed in. A random id for the current visit, your account id, and when you were last active, so tabs open at the same time count as one visit. It never leaves the device except as that visit id.
           </li>
           <li>
             <span className="text-foreground">fmc:flash</span> in session storage. A one-line message after a full-page redirect, such as account deletion. It is read once and removed.

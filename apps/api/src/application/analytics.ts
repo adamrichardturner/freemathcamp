@@ -4,6 +4,7 @@ import { NotFound } from "../domain/errors";
 import { round } from "../utils/math";
 import { learnerQueues, progressView, statusOf } from "./learning";
 import { AnalyticsRepository, PracticeRepository, ProgressRepository } from "./ports";
+import { learnerTime, weekTime } from "./visits";
 
 const DAY = 86_400_000;
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
@@ -52,6 +53,7 @@ export const dashboard = (userId: string, courseId: string, mode: LearningMode) 
         exercisesMastered: rows.filter((r) => statusOf(r) === "mastered").length,
         problemsSolved: rows.reduce((a, r) => a + r.items_seen, 0),
         reviewsDue: queues.review.length,
+        time: yield* weekTime(userId),
       },
     };
   });
@@ -119,5 +121,6 @@ export const analytics = (userId: string, courseId: string, mode: LearningMode) 
         masteryAfter: s.mastery_after === null ? null : round(s.mastery_after),
       })),
       queues: yield* learnerQueues(userId, courseId, mode),
+      time: yield* learnerTime(userId),
     };
   });

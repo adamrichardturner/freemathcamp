@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { ActivityTracker } from "@/components/app/activity-tracker";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ApiError } from "@/lib/api";
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: ReactNode }) {
           {children}
           <Toaster richColors position="top-center" />
           <FlashToast />
+          <ActivityTracker />
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>

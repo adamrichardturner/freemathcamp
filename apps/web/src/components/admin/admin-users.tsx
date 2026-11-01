@@ -15,7 +15,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, ApiError, type AdminUser, type AdminUserDetail, type AdminUserPage } from "@/lib/api";
 import { COURSE_ID } from "@/lib/course";
-import { duration, pct, relative } from "@/lib/format";
+import { duration, minutes, pct, relative } from "@/lib/format";
+import { TimeChart, UnitToggle, useTimeUnit } from "@/components/app/time-chart";
 import { cn } from "@/lib/utils";
 import { adminKeys } from "./admin-view";
 
@@ -79,13 +80,14 @@ export function AdminUsers() {
           </div>
         ) : (
           <div className={cn("overflow-x-auto transition-opacity", isPlaceholderData && "opacity-60")}>
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead className="text-left text-xs text-muted-foreground">
                 <tr className="border-b">
                   <th className="py-2 pr-3 pl-4 font-medium">Learner</th>
                   <th className="px-3 py-2 font-medium">Sign-in</th>
                   <th className="px-3 py-2 text-right font-medium">Problems</th>
                   <th className="px-3 py-2 text-right font-medium">Mastered</th>
+                  <th className="px-3 py-2 text-right font-medium">Time on site</th>
                   <th className="px-3 py-2 font-medium">Joined</th>
                   <th className="py-2 pr-4 pl-3 font-medium">Last active</th>
                 </tr>
@@ -116,13 +118,14 @@ export function AdminUsers() {
                     <td className="px-3 text-xs text-muted-foreground">{signInLabel[u.signIn]}</td>
                     <td className="px-3 text-right tabular-nums">{u.problems.toLocaleString()}</td>
                     <td className="px-3 text-right tabular-nums">{u.mastered}</td>
+                    <td className="px-3 text-right whitespace-nowrap tabular-nums">{minutes(u.timeMs / 60_000)}</td>
                     <td className="px-3 text-xs whitespace-nowrap text-muted-foreground">{date(u.createdAt)}</td>
                     <td className="pr-4 pl-3 text-xs whitespace-nowrap text-muted-foreground">{u.lastActiveAt ? relative(u.lastActiveAt) : "Never"}</td>
                   </tr>
                 ))}
                 {data.users.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="py-8 text-center text-muted-foreground">
                       No accounts match &ldquo;{q}&rdquo;.
                     </td>
                   </tr>
@@ -218,6 +221,8 @@ function UserDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
           ))}
         </dl>
 
+        <UserTime time={data.time} />
+
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">Recent sessions</h3>
           {data.sessions.length === 0 ? (
@@ -241,6 +246,72 @@ function UserDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
         <DangerActions user={user} onDeleted={onDeleted} />
       </div>
     </>
+  );
+}
+
+const visitTime = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+
+/** A learner's time on site by day, week or month, with the periods listed and their latest visits. */
+function UserTime({ time }: { time: AdminUserDetail["time"] }) {
+  const [unit, setUnit] = useTimeUnit("day");
+  const t = time.totals;
+  const series = unit === "day" ? time.daily : unit === "week" ? time.weekly : time.monthly;
+  const periods = series.filter((p) => p.minutes > 0).reverse();
+  const name = (p: string) =>
+    new Date(`${p}T00:00:00Z`).toLocaleDateString("en-GB", unit === "month" ? { month: "long", year: "numeric", timeZone: "UTC" } : { weekday: unit === "day" ? "short" : undefined, day: "numeric", month: "short", timeZone: "UTC" });
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">Time on site</h3>
+        <UnitToggle unit={unit} onChange={setUnit} />
+      </div>
+      <div className="grid grid-cols-4 gap-2 text-center">
+        <Mini label="Today" value={minutes(t.todayMinutes)} />
+        <Mini label="7 days" value={minutes(t.last7Minutes)} />
+        <Mini label="30 days" value={minutes(t.last30Minutes)} />
+        <Mini label="All time" value={minutes(t.minutes)} />
+      </div>
+      <TimeChart series={time} unit={unit} className="h-44" />
+      {periods.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No time on the site recorded yet.</p>
+      ) : (
+        <div className="max-h-48 overflow-y-auto rounded-lg border">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-card text-left text-xs text-muted-foreground">
+              <tr className="border-b">
+                <th className="px-3 py-1.5 font-medium">{unit === "day" ? "Day" : unit === "week" ? "Week of" : "Month"}</th>
+                <th className="px-3 py-1.5 text-right font-medium">Visits</th>
+                <th className="px-3 py-1.5 text-right font-medium">Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {periods.map((p) => (
+                <tr key={p.period} className="border-b last:border-0">
+                  <td className="px-3 py-1.5">{name(p.period)}</td>
+                  <td className="px-3 py-1.5 text-right tabular-nums">{p.visits}</td>
+                  <td className="px-3 py-1.5 text-right font-medium tabular-nums">{minutes(p.minutes)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {time.recentVisits.length > 0 && (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-xs text-muted-foreground">
+            Latest {time.recentVisits.length} visits · average {minutes(t.avgVisitMinutes)}
+          </summary>
+          <ul className="mt-2 divide-y rounded-lg border">
+            {time.recentVisits.map((v) => (
+              <li key={v.id} className="flex justify-between px-3 py-1.5">
+                <span className="text-muted-foreground">{visitTime(v.startedAt)}</span>
+                <span className="font-medium tabular-nums">{minutes(v.minutes)}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
   );
 }
 

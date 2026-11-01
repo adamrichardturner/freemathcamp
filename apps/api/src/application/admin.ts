@@ -13,6 +13,7 @@ import { notifySafely } from "./notifications";
 import { AccountRepository, AdminRepository, AnalyticsRepository, PracticeRepository, ProgressRepository, UserRepository, type AdminUserRow } from "./ports";
 import { progressView } from "./learning";
 import { streaks } from "./analytics";
+import { learnerTime, siteTime } from "./visits";
 
 /*
  * The admin panel. Routes are guarded by requireAdmin before any of these run,
@@ -36,6 +37,7 @@ const userView = (u: AdminUserRow) => ({
   lastActiveAt: u.lastActiveAt?.toISOString() ?? null,
   problems: u.problems,
   mastered: u.mastered,
+  timeMs: u.timeMs,
   isAdmin: u.emailVerified && u.email.toLowerCase() === ADMIN_EMAIL,
 });
 
@@ -93,6 +95,7 @@ export const adminOverview = (courseId: string) =>
         const l = rows.leagues.find((x) => x.tier === tier);
         return { tier: name, users: l?.users ?? 0, optedIn: l?.optedIn ?? 0 };
       }),
+      time: yield* siteTime,
     };
   });
 
@@ -142,6 +145,7 @@ export const adminUserDetail = (id: string, courseId: string) =>
         progressResets: events.length,
       },
       daily: daily.map((d) => ({ day: d.day, problems: d.problems })),
+      time: yield* learnerTime(id),
       sessions: sessions.map((s) => ({
         id: s.id,
         exerciseId: s.exercise_id,

@@ -8,6 +8,18 @@ export const duration = (ms: number) => {
   return `${Math.floor(m / 60)}h ${m % 60}m`;
 };
 
+/** Minutes on the site, e.g. "45 min" or "3h 20m". */
+export const minutes = (m: number) => {
+  if (m < 1) return m > 0 ? "<1 min" : "0 min";
+  if (m < 60) return `${Math.round(m)} min`;
+  const h = Math.floor(m / 60);
+  const rest = Math.round(m % 60);
+  return rest ? `${h}h ${rest}m` : `${h}h`;
+};
+
+/** Compact minutes for tight spaces, e.g. "12m" or "1.5h". */
+export const shortMinutes = (m: number) => (m < 60 ? `${Math.round(m)}m` : `${Math.round(m / 6) / 10}h`);
+
 const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
 export const relative = (iso: string, now = Date.now()) => {

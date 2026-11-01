@@ -123,7 +123,36 @@ export interface Dashboard {
     exercisesMastered: number;
     problemsSolved: number;
     reviewsDue: number;
+    time: { todayMinutes: number; weekMinutes: number; week: { day: string; minutes: number }[] };
   };
+}
+
+/** Minutes active on the site in one period; `period` is its first day (weeks start on Monday). */
+export interface TimePeriod {
+  period: string;
+  minutes: number;
+  visits: number;
+  users: number;
+}
+
+export interface TimeSeries {
+  daily: TimePeriod[];
+  weekly: TimePeriod[];
+  monthly: TimePeriod[];
+}
+
+export interface TimeTotals {
+  minutes: number;
+  visits: number;
+  avgVisitMinutes: number;
+  todayMinutes: number;
+  last7Minutes: number;
+  last30Minutes: number;
+}
+
+export interface LearnerTime extends TimeSeries {
+  totals: TimeTotals;
+  recentVisits: { id: string; startedAt: string; lastSeenAt: string; minutes: number }[];
 }
 
 export interface Analytics {
@@ -147,6 +176,7 @@ export interface Analytics {
   weakest: (ProgressView & { title: string })[];
   recentSessions: { id: string; exerciseId: string; title: string; mode: string; completedAt: string | null; masteryBefore: number; masteryAfter: number | null }[];
   queues: Queues;
+  time: LearnerTime;
 }
 
 export interface ExerciseDetail {
@@ -296,6 +326,7 @@ export interface AdminOverview {
   lessons: { exerciseId: string; title: string; unit: string; learners: number; problems: number; accuracy: number | null; mastered: number }[];
   progress: { label: string; users: number }[];
   leagues: { tier: string; users: number; optedIn: number }[];
+  time: TimeSeries & { totals: TimeTotals & { learners: number; learners30: number; avgPerLearner30Minutes: number } };
 }
 
 export interface AdminUser {
@@ -311,6 +342,8 @@ export interface AdminUser {
   lastActiveAt: string | null;
   problems: number;
   mastered: number;
+  /** Active time on the site, all time. */
+  timeMs: number;
   isAdmin: boolean;
 }
 
@@ -332,5 +365,6 @@ export interface AdminUserDetail {
     progressResets: number;
   };
   daily: { day: string; problems: number }[];
+  time: LearnerTime;
   sessions: { id: string; exerciseId: string; title: string; mode: string; completedAt: string | null; masteryBefore: number; masteryAfter: number | null }[];
 }

@@ -35,5 +35,6 @@ export const DatabaseLive = Layer.scoped(
 export const query = <A>(run: (db: Kysely<DB>) => Promise<A>) =>
   Effect.flatMap(Database, (db) => Effect.tryPromise({ try: () => run(db), catch: (cause) => new DatabaseError({ cause }) }));
 
+/** Unordered so independent migrations from parallel branches can ship in either order. */
 export const createMigrator = (db: Kysely<DB>) =>
-  new Migrator({ db, provider: { getMigrations: async () => migrations } });
+  new Migrator({ db, provider: { getMigrations: async () => migrations }, allowUnorderedMigrations: true });

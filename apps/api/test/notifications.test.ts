@@ -70,7 +70,7 @@ describe.skipIf(!enabled)("notifications", () => {
     expect((await login(CHROME, "203.0.113.7")).status).toBe(200);
     const flagged = await signIns();
     expect(flagged).toHaveLength(1);
-    expect(flagged[0]!.body).toContain("Firefox on Linux (203.0.113.7)");
+    expect(flagged[0]!.body).toContain("Firefox on Linux (IP address 203.0.113.7)");
 
     await drain(deliverPendingEmail as Effect.Effect<number, unknown, never>);
     const mail = outbox.filter((m) => m.to === email);

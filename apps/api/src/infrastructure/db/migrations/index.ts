@@ -7,6 +7,7 @@ import * as m0005 from "./0005_learning_mode";
 import * as m0006 from "./0006_notifications";
 import * as m0007 from "./0007_last_login_ip";
 import * as m0008 from "./0008_usernames_and_leagues";
+import * as m0010 from "./0010_site_visits";
 
 /** Static registry so migrations survive bundling. Append new ones in order. */
 export const migrations: Record<string, Migration> = {
@@ -18,4 +19,5 @@ export const migrations: Record<string, Migration> = {
   "0006_notifications": m0006,
   "0007_last_login_ip": m0007,
   "0008_usernames_and_leagues": m0008,
+  "0010_site_visits": m0010,
 };

@@ -1,13 +1,14 @@
 "use client";
 
-import { ArrowDownUp } from "lucide-react";
+import { ArrowDownUp, Hourglass } from "lucide-react";
 import { useState } from "react";
 import { Area, Bar, BarChart, CartesianGrid, ComposedChart, Line, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Input } from "@/components/ui/input";
+import { TimeChart, UNIT_WINDOW, UnitToggle, useTimeUnit, type TimeUnit } from "@/components/app/time-chart";
 import type { AdminOverview } from "@/lib/api";
-import { pct } from "@/lib/format";
+import { minutes, pct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const shortDay = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
@@ -165,6 +166,50 @@ export function AdminCharts({ overview }: { overview: AdminOverview }) {
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+const PERIOD_NAME: Record<TimeUnit, string> = { day: "day", week: "week", month: "month" };
+
+/** Everyone's active time on the site, per day, week or month. */
+export function AdminTime({ time }: { time: AdminOverview["time"] }) {
+  const [unit, setUnit] = useTimeUnit("day");
+  const t = time.totals;
+  const series = unit === "day" ? time.daily : unit === "week" ? time.weekly : time.monthly;
+  const current = series.at(-1);
+  const active = series.filter((p) => p.minutes > 0);
+  const average = active.length ? active.reduce((a, p) => a + p.minutes, 0) / active.length : 0;
+  const facts: [string, string][] = [
+    [`This ${PERIOD_NAME[unit]}`, minutes(current?.minutes ?? 0)],
+    [`Average per ${PERIOD_NAME[unit]}`, minutes(average)],
+    ["Per learner, 30 days", minutes(t.avgPerLearner30Minutes)],
+    ["Average visit", minutes(t.avgVisitMinutes)],
+  ];
+  return (
+    <Card>
+      <CardHeader className="sm:grid-cols-[1fr_auto]">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <Hourglass className="size-4 text-chart-2" /> Time on site
+          </CardTitle>
+          <CardDescription>
+            {minutes(t.minutes)} across {t.visits.toLocaleString()} visits by {t.learners.toLocaleString()} {t.learners === 1 ? "learner" : "learners"} · {UNIT_WINDOW[unit]} shown
+          </CardDescription>
+        </div>
+        <UnitToggle unit={unit} onChange={setUnit} />
+      </CardHeader>
+      <CardContent className="grid gap-6 lg:grid-cols-[1fr_220px]">
+        <TimeChart series={time} unit={unit} perLearner className="h-64" />
+        <dl className="grid grid-cols-2 content-start gap-2 lg:grid-cols-1">
+          {facts.map(([k, v]) => (
+            <div key={k} className="rounded-lg bg-muted/60 px-3 py-2">
+              <dd className="text-lg font-semibold tabular-nums">{v}</dd>
+              <dt className="text-[11px] text-muted-foreground">{k}</dt>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+    </Card>
   );
 }
 
