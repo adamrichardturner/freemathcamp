@@ -302,7 +302,7 @@ export function MobileMenu() {
         if (id) afterScrollUnlock(() => scrollToSection(id));
       }}
     >
-      <SheetTrigger className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative size-11 shrink-0 md:hidden")} aria-label="Open menu">
+      <SheetTrigger className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "relative size-11 shrink-0 nav:hidden")} aria-label="Open menu">
         <Menu className="size-5" />
         {signedIn && <UnseenDot />}
       </SheetTrigger>

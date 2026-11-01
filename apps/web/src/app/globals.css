@@ -8,6 +8,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Where the header swaps the mobile menu for the full nav (877px and up). */
+  --breakpoint-nav: 54.8125rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
