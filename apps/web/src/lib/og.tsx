@@ -1,4 +1,5 @@
-import { getExercise } from "@fmc/curriculum";
+import { categoryById, getExercise } from "@fmc/curriculum";
+import { articleBySlug } from "@fmc/curriculum/articles";
 import type { Metadata } from "next";
 import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
@@ -112,6 +113,25 @@ export async function lessonImage(courseId: string, exerciseId: string) {
           )}
           <div style={{ display: "flex", fontFamily: "Instrument Serif", fontSize: title.length > 28 ? 80 : 100, lineHeight: 1.02, letterSpacing: -1.5 }}>{title}</div>
           {ref && <div style={{ display: "flex", fontSize: 32, color: "#cfcbe6", maxWidth: 1000 }}>{plainText(ref.exercise.summary).replace(/≤/g, "<=").replace(/≥/g, ">=").replace(/≠/g, "!=")}</div>}
+        </div>
+      </OgFrame>
+    ),
+    { ...OG_SIZE, fonts: await ogFonts(), headers: IMAGE_HEADERS },
+  );
+}
+
+export async function articleImage(slug: string) {
+  const a = articleBySlug(slug);
+  const logo = await logoDataUri();
+  // The share-image font covers Latin-1; titles with superscripts or Greek fall back to the concept's plain name.
+  const title = a ? (/[^\u0000-\u00ff\u2013\u2014\u2019]/.test(a.title) ? a.name : a.title) : "Free Math Camp";
+  const category = a ? categoryById(a.category).title : "";
+  return new ImageResponse(
+    (
+      <OgFrame logo={logo} footer="Free maths explainer · visual examples · practice">
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {a && <div style={{ display: "flex", fontSize: 26, letterSpacing: 3, textTransform: "uppercase", color: "#a99cff" }}>Articles · {category}</div>}
+          <div style={{ display: "flex", fontFamily: "Instrument Serif", fontSize: title.length > 60 ? 64 : title.length > 36 ? 76 : 96, lineHeight: 1.04, letterSpacing: -1.5 }}>{title}</div>
         </div>
       </OgFrame>
     ),

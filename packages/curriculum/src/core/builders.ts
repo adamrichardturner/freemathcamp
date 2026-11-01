@@ -21,6 +21,7 @@ export const decimalAnswer = (value: number, dp = 2): Answer =>
 
 /* Lesson block shorthands keep the content files readable. */
 export const text = (md: Md): Block => ({ kind: "text", md });
+export const heading = (text: string): Block => ({ kind: "heading", text });
 export const math = (tex: string, caption?: Md): Block => ({ kind: "math", tex, ...(caption ? { caption } : {}) });
 export const key = (md: Md, title = "Key idea"): Block => ({ kind: "callout", tone: "key", title, md });
 export const tip = (md: Md, title = "Tip"): Block => ({ kind: "callout", tone: "tip", title, md });

@@ -79,6 +79,15 @@ Lessons are read on the page. They are not videos.
 - Answers can be typed as fractions, decimals, roots, `pi`, `e`, `ln(…)` or `log(…)`, and multiple solutions as a comma-separated list.
 - Hints, and the option to reveal a solution when you are stuck.
 
+## Articles
+
+[freemathcamp.app/articles](https://freemathcamp.app/articles) holds 67 longer explainers, one question per article, grouped into 12 categories that follow the course. They use the same blocks as the lessons (visuals, explorers and step-through examples), plus animated derivations, Pascal's triangle and a secant-to-tangent explorer.
+
+- The first mention of each concept in a lesson links to its article. Hovering shows a preview card with a short definition and summary, and an icon opens the article in a new tab.
+- Each lesson has a scrolling Suggested reading list: the articles written for it, then every concept its copy mentions.
+- Articles live in `packages/curriculum/src/articles`, behind their own entry point (`@fmc/curriculum/articles`) so lesson pages never ship article text. Each one lists the terms that link to it, the lessons it supports and related reading; a test checks every link, term and lesson id.
+- Pages carry Article, FAQ and breadcrumb structured data, a share image each, and appear in the sitemap and `llms.txt`.
+
 ## Progress, account and settings
 
 The progress page fills in once practice begins: an activity heatmap, first-try accuracy, time spent, hints and reveals, mastery by unit, a difficulty breakdown, and a view of strengths and weak spots.

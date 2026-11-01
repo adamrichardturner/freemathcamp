@@ -1,6 +1,6 @@
 "use client";
 
-import { ChartLine, LayoutDashboard, Map as MapIcon } from "lucide-react";
+import { BookMarked, ChartLine, LayoutDashboard, Map as MapIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ButtonLink } from "@/components/app/button-link";
@@ -16,6 +16,7 @@ export const NAV = [
   { href: "/learn", label: "Dashboard", icon: LayoutDashboard, auth: true },
   { href: "/courses/foundations", label: "Course", icon: MapIcon, auth: false },
   { href: "/progress", label: "Progress", icon: ChartLine, auth: true },
+  { href: "/articles", label: "Articles", icon: BookMarked, auth: false },
 ] as const;
 
 const isActive = (pathname: string, href: string) => pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));

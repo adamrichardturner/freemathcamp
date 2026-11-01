@@ -51,9 +51,11 @@ export function SiteFooter() {
         { href: "/learn", label: "Dashboard" },
         { href: "/courses/foundations", label: "Foundations" },
         { href: "/progress", label: "Progress" },
+        { href: "/articles", label: "Articles" },
       ]
     : [
         { href: "/courses/foundations", label: "Foundations" },
+        { href: "/articles", label: "Articles" },
         { href: "/register", label: "Start free" },
         { href: "/login", label: "Sign in" },
       ];

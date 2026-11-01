@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, BookOpen, ChartLine, CircleHelp, Compass, Cpu, House, LayoutDashboard, Loader2, Lock, LogOut, Map as MapIcon, Menu, Moon, Settings, Sparkles, Sun, X } from "lucide-react";
+import { Bell, BookMarked, BookOpen, ChartLine, CircleHelp, Compass, Cpu, House, LayoutDashboard, Loader2, Lock, LogOut, Map as MapIcon, Menu, Moon, Settings, Sparkles, Sun, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -46,11 +46,13 @@ const unitLinks: MenuLink[] = course.units.map((u) => ({
 
 const homeLink: MenuLink = { href: "/", label: "Home", detail: "What Free Math Camp is", icon: House };
 const courseLink: MenuLink = { href: COURSE_PATH, label: "Foundations", detail: "The course map", icon: BookOpen };
+const articlesLink: MenuLink = { href: "/articles", label: "Articles", detail: "Visual explainers, by topic", icon: BookMarked };
 
 const accountLinks: MenuLink[] = [
   { href: "/learn", label: "Dashboard", detail: "Today's plan and your streak", icon: LayoutDashboard },
   { href: COURSE_PATH, label: "Course", detail: "Every lesson, in order", icon: MapIcon },
   { href: "/progress", label: "Progress", detail: "Mastery, accuracy and weak spots", icon: ChartLine },
+  articlesLink,
   { href: "/notifications", label: "Notifications", detail: "Milestones, reminders and notices", icon: Bell },
   { href: "/settings", label: "Settings", detail: "Profile, goals, sounds and more", icon: Settings },
 ];
@@ -279,7 +281,7 @@ export function MobileMenu() {
   const onCourse = pathname === COURSE_PATH;
   const lessonId = pathname.startsWith(`${COURSE_PATH}/`) ? pathname.slice(COURSE_PATH.length + 1) : null;
   const section = onHome ? { id: "mobile-menu-page", label: "On this page", links: pageLinks } : onCourse ? { id: "mobile-menu-units", label: "Units", links: unitLinks } : null;
-  const explore = signedIn ? accountLinks : onHome ? [courseLink] : [homeLink, courseLink];
+  const explore = signedIn ? accountLinks : onHome ? [courseLink, articlesLink] : [homeLink, courseLink, articlesLink];
 
   return (
     <Sheet

@@ -1,9 +1,10 @@
 "use client";
 
-import type { Block } from "@fmc/curriculum";
+import { linkConceptsInBlocks, type Block } from "@fmc/curriculum";
 import { ChevronRight, Info, Lightbulb, RotateCcw, Sparkles, TriangleAlert } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { AnimatePresence, motion, useInView } from "motion/react";
+import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
+import { useConcepts } from "@/components/articles/concepts";
 import { Md } from "@/components/math/md";
 import { Tex } from "@/components/math/tex";
 import { Button } from "@/components/ui/button";
@@ -58,10 +59,38 @@ function WorkedExample({ block }: { block: Extract<Block, { kind: "example" }> }
   );
 }
 
+/** Anchor id for a heading, shared with the article contents list. */
+export const headingId = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+/**
+ * Visuals animate as they mount. Holding the animation until the visual scrolls into
+ * view means a reader further down a long page still sees it play. The visual keeps
+ * its space while it waits, so nothing shifts.
+ */
+function PlayInView({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "0px 0px -12% 0px" });
+  return (
+    <div ref={ref} className={cn(!inView && "invisible")}>
+      <Fragment key={inView ? "play" : "wait"}>{children}</Fragment>
+    </div>
+  );
+}
+
 export function LessonBlock({ block }: { block: Block }) {
   switch (block.kind) {
     case "text":
       return <Md md={block.md} className="text-[1.02rem] text-foreground/90" />;
+    case "heading":
+      return (
+        <h2 id={headingId(block.text)} className="scroll-mt-24 pt-4 font-display text-3xl leading-tight tracking-tight">
+          {block.text}
+        </h2>
+      );
     case "math":
       return (
         <figure className="rounded-xl border bg-card/60 px-4 py-3">
@@ -94,17 +123,25 @@ export function LessonBlock({ block }: { block: Block }) {
     case "visual":
       return (
         <figure className="space-y-2">
-          <Visual visual={block.visual} />
+          <PlayInView>
+            <Visual visual={block.visual} />
+          </PlayInView>
           {block.caption && <Md md={block.caption} className="text-center text-sm text-muted-foreground" />}
         </figure>
       );
   }
 }
 
-export function Lesson({ blocks }: { blocks: Block[] }) {
+/**
+ * Renders lesson or article blocks. Under a ConceptProvider, the first mention of each
+ * concept that has an article becomes a link with a preview card.
+ */
+export function Lesson({ blocks, exclude }: { blocks: Block[]; exclude?: string }) {
+  const concepts = useConcepts();
+  const linked = useMemo(() => (concepts ? linkConceptsInBlocks(blocks, concepts.index, { exclude }).blocks : blocks), [blocks, concepts, exclude]);
   return (
     <div className="space-y-6">
-      {blocks.map((b, i) => (
+      {linked.map((b, i) => (
         <motion.div key={i} initial={i < 3 ? false : { opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} transition={{ duration: 0.4 }}>
           <LessonBlock block={b} />
         </motion.div>

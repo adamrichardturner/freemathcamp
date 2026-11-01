@@ -8,6 +8,9 @@ export * from "./core/answers";
 export * from "./core/graph";
 export * from "./core/rng";
 export type * from "./core/types";
+export * from "./articles/categories";
+export * from "./articles/link";
+export type * from "./articles/types";
 
 export const courses: Course[] = [foundations];
 

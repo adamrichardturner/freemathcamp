@@ -2,8 +2,10 @@
 
 import type { Visual } from "@fmc/curriculum";
 import { Circle, Coordinates, Line, Mafs, MovablePoint, Plot, Point, Polygon, Text, vec } from "mafs";
-import { useState } from "react";
+import { Play } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Tex } from "@/components/math/tex";
+import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { fmt, LabeledSlider, tone, VisualFrame } from "./shared";
 
@@ -306,6 +308,59 @@ export function SystemExplorer({ lines }: V<"systemExplorer">) {
           </>
         )}
       </p>
+    </VisualFrame>
+  );
+}
+
+export function SecantExplorer({ fn, x: x0, h: h0 = 2, label, viewBox }: V<"secantExplorer">) {
+  const [h, setH] = useState(h0);
+  const frame = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  const y0 = fn(x0), y1 = fn(x0 + h);
+  const slope = (y1 - y0) / h;
+  // A symmetric difference with a tiny step is plenty for the smooth curves used here.
+  const tangent = (fn(x0 + 1e-5) - fn(x0 - 1e-5)) / 2e-5;
+  const shrink = () => {
+    cancelAnimationFrame(frame.current);
+    const from = h0, start = performance.now(), ms = 2600;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / ms);
+      const eased = 1 - (1 - t) ** 3;
+      setH(Math.round((from - (from - 0.05) * eased) * 100) / 100);
+      if (t < 1) frame.current = requestAnimationFrame(tick);
+    };
+    frame.current = requestAnimationFrame(tick);
+  };
+  return (
+    <VisualFrame
+      interactive
+      controls={
+        <>
+          <LabeledSlider label={<Tex tex="h" />} value={h} onChange={setH} min={0.05} max={Math.max(3, h0)} step={0.05} />
+          <div className="flex items-end">
+            <Button variant="secondary" size="sm" onClick={shrink} className="w-full sm:w-auto">
+              <Play /> Shrink h towards 0
+            </Button>
+          </div>
+        </>
+      }
+    >
+      <Mafs height={HEIGHT} viewBox={viewBox ?? { x: [-2, 5], y: [-2, 10] }} preserveAspectRatio={false} zoom={false} pan={false}>
+        <Coordinates.Cartesian subdivisions={false} />
+        <Plot.OfX y={fn} color={P} weight={3} />
+        <Plot.OfX y={(x) => y0 + tangent * (x - x0)} color={MUTED} style="dashed" weight={2} />
+        <Plot.OfX y={(x) => y0 + slope * (x - x0)} color={WARN} weight={2.5} />
+        <Line.Segment point1={[x0, y0]} point2={[x0 + h, y0]} color={ACCENT} weight={2} />
+        <Line.Segment point1={[x0 + h, y0]} point2={[x0 + h, y1]} color={ACCENT} weight={2} />
+        <Point x={x0} y={y0} color={P} />
+        <Point x={x0 + h} y={y1} color={WARN} />
+      </Mafs>
+      <div className="mt-2 flex flex-col items-center gap-1 text-sm">
+        <Tex tex={`\\frac{f(${fmt(x0)} + h) - f(${fmt(x0)})}{h} = \\frac{${fmt(y1 - y0, 3)}}{${fmt(h)}} = ${fmt(slope, 3)}`} />
+        <span className="text-xs text-muted-foreground">
+          {label ? `${label} · ` : ""}secant (orange) slope {fmt(slope, 3)} · tangent (dashed) slope {fmt(tangent, 3)}
+        </span>
+      </div>
     </VisualFrame>
   );
 }
