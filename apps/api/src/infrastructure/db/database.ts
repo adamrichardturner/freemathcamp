@@ -9,6 +9,8 @@ import type { DB } from "./schema";
 
 // int8 (bigint) columns hold millisecond totals well within Number range.
 pg.types.setTypeParser(20, (v) => Number.parseInt(v, 10));
+// Calendar dates (league weeks) stay "YYYY-MM-DD" rather than becoming local-midnight Dates.
+pg.types.setTypeParser(1082, (v) => v);
 
 export const createKysely = (connectionString: string) =>
   new Kysely<DB>({

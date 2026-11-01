@@ -4,6 +4,7 @@ import { createApp } from "./http/app";
 import { makeRuntime, type AppServices } from "./http/runtime";
 import { hostname } from "node:os";
 import { deliverPendingEmail, deliverPendingPush, pruneNotifications, runReminders, withLease } from "./application/jobs";
+import { settleFinishedWeeks } from "./application/leagues";
 import { SessionRepository } from "./application/ports";
 import { createMigrator } from "./infrastructure/db/database";
 import { Database } from "./infrastructure/db/database";
@@ -52,6 +53,8 @@ const main = Effect.gen(function* () {
           every(15_000, deliverPendingEmail),
           // Reminders: one instance at a time; each learner gets at most one nudge a day.
           every(10 * 60_000, withLease("reminders", holder, 9 * 60_000, Effect.suspend(() => runReminders()))),
+          // Leagues: settle last week's cohorts soon after Monday 00:00 UTC (a no-op the rest of the week).
+          every(5 * 60_000, withLease("leagues", holder, 4 * 60_000, settleFinishedWeeks)),
         ]
       : []),
   ];

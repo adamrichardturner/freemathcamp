@@ -1,5 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { handle } from "./helpers";
 import { createApp } from "../src/http/app";
 import { makeRuntime, type AppRuntime } from "../src/http/runtime";
 import { createKysely } from "../src/infrastructure/db/database";
@@ -21,7 +22,7 @@ describe.skipIf(!enabled)("account settings", () => {
   const signUp = async () => {
     const agent = request.agent(app);
     const email = `settings+${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`;
-    const res = await agent.post("/api/auth/register").set("Origin", ORIGIN).send({ email, password: PASSWORD, displayName: "Ada" });
+    const res = await agent.post("/api/auth/register").set("Origin", ORIGIN).send({ email, password: PASSWORD, displayName: "Ada", username: handle() });
     expect(res.status).toBe(201);
     const send = (method: "post" | "patch" | "delete", path: string, body: object = {}) => agent[method](path).set("Origin", ORIGIN).send(body);
     return { agent, email, send };
@@ -36,9 +37,9 @@ describe.skipIf(!enabled)("account settings", () => {
 
   it("limits display name changes to three a day, ignoring no-op saves", async () => {
     const { agent, send } = await signUp();
-    expect((await send("patch", "/api/me/profile", { displayName: "Ada" })).status).toBe(200); // unchanged: not counted
+    expect((await send("patch", "/api/me/profile", { displayName: "Ada", username: handle() })).status).toBe(200); // unchanged: not counted
     for (const name of ["Ada L", "Ada Lovelace", "Countess Ada"]) expect((await send("patch", "/api/me/profile", { displayName: name })).body.user.displayName).toBe(name);
-    const blocked = await send("patch", "/api/me/profile", { displayName: "Augusta" });
+    const blocked = await send("patch", "/api/me/profile", { displayName: "Augusta", username: handle() });
     expect(blocked.status).toBe(429);
     const settings = (await agent.get("/api/me/settings")).body;
     expect(settings.nameChanges.remaining).toBe(0);

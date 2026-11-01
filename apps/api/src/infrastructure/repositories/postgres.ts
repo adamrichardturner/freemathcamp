@@ -2,7 +2,10 @@ import { Effect, Layer } from "effect";
 import { sql, type SelectQueryBuilder } from "kysely";
 import {
   AccountRepository,
+  AdminRepository,
   AnalyticsRepository,
+  LeagueRepository,
+  type LeagueMembership,
   EmailTokenRepository,
   JobLeaseRepository,
   NotificationRepository,
@@ -17,7 +20,9 @@ import {
 } from "../../application/ports";
 import { Conflict, DatabaseError } from "../../domain/errors";
 import { Database } from "../db/database";
-import type { DB } from "../db/schema";
+import type { DB, LeagueMembersTable } from "../db/schema";
+import { COHORT_SIZE } from "../../domain/leagues";
+import type { AdminUserRow } from "../../application/ports";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -29,16 +34,45 @@ const repo = <Tag, S>(tag: import("effect").Context.Tag<Tag, S>, make: (run: <A>
   );
 
 export const UserRepositoryLive = repo(UserRepository, (run) => ({
-  create: ({ email, displayName, passwordHash }) =>
-    run((db) => db.insertInto("users").values({ email, display_name: displayName, password_hash: passwordHash }).returningAll().executeTakeFirstOrThrow()).pipe(
+  create: ({ email, displayName, username, passwordHash }) =>
+    run((db) => db.insertInto("users").values({ email, display_name: displayName, username, password_hash: passwordHash }).returningAll().executeTakeFirstOrThrow()).pipe(
       Effect.catchIf(
         (e) => (e.cause as { code?: string })?.code === UNIQUE_VIOLATION,
-        () => Effect.fail(new Conflict({ message: "An account with that email already exists." })),
+        (e) =>
+          Effect.fail(
+            new Conflict({ message: (e.cause as { constraint?: string })?.constraint?.includes("username") ? "That username is taken." : "An account with that email already exists." }),
+          ),
       ),
     ),
+  setUsername: (id, username) =>
+    run((db) => db.updateTable("users").set({ username }).where("id", "=", id).returningAll().executeTakeFirstOrThrow()).pipe(
+      Effect.catchIf(
+        (e) => (e.cause as { code?: string })?.code === UNIQUE_VIOLATION,
+        () => Effect.fail(new Conflict({ message: "That username is taken." })),
+      ),
+    ),
+  usernameTaken: (username, exceptUserId) =>
+    run((db) => {
+      // citext makes this comparison case-insensitive, matching the unique index.
+      let q = db.selectFrom("users").select("id").where("username", "=", username);
+      if (exceptUserId) q = q.where("id", "!=", exceptUserId);
+      return q.executeTakeFirst();
+    }).pipe(Effect.map((r) => !!r)),
   findByEmail: (email) => run((db) => db.selectFrom("users").selectAll().where("email", "=", email).executeTakeFirst()),
   findById: (id) => run((db) => db.selectFrom("users").selectAll().where("id", "=", id).executeTakeFirst()),
   touch: (id) => run((db) => db.updateTable("users").set({ last_active_at: new Date() }).where("id", "=", id).execute()).pipe(Effect.asVoid),
+  recordLoginIp: (id, ip) =>
+    run((db) =>
+      // The self-join reads the row as it was before this update, so the swap is one statement.
+      db
+        .updateTable("users")
+        .from("users as prev")
+        .set({ last_login_ip: ip })
+        .whereRef("users.id", "=", "prev.id")
+        .where("users.id", "=", id)
+        .returning("prev.last_login_ip as previous")
+        .executeTakeFirst(),
+    ).pipe(Effect.map((r) => r?.previous ?? null)),
   updateDisplayName: (id, displayName) =>
     run((db) => db.updateTable("users").set({ display_name: displayName }).where("id", "=", id).returningAll().executeTakeFirstOrThrow()),
   findByOAuth: (provider, providerUserId) =>
@@ -87,7 +121,7 @@ export const UserRepositoryLive = repo(UserRepository, (run) => ({
     run((db) =>
       db.updateTable("users").set({ notify_email_reminders: false }).where("email_unsubscribe_token", "=", token).returningAll().executeTakeFirst(),
     ),
-  updatePreferences: (id, { dailyGoal, learningMode, timezone, notifyReminders, notifyProgress, notifyEmailReminders }) =>
+  updatePreferences: (id, { dailyGoal, learningMode, timezone, notifyReminders, notifyProgress, notifyEmailReminders, leagueOptIn }) =>
     run((db) =>
       db
         .updateTable("users")
@@ -98,6 +132,7 @@ export const UserRepositoryLive = repo(UserRepository, (run) => ({
           ...(notifyReminders !== undefined && { notify_reminders: notifyReminders }),
           ...(notifyProgress !== undefined && { notify_progress: notifyProgress }),
           ...(notifyEmailReminders !== undefined && { notify_email_reminders: notifyEmailReminders }),
+          ...(leagueOptIn !== undefined && { league_opt_in: leagueOptIn }),
         })
         .where("id", "=", id)
         .returningAll()
@@ -167,17 +202,6 @@ export const SessionRepositoryLive = repo(SessionRepository, (run) => ({
     run((db) => db.deleteFrom("sessions").where("user_id", "=", userId).where("id", "!=", keepId).executeTakeFirst()).pipe(
       Effect.map((r) => Number(r.numDeletedRows)),
     ),
-  hasUserAgent: (userId, userAgent) =>
-    run((db) =>
-      db
-        .selectFrom("sessions")
-        .select("id")
-        .where("user_id", "=", userId)
-        .where("user_agent", "=", userAgent.slice(0, 300))
-        .where("expires_at", ">", new Date())
-        .limit(1)
-        .executeTakeFirst(),
-    ).pipe(Effect.map((r) => !!r)),
 }));
 
 export const AccountRepositoryLive = repo(AccountRepository, (run) => ({
@@ -372,6 +396,7 @@ export const PracticeRepositoryLive = repo(PracticeRepository, (run) => ({
           struggle: r.struggle,
           clean_solve: r.cleanSolve,
           mastery_after: r.masteryAfter,
+          xp: r.xp,
         })
         .onConflict((oc) => oc.doNothing())
         .returning("item_index")
@@ -710,7 +735,284 @@ export const ReminderRepositoryLive = repo(ReminderRepository, (run) => ({
     }),
 }));
 
+
+type Kdb = import("kysely").Kysely<DB>;
+
+const toMembership = (m: import("kysely").Selectable<LeagueMembersTable>): LeagueMembership => ({
+  weekStart: m.week_start,
+  cohortId: m.cohort_id,
+  tier: m.tier,
+  xp: m.xp,
+  result: m.result,
+  finalRank: m.final_rank,
+});
+
+const weekStartDate = (weekStart: string) => new Date(`${weekStart}T00:00:00Z`);
+
+/** Places a learner in the first cohort of their tier with room, or opens a new one. Runs inside a transaction. */
+const joinCohort = async (trx: Kdb, userId: string, weekStart: string): Promise<LeagueMembership | undefined> => {
+  const existing = await trx.selectFrom("league_members").selectAll().where("week_start", "=", weekStart).where("user_id", "=", userId).executeTakeFirst();
+  if (existing) return toMembership(existing);
+  const user = await trx.selectFrom("users").select(["league_opt_in", "username", "league_tier"]).where("id", "=", userId).executeTakeFirst();
+  if (!user?.league_opt_in || !user.username) return undefined;
+  const tier = user.league_tier;
+  // One joiner per tier and week at a time, so a cohort never overfills.
+  await sql`select pg_advisory_xact_lock(hashtext(${`league:${weekStart}:${tier}`}))`.execute(trx);
+  const open = await trx
+    .selectFrom("league_cohorts as c")
+    .select("c.id")
+    .where("c.week_start", "=", weekStart)
+    .where("c.tier", "=", tier)
+    .where("c.finalized_at", "is", null)
+    .where(sql<boolean>`(select count(*) from league_members m where m.cohort_id = c.id) < ${COHORT_SIZE}`)
+    .orderBy("c.created_at")
+    .limit(1)
+    .executeTakeFirst();
+  const cohortId = open?.id ?? (await trx.insertInto("league_cohorts").values({ week_start: weekStart, tier }).returning("id").executeTakeFirstOrThrow()).id;
+  // XP earned earlier in the week counts, so joining mid-week is fair.
+  const earned = await trx
+    .selectFrom("item_results")
+    .select(sql<number>`coalesce(sum(xp), 0)::int`.as("xp"))
+    .where("user_id", "=", userId)
+    .where("resolved_at", ">=", weekStartDate(weekStart))
+    .executeTakeFirstOrThrow();
+  const row =
+    (await trx
+      .insertInto("league_members")
+      .values({ week_start: weekStart, user_id: userId, cohort_id: cohortId, tier, xp: earned.xp })
+      .onConflict((oc) => oc.columns(["week_start", "user_id"]).doNothing())
+      .returningAll()
+      .executeTakeFirst()) ?? (await trx.selectFrom("league_members").selectAll().where("week_start", "=", weekStart).where("user_id", "=", userId).executeTakeFirstOrThrow());
+  return toMembership(row);
+};
+
+const standingsQuery = (db: Kdb, cohortId: string) =>
+  db
+    .selectFrom("league_members as m")
+    .innerJoin("users as u", "u.id", "m.user_id")
+    .select(["m.user_id as userId", "u.username", "m.xp"])
+    .where("m.cohort_id", "=", cohortId)
+    .orderBy("m.xp", "desc")
+    .orderBy("m.xp_at")
+    .orderBy("m.user_id")
+    .execute()
+    .then((rows) => rows.map((r) => ({ userId: r.userId, username: r.username ?? "learner", xp: r.xp })));
+
+export const LeagueRepositoryLive = repo(LeagueRepository, (run) => ({
+  join: (userId, weekStart) => run((db) => db.transaction().execute((trx) => joinCohort(trx, userId, weekStart))),
+  addXp: (userId, xp, weekStart) =>
+    xp <= 0
+      ? Effect.void
+      : run((db) =>
+          db.transaction().execute(async (trx) => {
+            const updated = await trx
+              .updateTable("league_members")
+              .set({ xp: sql`xp + ${xp}`, xp_at: new Date() })
+              .where("week_start", "=", weekStart)
+              .where("user_id", "=", userId)
+              .where("result", "is", null)
+              .returning("user_id")
+              .executeTakeFirst();
+            // Not in a cohort yet this week: joining counts this problem's XP too.
+            if (!updated) await joinCohort(trx, userId, weekStart);
+          }),
+        ),
+  leave: (userId, weekStart) =>
+    run((db) => db.deleteFrom("league_members").where("week_start", "=", weekStart).where("user_id", "=", userId).where("result", "is", null).execute()).pipe(Effect.asVoid),
+  membership: (userId, weekStart) =>
+    run((db) => db.selectFrom("league_members").selectAll().where("week_start", "=", weekStart).where("user_id", "=", userId).executeTakeFirst()).pipe(
+      Effect.map((m) => m && toMembership(m)),
+    ),
+  lastSettled: (userId, weekStart) =>
+    run((db) =>
+      db
+        .selectFrom("league_members")
+        .selectAll()
+        .where("user_id", "=", userId)
+        .where("week_start", "<", weekStart)
+        .where("result", "is not", null)
+        .orderBy("week_start", "desc")
+        .limit(1)
+        .executeTakeFirst(),
+    ).pipe(Effect.map((m) => m && toMembership(m))),
+  standings: (cohortId) => run((db) => standingsQuery(db, cohortId)),
+  lifetimeXp: (userId) =>
+    run((db) => db.selectFrom("item_results").select(sql<number>`coalesce(sum(xp), 0)::int`.as("xp")).where("user_id", "=", userId).executeTakeFirstOrThrow()).pipe(
+      Effect.map((r) => r.xp),
+    ),
+  unsettledCohorts: (weekStart) =>
+    run((db) =>
+      db.selectFrom("league_cohorts").select("id").where("finalized_at", "is", null).where("week_start", "<", weekStart).orderBy("week_start").limit(500).execute(),
+    ).pipe(Effect.map((rows) => rows.map((r) => r.id))),
+  settleCohort: (cohortId, decide) =>
+    run((db) =>
+      db.transaction().execute(async (trx) => {
+        const cohort = await trx.selectFrom("league_cohorts").selectAll().where("id", "=", cohortId).where("finalized_at", "is", null).forUpdate().skipLocked().executeTakeFirst();
+        if (!cohort) return undefined;
+        const members = decide(await standingsQuery(trx, cohortId), cohort.tier);
+        if (members.length > 0) {
+          const values = sql.join(members.map((m) => sql`(${m.userId}::uuid, ${m.result}, ${m.rank}::smallint, ${m.nextTier}::smallint)`));
+          await sql`update league_members m set result = v.result, final_rank = v.rank from (values ${values}) as v(user_id, result, rank, tier) where m.cohort_id = ${cohortId} and m.user_id = v.user_id`.execute(trx);
+          await sql`update users u set league_tier = v.tier from (values ${values}) as v(user_id, result, rank, tier) where u.id = v.user_id`.execute(trx);
+        }
+        await trx.updateTable("league_cohorts").set({ finalized_at: new Date() }).where("id", "=", cohortId).execute();
+        return { weekStart: cohort.week_start, tier: cohort.tier, members };
+      }),
+    ),
+}));
+
+/** Columns for the admin's account list; per-row counts are correlated subqueries on indexed user_id. */
+const adminUserSelect = (db: import("kysely").Kysely<DB>, masteredAt: number) =>
+  db
+    .selectFrom("users as u")
+    .select((eb) => [
+      "u.id",
+      "u.email",
+      "u.display_name as displayName",
+      "u.username",
+      "u.avatar_url as avatarUrl",
+      sql<boolean>`u.email_verified_at is not null`.as("emailVerified"),
+      sql<boolean>`u.password_hash is not null`.as("hasPassword"),
+      sql<boolean>`exists (select 1 from oauth_accounts o where o.user_id = u.id and o.provider = 'google')`.as("google"),
+      "u.learning_mode as learningMode",
+      "u.created_at as createdAt",
+      "u.last_active_at as lastActiveAt",
+      eb.selectFrom("item_results as r").select(sql<number>`count(*)::int`.as("n")).whereRef("r.user_id", "=", "u.id").as("problems"),
+      eb
+        .selectFrom("exercise_progress as p")
+        .select(sql<number>`count(*)::int`.as("n"))
+        .whereRef("p.user_id", "=", "u.id")
+        .where("p.mastery", ">=", masteredAt)
+        .where("p.sessions_completed", ">", 0)
+        .as("mastered"),
+    ]);
+
+const toAdminUser = (r: Omit<AdminUserRow, "problems" | "mastered" | "lastActiveAt"> & { problems: number | null; mastered: number | null; lastActiveAt: Date | null }): AdminUserRow => ({
+  ...r,
+  problems: r.problems ?? 0,
+  mastered: r.mastered ?? 0,
+});
+
+export const AdminRepositoryLive = repo(AdminRepository, (run) => ({
+  overview: (courseId, days, masteredAt) =>
+    run(async (db) => {
+      const since = sql<Date>`now() - make_interval(days => ${days})`;
+      const [totals, practice, daily, signIn, modes, levels, lessons, masteredCounts, leagues] = await Promise.all([
+        db
+          .selectFrom("users")
+          .select([
+            sql<number>`count(*)::int`.as("users"),
+            sql<number>`count(*) filter (where email_verified_at is not null)::int`.as("verified"),
+            sql<number>`count(*) filter (where onboarded_at is not null)::int`.as("onboarded"),
+            sql<number>`count(*) filter (where created_at >= now() - interval '7 days')::int`.as("signups7"),
+            sql<number>`count(*) filter (where created_at >= now() - interval '30 days')::int`.as("signups30"),
+          ])
+          .executeTakeFirstOrThrow(),
+        db
+          .selectFrom("item_results")
+          .select([
+            sql<number>`count(*)::int`.as("problems"),
+            sql<number>`count(*) filter (where clean_solve)::int`.as("cleanSolves"),
+            sql<string>`coalesce(sum(time_ms), 0)::bigint`.as("timeMs"),
+            sql<number>`count(distinct user_id) filter (where resolved_at >= now() - interval '7 days')::int`.as("active7"),
+            sql<number>`count(distinct user_id) filter (where resolved_at >= now() - interval '30 days')::int`.as("active30"),
+            (eb) => eb.selectFrom("practice_sessions").select(sql<number>`count(*)::int`.as("n")).where("status", "=", "completed").as("sessionsCompleted"),
+          ])
+          .where("course_id", "=", courseId)
+          .executeTakeFirstOrThrow(),
+        sql<{ day: string; signups: number; activeUsers: number; problems: number; cleanSolves: number }>`
+          with practice as (
+            select date_trunc('day', resolved_at) as d, count(distinct user_id)::int as active_users, count(*)::int as problems, count(*) filter (where clean_solve)::int as clean_solves
+            from item_results where resolved_at >= ${since} and course_id = ${courseId} group by 1
+          ), signups as (
+            select date_trunc('day', created_at) as d, count(*)::int as signups from users where created_at >= ${since} group by 1
+          )
+          select to_char(coalesce(p.d, s.d), 'YYYY-MM-DD') as day, coalesce(s.signups, 0) as signups, coalesce(p.active_users, 0) as "activeUsers",
+                 coalesce(p.problems, 0) as problems, coalesce(p.clean_solves, 0) as "cleanSolves"
+          from practice p full join signups s on s.d = p.d order by 1
+        `.execute(db),
+        db
+          .selectFrom("users as u")
+          .select([
+            sql<number>`count(*) filter (where u.password_hash is not null and o.user_id is null)::int`.as("password"),
+            sql<number>`count(*) filter (where u.password_hash is null and o.user_id is not null)::int`.as("google"),
+            sql<number>`count(*) filter (where u.password_hash is not null and o.user_id is not null)::int`.as("both"),
+          ])
+          .leftJoin((eb) => eb.selectFrom("oauth_accounts").select("user_id").distinct().as("o"), (j) => j.onRef("o.user_id", "=", "u.id"))
+          .executeTakeFirstOrThrow(),
+        db
+          .selectFrom("users")
+          .select([sql<number>`count(*) filter (where learning_mode = 'path')::int`.as("path"), sql<number>`count(*) filter (where learning_mode = 'audit')::int`.as("audit")])
+          .executeTakeFirstOrThrow(),
+        db
+          .selectFrom("item_results")
+          .select(["level", sql<number>`count(*)::int`.as("problems"), sql<number>`count(*) filter (where clean_solve)::int`.as("cleanSolves")])
+          .where("course_id", "=", courseId)
+          .groupBy("level")
+          .orderBy("level")
+          .execute(),
+        db
+          .selectFrom("exercise_progress")
+          .select([
+            "exercise_id as exerciseId",
+            sql<number>`count(*) filter (where items_seen > 0)::int`.as("learners"),
+            sql<number>`coalesce(sum(items_seen), 0)::int`.as("problems"),
+            sql<number>`coalesce(sum(clean_solves), 0)::int`.as("cleanSolves"),
+            sql<number>`count(*) filter (where mastery >= ${masteredAt} and sessions_completed > 0)::int`.as("mastered"),
+          ])
+          .where("course_id", "=", courseId)
+          .groupBy("exercise_id")
+          .execute(),
+        sql<{ mastered: number; users: number }>`
+          select coalesce(m.n, 0)::int as mastered, count(*)::int as users
+          from users u
+          left join (
+            select user_id, count(*) as n from exercise_progress
+            where course_id = ${courseId} and mastery >= ${masteredAt} and sessions_completed > 0 group by user_id
+          ) m on m.user_id = u.id
+          group by 1 order by 1
+        `.execute(db),
+        db
+          .selectFrom("users")
+          .select(["league_tier as tier", sql<number>`count(*)::int`.as("users"), sql<number>`count(*) filter (where league_opt_in)::int`.as("optedIn")])
+          .groupBy("league_tier")
+          .orderBy("league_tier")
+          .execute(),
+      ]);
+      return {
+        totals: { ...totals, active7: practice.active7, active30: practice.active30, problems: practice.problems, cleanSolves: practice.cleanSolves, timeMs: Number(practice.timeMs), sessionsCompleted: practice.sessionsCompleted ?? 0 },
+        daily: daily.rows,
+        signIn,
+        modes,
+        levels,
+        lessons,
+        masteredCounts: masteredCounts.rows,
+        leagues,
+      };
+    }),
+  listUsers: ({ query, limit, offset, masteredAt }) =>
+    run(async (db) => {
+      const q = query.trim();
+      // Escape LIKE wildcards so a search for "_" or "%" is literal.
+      const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      let rows = adminUserSelect(db, masteredAt);
+      let count = db.selectFrom("users as u").select(sql<number>`count(*)::int`.as("n"));
+      if (q) {
+        rows = rows.where((eb) => eb.or([eb("u.email", "ilike", pattern), eb("u.display_name", "ilike", pattern), eb("u.username", "ilike", pattern)]));
+        count = count.where((eb) => eb.or([eb("u.email", "ilike", pattern), eb("u.display_name", "ilike", pattern), eb("u.username", "ilike", pattern)]));
+      }
+      const [users, total] = await Promise.all([rows.orderBy("u.created_at", "desc").orderBy("u.id").limit(limit).offset(offset).execute(), count.executeTakeFirstOrThrow()]);
+      return { users: users.map(toAdminUser), total: total.n };
+    }),
+  findUser: (id, masteredAt) =>
+    run((db) => adminUserSelect(db, masteredAt).where("u.id", "=", id).executeTakeFirst()).pipe(Effect.map((r) => r && toAdminUser(r))),
+  deleteSessions: (userId) =>
+    run((db) => db.deleteFrom("sessions").where("user_id", "=", userId).executeTakeFirst()).pipe(Effect.map((r) => Number(r.numDeletedRows))),
+}));
+
 export const RepositoriesLive = Layer.mergeAll(
+  AdminRepositoryLive,
+  LeagueRepositoryLive,
   UserRepositoryLive,
   AccountRepositoryLive,
   EmailTokenRepositoryLive,

@@ -33,6 +33,7 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, json: unknown = {}) => request<T>(path, { method: "POST", json }),
   patch: <T>(path: string, json: unknown) => request<T>(path, { method: "PATCH", json }),
+  put: <T>(path: string, json: unknown) => request<T>(path, { method: "PUT", json }),
   delete: <T>(path: string, json: unknown = {}) => request<T>(path, { method: "DELETE", json }),
 };
 
@@ -42,6 +43,8 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
+  /** Null until chosen; the app asks for one after sign-in. */
+  username: string | null;
   avatarUrl: string | null;
   hasPassword: boolean;
   emailVerified: boolean;
@@ -50,6 +53,8 @@ export interface User {
   onboarded: boolean;
   timezone: string;
   notifications: { reminders: boolean; progress: boolean; emailReminders: boolean };
+  leagueOptIn: boolean;
+  isAdmin: boolean;
   createdAt: string;
 }
 
@@ -174,6 +179,8 @@ export interface Resolution {
   cleanSolve: boolean;
   mastery: { before: number; after: number };
   levelChange: number;
+  /** League XP this problem earned. */
+  xp: number;
   next: PracticeItem | null;
   done: boolean;
 }
@@ -235,4 +242,95 @@ export interface PushConfig {
   webPublicKey: string | null;
   web: boolean;
   ios: boolean;
+}
+
+/* ---- Leagues ---- */
+
+export type LeagueResult = "promoted" | "stayed" | "demoted";
+
+export interface LeagueTier {
+  index: number;
+  name: string;
+}
+
+export interface League {
+  optedIn: boolean;
+  username: string | null;
+  tier: LeagueTier;
+  tiers: string[];
+  lifetimeXp: number;
+  week: { start: string; endsAt: string };
+  cohort: {
+    rank: number;
+    size: number;
+    xp: number;
+    promote: number;
+    demote: number;
+    promotionMinXp: number | null;
+    members: { rank: number; username: string; xp: number; you: boolean }[];
+  } | null;
+  lastWeek: { weekStart: string; tier: LeagueTier; result: LeagueResult | null; rank: number | null } | null;
+}
+
+/* ---- Admin ---- */
+
+export interface AdminOverview {
+  totals: {
+    users: number;
+    verified: number;
+    onboarded: number;
+    signups7: number;
+    signups30: number;
+    active7: number;
+    active30: number;
+    problems: number;
+    cleanSolves: number;
+    accuracy: number;
+    timeMs: number;
+    sessionsCompleted: number;
+  };
+  daily: { day: string; signups: number; activeUsers: number; problems: number; accuracy: number | null }[];
+  signIn: { password: number; google: number; both: number };
+  modes: { path: number; audit: number };
+  levels: { level: number; problems: number; accuracy: number | null }[];
+  lessons: { exerciseId: string; title: string; unit: string; learners: number; problems: number; accuracy: number | null; mastered: number }[];
+  progress: { label: string; users: number }[];
+  leagues: { tier: string; users: number; optedIn: number }[];
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string;
+  username: string | null;
+  avatarUrl: string | null;
+  emailVerified: boolean;
+  signIn: "password" | "google" | "both";
+  learningMode: LearningMode;
+  createdAt: string;
+  lastActiveAt: string | null;
+  problems: number;
+  mastered: number;
+  isAdmin: boolean;
+}
+
+export interface AdminUserPage {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AdminUserDetail {
+  user: AdminUser & { timezone: string; dailyGoal: number; onboarded: boolean; lastLoginIp: string | null };
+  stats: {
+    streak: Streak;
+    started: number;
+    mastered: number;
+    totalLessons: number;
+    last30: { problems: number; accuracy: number | null; timeMs: number };
+    progressResets: number;
+  };
+  daily: { day: string; problems: number }[];
+  sessions: { id: string; exerciseId: string; title: string; mode: string; completedAt: string | null; masteryBefore: number; masteryAfter: number | null }[];
 }

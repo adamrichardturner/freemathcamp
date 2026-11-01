@@ -30,13 +30,19 @@ export interface UserPreferencesPatch {
   notifyReminders?: boolean | undefined;
   notifyProgress?: boolean | undefined;
   notifyEmailReminders?: boolean | undefined;
+  leagueOptIn?: boolean | undefined;
 }
 
 export interface UserRepositoryShape {
-  create(input: { email: string; displayName: string; passwordHash: string | null }): Effect.Effect<User, DatabaseError | Conflict>;
+  create(input: { email: string; displayName: string; username: string | null; passwordHash: string | null }): Effect.Effect<User, DatabaseError | Conflict>;
+  /** Fails with Conflict when another account has it, in any letter case. */
+  setUsername(id: string, username: string): Effect.Effect<User, DatabaseError | Conflict>;
+  usernameTaken(username: string, exceptUserId?: string): Db<boolean>;
   findByEmail(email: string): Db<User | undefined>;
   findById(id: string): Db<User | undefined>;
   touch(id: string): Db<void>;
+  /** Stores the IP of a new sign-in and returns the one it replaced. */
+  recordLoginIp(id: string, ip: string | null): Db<string | null>;
   updateDisplayName(id: string, displayName: string): Db<User>;
   findByOAuth(provider: "google", providerUserId: string): Db<User | undefined>;
   /** Links a provider identity to a user (creating the user if needed) atomically. */
@@ -66,8 +72,6 @@ export interface SessionRepositoryShape {
   countActive(userId: string): Db<number>;
   /** Signs out every other device, keeping the given session. Returns how many were removed. */
   deleteOthers(userId: string, keepId: string): Db<number>;
-  /** Whether the user already has a live session from this browser/app, so a new one can be flagged. */
-  hasUserAgent(userId: string, userAgent: string): Db<boolean>;
 }
 export class SessionRepository extends Context.Tag("SessionRepository")<SessionRepository, SessionRepositoryShape>() {}
 
@@ -126,6 +130,7 @@ export interface NewItemResult {
   struggle: number;
   cleanSolve: boolean;
   masteryAfter: number;
+  xp: number;
 }
 
 export interface PracticeRepositoryShape {
@@ -166,6 +171,105 @@ export interface AnalyticsRepositoryShape {
   masteryTimeline(userId: string, courseId: string, exerciseId: string): Db<{ at: Date; mastery: number; struggle: number }[]>;
 }
 export class AnalyticsRepository extends Context.Tag("AnalyticsRepository")<AnalyticsRepository, AnalyticsRepositoryShape>() {}
+
+/* ---- Leagues ---- */
+
+export interface LeagueMembership {
+  weekStart: string;
+  cohortId: string;
+  tier: number;
+  xp: number;
+  result: "promoted" | "stayed" | "demoted" | null;
+  finalRank: number | null;
+}
+
+export interface LeagueStanding {
+  userId: string;
+  username: string;
+  xp: number;
+}
+
+export interface SettledMember {
+  userId: string;
+  rank: number;
+  result: "promoted" | "stayed" | "demoted";
+  nextTier: number;
+}
+
+export interface LeagueRepositoryShape {
+  /** Puts an opted-in learner with a username into a cohort for the week (if not already), with the XP they've earned so far this week. */
+  join(userId: string, weekStart: string): Db<LeagueMembership | undefined>;
+  /** Adds XP to this week's membership, joining first if needed. No-op unless opted in. */
+  addXp(userId: string, xp: number, weekStart: string): Db<void>;
+  leave(userId: string, weekStart: string): Db<void>;
+  membership(userId: string, weekStart: string): Db<LeagueMembership | undefined>;
+  /** The most recent settled week before `weekStart`. */
+  lastSettled(userId: string, weekStart: string): Db<LeagueMembership | undefined>;
+  /** The cohort in rank order (most XP first, earliest to reach it on ties). */
+  standings(cohortId: string): Db<LeagueStanding[]>;
+  lifetimeXp(userId: string): Db<number>;
+  /** Cohorts from weeks before `weekStart` that haven't been settled. */
+  unsettledCohorts(weekStart: string): Db<string[]>;
+  /**
+   * Settles one cohort atomically (skipping it if another instance holds it):
+   * records each member's rank and result, and moves their tier.
+   */
+  settleCohort(cohortId: string, decide: (ranked: LeagueStanding[], tier: number) => SettledMember[]): Db<{ weekStart: string; tier: number; members: SettledMember[] } | undefined>;
+}
+export class LeagueRepository extends Context.Tag("LeagueRepository")<LeagueRepository, LeagueRepositoryShape>() {}
+
+/* ---- Admin ---- */
+
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  displayName: string;
+  username: string | null;
+  avatarUrl: string | null;
+  emailVerified: boolean;
+  hasPassword: boolean;
+  google: boolean;
+  learningMode: LearningMode;
+  createdAt: Date;
+  lastActiveAt: Date | null;
+  problems: number;
+  mastered: number;
+}
+
+export interface AdminOverviewRows {
+  totals: {
+    users: number;
+    verified: number;
+    onboarded: number;
+    signups7: number;
+    signups30: number;
+    active7: number;
+    active30: number;
+    problems: number;
+    cleanSolves: number;
+    timeMs: number;
+    sessionsCompleted: number;
+  };
+  /** Last `days` days, only days with something in them. */
+  daily: { day: string; signups: number; activeUsers: number; problems: number; cleanSolves: number }[];
+  signIn: { password: number; google: number; both: number };
+  modes: { path: number; audit: number };
+  levels: { level: number; problems: number; cleanSolves: number }[];
+  lessons: { exerciseId: string; learners: number; problems: number; cleanSolves: number; mastered: number }[];
+  /** How many learners have mastered n lessons. */
+  masteredCounts: { mastered: number; users: number }[];
+  leagues: { tier: number; users: number; optedIn: number }[];
+}
+
+export interface AdminRepositoryShape {
+  overview(courseId: string, days: number, masteredAt: number): Db<AdminOverviewRows>;
+  /** Newest first. Matches email, display name or username, case-insensitively. */
+  listUsers(opts: { query: string; limit: number; offset: number; masteredAt: number }): Db<{ users: AdminUserRow[]; total: number }>;
+  findUser(id: string, masteredAt: number): Db<AdminUserRow | undefined>;
+  /** Signs a user out everywhere. Returns how many sessions ended. */
+  deleteSessions(userId: string): Db<number>;
+}
+export class AdminRepository extends Context.Tag("AdminRepository")<AdminRepository, AdminRepositoryShape>() {}
 
 /* ---- Notifications ---- */
 

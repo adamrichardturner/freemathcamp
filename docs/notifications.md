@@ -18,8 +18,8 @@ stay in the app and on push, so inboxes stay quiet.
 
 ## What triggers a notification
 
-- **Account and security:** welcome, email confirmed, sign-in from a browser or app
-  the account hasn't used before, Google sign-in linked, password changed or
+- **Account and security:** welcome, email confirmed, a sign-in from a different IP
+  address than the previous sign-in (`users.last_login_ip`), Google sign-in linked, password changed or
   added, other devices signed out, course progress reset. These can't be
   switched off.
 - **Progress:** the first completed session on a lesson (and, in Path mode, the

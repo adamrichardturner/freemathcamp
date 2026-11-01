@@ -1,6 +1,7 @@
 import { formatAnswer, generateProblem, getExercise, type Answer } from "@fmc/curriculum";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { handle } from "./helpers";
 import { createApp } from "../src/http/app";
 import { makeRuntime, type AppRuntime } from "../src/http/runtime";
 import { Effect } from "effect";
@@ -43,13 +44,13 @@ describe.skipIf(!enabled)("API", () => {
   });
 
   it("validates registration input", async () => {
-    const res = await post("/api/auth/register", { email: "nope", password: "short", displayName: "" });
+    const res = await post("/api/auth/register", { email: "nope", password: "short", displayName: "", username: handle() });
     expect(res.status).toBe(400);
     expect(res.body.error.issues.length).toBeGreaterThan(1);
   });
 
   it("registers, sets an httpOnly session cookie, and returns the user", async () => {
-    const res = await post("/api/auth/register", { email, password: "correct-horse-42", displayName: "Ada" });
+    const res = await post("/api/auth/register", { email, password: "correct-horse-42", displayName: "Ada", username: handle() });
     expect(res.status).toBe(201);
     expect(res.headers["set-cookie"]?.[0]).toMatch(/fmc_session=.*HttpOnly.*SameSite=Lax/i);
     const me = await agent.get("/api/auth/me");
@@ -58,7 +59,7 @@ describe.skipIf(!enabled)("API", () => {
   });
 
   it("refuses duplicate accounts and wrong passwords", async () => {
-    expect((await post("/api/auth/register", { email, password: "correct-horse-42", displayName: "Ada" })).status).toBe(409);
+    expect((await post("/api/auth/register", { email, password: "correct-horse-42", displayName: "Ada", username: handle() })).status).toBe(409);
     const other = request(createApp(runtime, { webOrigin: ORIGIN, secureCookies: false }));
     const res = await other.post("/api/auth/login").set("Origin", ORIGIN).send({ email, password: "wrong-password-1" });
     expect(res.status).toBe(401);
@@ -168,7 +169,7 @@ describe.skipIf(!enabled)("email verification edge cases", () => {
     const email = `resend+${Date.now()}@example.com`;
     const app = createApp(runtime, { webOrigin: ORIGIN, secureCookies: false });
     const signup = request.agent(app);
-    await signup.post("/api/auth/register").set("Origin", ORIGIN).send({ email, password: "correct-horse-42", displayName: "Grace" });
+    await signup.post("/api/auth/register").set("Origin", ORIGIN).send({ email, password: "correct-horse-42", displayName: "Grace", username: handle() });
     // Two resends are allowed (three emails per hour including the sign-up one), then 429.
     for (const expected of [200, 200, 429]) expect((await signup.post("/api/auth/resend-verification").set("Origin", ORIGIN).send({})).status).toBe(expected);
 
@@ -184,7 +185,7 @@ describe.skipIf(!enabled)("email verification edge cases", () => {
     const program = Effect.gen(function* () {
       const users = yield* UserRepository;
       const sessions = yield* SessionRepository;
-      const squatter = yield* users.create({ email, displayName: "Squatter", passwordHash: "argon2-hash" });
+      const squatter = yield* users.create({ email, displayName: "Squatter", username: null, passwordHash: "argon2-hash" });
       const sessionId = hashToken(`squatter-session-${Date.now()}-padding`);
       yield* sessions.create({ id: sessionId, userId: squatter.id, expiresAt: new Date(Date.now() + 86_400_000), userAgent: null, ip: null });
       const owner = yield* users.upsertOAuthUser({ provider: "google", providerUserId: `g-${Date.now()}`, email, displayName: "Owner", avatarUrl: null });

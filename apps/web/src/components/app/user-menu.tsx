@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Bell, ChartLine, Compass, Flame, GraduationCap, LayoutDashboard, Loader2, LogOut, Settings, Target } from "lucide-react";
+import { BadgeCheck, Bell, ChartLine, Compass, Flame, GraduationCap, LayoutDashboard, Loader2, LogOut, Settings, ShieldCheck, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AllNotificationsLink, NotificationCentre } from "@/components/notifications/notification-centre";
@@ -104,6 +104,11 @@ export function UserMenu({ user }: { user: User }) {
             <DropdownMenuItem onClick={openOnboarding}>
               <Compass /> Take the tour
             </DropdownMenuItem>
+            {user.isAdmin && (
+              <DropdownMenuItem onClick={() => router.push("/admin")}>
+                <ShieldCheck /> Admin
+              </DropdownMenuItem>
+            )}
           </DropdownMenuGroup>
           <DropdownMenuSeparator className="my-0" />
           <DropdownMenuGroup className="p-1">

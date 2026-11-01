@@ -7,8 +7,10 @@ import { loadUser } from "./middleware/auth";
 import { clientIp } from "./middleware/client-ip";
 import { csrfGuard, noStore } from "./middleware/security";
 import { accountRoutes } from "./routes/account";
+import { adminRoutes } from "./routes/admin";
 import { authRoutes } from "./routes/auth";
 import { learningRoutes } from "./routes/learning";
+import { leagueRoutes } from "./routes/leagues";
 import { emailRoutes, notificationRoutes, pushRoutes } from "./routes/notifications";
 import type { AppRuntime } from "./runtime";
 
@@ -40,6 +42,8 @@ export const createApp = (runtime: AppRuntime, opts: AppOptions) => {
   app.use("/api/auth", authRoutes(runtime, { secure: opts.secureCookies, webOrigin: opts.webOrigin }));
   app.use("/api/me/notifications", notificationRoutes(runtime));
   app.use("/api/me/push", pushRoutes(runtime));
+  app.use("/api/admin", adminRoutes(runtime));
+  app.use("/api/leagues", leagueRoutes(runtime));
   app.use("/api/me", accountRoutes(runtime, { secure: opts.secureCookies }));
   app.use("/api", learningRoutes(runtime));
 

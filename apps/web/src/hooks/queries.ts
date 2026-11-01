@@ -3,7 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { unlockedBy, unlockedLessons } from "@fmc/curriculum";
 import { useMemo, useSyncExternalStore } from "react";
-import { api, type AccountSettings, type Analytics, type CourseProgress, type Dashboard, type ExerciseDetail, type User } from "@/lib/api";
+import { toast } from "sonner";
+import { api, ApiError, type AccountSettings, type Analytics, type CourseProgress, type Dashboard, type ExerciseDetail, type League, type User } from "@/lib/api";
 import { COURSE_ID, graph } from "@/lib/course";
 import { hardNavigate } from "@/lib/navigation";
 
@@ -15,6 +16,7 @@ export const keys = {
   analytics: ["analytics", COURSE_ID] as const,
   exercise: (id: string) => ["exercise", COURSE_ID, id] as const,
   settings: ["settings"] as const,
+  league: ["league"] as const,
 };
 
 export const useMe = () =>
@@ -77,11 +79,29 @@ export const useAnalytics = (enabled = true) =>
 export const useExerciseDetail = (id: string, enabled = true) =>
   useQuery({ queryKey: keys.exercise(id), queryFn: () => api.get<ExerciseDetail>(`/courses/${COURSE_ID}/exercises/${id}`), enabled });
 
+export const useLeague = (enabled = true) => useQuery({ queryKey: keys.league, queryFn: () => api.get<League>("/leagues/me"), enabled });
+
+/** Joins or leaves leagues, keeping the user and the league view in step wherever the switch is. */
+export const useLeagueOptIn = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (optIn: boolean) => api.put<{ user: User }>("/me/league", { optIn }),
+    onSuccess: ({ user }) => {
+      qc.setQueryData(keys.me, user);
+      void qc.invalidateQueries({ queryKey: keys.league });
+      void qc.invalidateQueries({ queryKey: keys.settings });
+      toast.success(user.leagueOptIn ? "You're in this week's league" : "You've left the leagues");
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn't update your league setting."),
+  });
+};
+
 /** After practice the whole learner model changes; refresh every view of it. */
 export const useInvalidateLearner = () => {
   const qc = useQueryClient();
   return () =>
     Promise.all([
+      qc.invalidateQueries({ queryKey: keys.league }),
       qc.invalidateQueries({ queryKey: keys.progress }),
       qc.invalidateQueries({ queryKey: keys.dashboard }),
       qc.invalidateQueries({ queryKey: keys.analytics }),

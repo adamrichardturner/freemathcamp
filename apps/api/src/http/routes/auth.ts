@@ -6,7 +6,8 @@ import { sendVerificationEmail, verifyEmail } from "../../application/email-veri
 import { beginGoogleFlow, completeGoogleFlow, isGoogleEnabled, type OAuthFlowState } from "../../infrastructure/oauth/google";
 import { clearSessionCookie, cookieOptions, currentUser, requireUser, setSessionCookie } from "../middleware/auth";
 import { handle, type AppRuntime } from "../runtime";
-import { decode, LoginBody, RegisterBody, VerifyEmailBody } from "../validation";
+import { usernameAvailability } from "../../application/account";
+import { decode, LoginBody, RegisterBody, UsernameQuery, VerifyEmailBody } from "../validation";
 
 const OAUTH_COOKIE = "fmc_oauth";
 
@@ -43,6 +44,9 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
     keyGenerator: (req) => ipKeyGenerator(req.clientIp),
     message: { error: { code: "RateLimited", message: "Too many sign-ups from this network. Try again later." } },
   });
+
+  // Live feedback while choosing a username, at sign-up or later.
+  router.get("/username-available", h((req) => Effect.flatMap(decode(UsernameQuery, req.query), (q) => usernameAvailability(q.username, req.user))));
 
   router.get("/providers", h(() => Effect.map(isGoogleEnabled, (google) => ({ google, password: true }))));
 

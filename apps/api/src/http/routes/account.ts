@@ -5,6 +5,7 @@ import {
   accountSettings,
   changeDisplayName,
   changePassword,
+  changeUsername,
   completeOnboarding,
   deleteAccount,
   exportAccountData,
@@ -12,9 +13,10 @@ import {
   signOutOtherSessions,
   updatePreferences,
 } from "../../application/account";
+import { setLeagueOptIn } from "../../application/leagues";
 import { clearSessionCookie, currentUser, requireUser } from "../middleware/auth";
 import { handle, type AppRuntime } from "../runtime";
-import { ChangePasswordBody, DeleteAccountBody, decode, PreferencesBody, ProfileBody, ResetProgressBody } from "../validation";
+import { ChangePasswordBody, DeleteAccountBody, decode, LeagueOptInBody, PreferencesBody, ProfileBody, ResetProgressBody, UsernameBody } from "../validation";
 
 /** /api/me — the signed-in learner's own account. Works before email verification so people can fix or delete it. */
 export const accountRoutes = (runtime: AppRuntime, opts: { secure: boolean }) => {
@@ -41,6 +43,26 @@ export const accountRoutes = (runtime: AppRuntime, opts: { secure: boolean }) =>
       Effect.gen(function* () {
         const { displayName } = yield* decode(ProfileBody, req.body);
         return { user: yield* changeDisplayName(yield* currentUser(req), displayName) };
+      }),
+    ),
+  );
+
+  router.patch(
+    "/username",
+    h((req) =>
+      Effect.gen(function* () {
+        const { username } = yield* decode(UsernameBody, req.body);
+        return { user: yield* changeUsername(yield* currentUser(req), username) };
+      }),
+    ),
+  );
+
+  router.put(
+    "/league",
+    h((req) =>
+      Effect.gen(function* () {
+        const { optIn } = yield* decode(LeagueOptInBody, req.body);
+        return { user: yield* setLeagueOptIn(yield* currentUser(req), optIn) };
       }),
     ),
   );

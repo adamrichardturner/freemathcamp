@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VerifyEmailCard } from "@/components/app/verify-email-card";
 import { LessonLink } from "@/components/course/lesson-link";
+import { LeagueCard } from "@/components/leagues/league-card";
 import { useCourseProgress, useDashboard, useSession } from "@/hooks/queries";
 import type { QueueKind, Recommendation } from "@/lib/api";
 import { course, exerciseRef } from "@/lib/course";
@@ -96,6 +97,7 @@ export function DashboardView() {
         </Card>
 
         <div className="space-y-6">
+          <LeagueCard />
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">

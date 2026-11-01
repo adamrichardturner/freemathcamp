@@ -16,6 +16,8 @@ import {
   type PracticeMode,
 } from "../domain/engine";
 import { Conflict, NotFound } from "../domain/errors";
+import { xpFor } from "../domain/leagues";
+import { awardXp } from "./leagues";
 import type { PracticeItem, PracticeSession, User } from "../infrastructure/db/schema";
 import { newSeed } from "../infrastructure/security/tokens";
 import { mean, round } from "../utils/math";
@@ -88,6 +90,7 @@ const resolveItem = (userId: string, session: PracticeSession, ref: ExerciseRef,
     const mastery = updateMastery({ previous: progress.mastery, signal, level: item.level, multipleChoice: problem.answer.kind === "choice" });
     const struggle = updateStruggle(progress.struggle, progress.items_seen, signal.struggle);
 
+    const xp = xpFor({ level: item.level, wrongAttempts: r.wrongAttempts, hintsUsed: r.hintsUsed, revealed: r.revealed });
     const inserted = yield* practice.recordItemResult({
       sessionId: session.id,
       itemIndex: index,
@@ -102,8 +105,10 @@ const resolveItem = (userId: string, session: PracticeSession, ref: ExerciseRef,
       struggle: signal.struggle,
       cleanSolve: signal.cleanSolve,
       masteryAfter: mastery,
+      xp,
     });
     if (!inserted) return yield* Effect.fail(new Conflict({ message: "That problem was already completed." }));
+    yield* awardXp(userId, xp);
 
     const now = new Date();
     yield* progressRepo.update(userId, session.course_id, session.exercise_id, {
@@ -137,6 +142,7 @@ const resolveItem = (userId: string, session: PracticeSession, ref: ExerciseRef,
       cleanSolve: signal.cleanSolve,
       mastery: { before: round(progress.mastery), after: round(mastery) },
       levelChange: next ? next.level - item.level : 0,
+      xp,
       next,
       done: next === null,
     };

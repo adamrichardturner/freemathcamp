@@ -19,6 +19,7 @@ const KINDS = {
   google_linked: "account",
   password_changed: "account",
   password_set: "account",
+  password_reset: "account",
   sessions_revoked: "account",
   progress_reset: "account",
   // Course progress.
@@ -29,6 +30,7 @@ const KINDS = {
   streak_milestone: "progress",
   daily_goal: "progress",
   problems_milestone: "progress",
+  league_result: "progress",
   // Engagement reminders.
   reminder_streak: "reminder",
   reminder_reviews: "reminder",
@@ -51,6 +53,7 @@ const EMAIL: Partial<Record<NotificationKind, "always" | "reminder">> = {
   google_linked: "always",
   password_changed: "always",
   password_set: "always",
+  password_reset: "always",
   sessions_revoked: "always",
   progress_reset: "always",
   reminder_inactive: "reminder",
@@ -104,11 +107,27 @@ export const notices = {
     body: `${hadPassword ? "Your password was changed." : "You can now sign in with your email and password."}${signedOut ? ` We signed out ${plural(signedOut, "other device")}.` : ""} If this wasn't you, reset it straight away.`,
     href: "/settings#security",
   }),
+  passwordReset: (): NotificationDraft => ({
+    kind: "password_reset",
+    title: "Password reset by FreeMathCamp support",
+    body: "Your password was reset and every device was signed out. Sign in with the new password you were given, then change it in Settings.",
+    href: "/settings#security",
+  }),
   sessionsRevoked: (count: number): NotificationDraft => ({
     kind: "sessions_revoked",
     title: "Signed out other devices",
     body: `${plural(count, "other device")} ${count === 1 ? "was" : "were"} signed out. Only this device is signed in now.`,
     href: "/settings#security",
+  }),
+  leagueResult: (weekStart: string, result: "promoted" | "demoted", tier: string, rank: number): NotificationDraft => ({
+    kind: "league_result",
+    title: result === "promoted" ? `Promoted to the ${tier} League` : `Moved to the ${tier} League`,
+    body:
+      result === "promoted"
+        ? `You finished #${rank} in your league last week. A new week has started in ${tier}.`
+        : `You finished #${rank} last week, so this week you're in ${tier}. A strong week takes you straight back up.`,
+    href: "/leagues",
+    dedupeKey: `league:${weekStart}`,
   }),
   progressReset: (course: string): NotificationDraft => ({
     kind: "progress_reset",
