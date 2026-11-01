@@ -31,7 +31,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/65">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
         <Logo href={user ? "/learn" : "/"} />
-        <nav className="ml-4 hidden items-center gap-1 md:flex">
+        <nav className="ml-4 hidden items-center gap-1 nav:flex">
           {items.map((n) => (
             <Link
               key={n.href}
@@ -45,7 +45,7 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <div className="ml-auto hidden items-center gap-1.5 md:flex">
+        <div className="ml-auto hidden items-center gap-1.5 nav:flex">
           <ThemeToggle />
           {!ready ? (
             <Skeleton className="size-8 rounded-full" />
@@ -62,7 +62,7 @@ export function SiteHeader() {
             </>
           )}
         </div>
-        <div className="ml-auto md:hidden">
+        <div className="ml-auto nav:hidden">
           <MobileMenu />
         </div>
       </div>
