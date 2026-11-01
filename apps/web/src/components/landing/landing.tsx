@@ -37,7 +37,7 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
       <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-20 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-24">
         <div>
           <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border bg-card/80 px-3 py-1 text-xs font-medium backdrop-blur">
-            <Sparkles className="size-3.5 text-primary" /> Free Math Camp · adaptive · beautifully visual
+            <Sparkles className="size-3.5 text-primary" /> FreeMathCamp · adaptive · beautifully visual
           </motion.span>
           <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 font-display text-5xl leading-[1.02] tracking-tight text-balance sm:text-6xl lg:text-7xl">
             All the maths you need <em className="bg-gradient-to-r from-primary to-chart-4 bg-clip-text text-transparent">before</em> calculus.
@@ -215,7 +215,7 @@ function Faq() {
   return (
     <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-20 sm:px-6" aria-labelledby="faq-heading">
       <motion.h2 {...fadeUp} id="faq-heading" className="text-center font-display text-4xl sm:text-5xl">
-        Free Math Camp, answered
+        FreeMathCamp, answered
       </motion.h2>
       <div className="mt-10 divide-y rounded-2xl border bg-card">
         {FAQS.map((f, i) => (

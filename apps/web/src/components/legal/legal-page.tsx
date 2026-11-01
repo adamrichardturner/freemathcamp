@@ -47,7 +47,7 @@ export function LegalPage({
     <>
       <SiteHeader />
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-16">
-        <p className="text-sm text-muted-foreground">Free Math Camp</p>
+        <p className="text-sm text-muted-foreground">FreeMathCamp</p>
         <h1 className="mt-3 font-display text-4xl tracking-tight sm:text-5xl">{title}</h1>
         <p className="mt-6 text-sm text-muted-foreground">Updated {updated}</p>
         <div className="mt-8 space-y-4 text-base leading-relaxed text-muted-foreground">{lede}</div>

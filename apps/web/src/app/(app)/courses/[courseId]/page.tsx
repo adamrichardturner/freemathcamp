@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const course = getCourse((await params).courseId);
   if (!course) return {};
   const lessons = course.units.reduce((a, u) => a + u.exercises.length, 0);
-  const description = `${course.tagline} ${lessons} free lessons across ${course.units.length} units — ${course.units.map((u) => u.title).join(", ")}. Interactive visuals and adaptive practice from Free Math Camp.`;
+  const description = `${course.tagline} ${lessons} free lessons across ${course.units.length} units — ${course.units.map((u) => u.title).join(", ")}. Interactive visuals and adaptive practice from FreeMathCamp.`;
   const share = shareImage(ogImagePath(), SITE_IMAGE_ALT);
   return {
     title: `${course.title}: Free Pre-Calculus Math Course`,
@@ -24,12 +24,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: { canonical: `/courses/${course.id}` },
     // Setting openGraph replaces the inherited object, so name the site share image explicitly.
     openGraph: {
-      title: `${course.title} — Free Math Camp`,
+      title: `${course.title} — FreeMathCamp`,
       description,
       url: `/courses/${course.id}`,
       ...share.openGraph,
     },
-    twitter: { ...share.twitter, title: `${course.title} — Free Math Camp`, description },
+    twitter: { ...share.twitter, title: `${course.title} — FreeMathCamp`, description },
   };
 }
 
@@ -38,7 +38,7 @@ async function Course({ params }: Pick<Props, "params">) {
   if (!course) notFound();
   return (
     <>
-      <JsonLd data={graph(courseSchema(course), breadcrumbs([{ name: "Free Math Camp", path: "/" }, { name: course.title, path: `/courses/${course.id}` }]))} />
+      <JsonLd data={graph(courseSchema(course), breadcrumbs([{ name: "FreeMathCamp", path: "/" }, { name: course.title, path: `/courses/${course.id}` }]))} />
       <CourseMap />
     </>
   );

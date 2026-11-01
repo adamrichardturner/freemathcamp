@@ -5,7 +5,7 @@ import { AUTHOR, SITE } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Terms of service",
   description:
-    "The terms for Free Math Camp, a free course in the maths you need before calculus. Governed by the laws of England and Wales, with the mandatory consumer protections of the country where you live left in place.",
+    "The terms for FreeMathCamp, a free course in the maths you need before calculus. Governed by the laws of England and Wales, with the mandatory consumer protections of the country where you live left in place.",
   alternates: { canonical: "/terms" },
 };
 
@@ -46,7 +46,7 @@ export default function TermsPage() {
     >
       <LegalSection id="agreement" title="This agreement">
         <p>
-          <span className="text-foreground">{AUTHOR.name}</span> is the other party to this agreement. He created the course. He is a private individual, not a company or an organisation. Free Math Camp is the name of the course. Contact <LegalLink href={`mailto:${AUTHOR.email}`}>{AUTHOR.email}</LegalLink>. If you need a postal address for a formal notice, ask and he will provide one.
+          <span className="text-foreground">{AUTHOR.name}</span> is the other party to this agreement. He created the course. He is a private individual, not a company or an organisation. FreeMathCamp is the name of the course. Contact <LegalLink href={`mailto:${AUTHOR.email}`}>{AUTHOR.email}</LegalLink>. If you need a postal address for a formal notice, ask and he will provide one.
         </p>
         <p>
           Before you create an account, these terms tell you who we are, what the course is, that the price is zero, that there is no subscription term, and how to close the account. That is the information a distance contract is meant to give you up front, including under the Consumer Contracts (Information, Cancellation and Additional Charges) Regulations 2013 in the United Kingdom.
