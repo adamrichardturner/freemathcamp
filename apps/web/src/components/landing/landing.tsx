@@ -83,6 +83,16 @@ function HeroDemo() {
         <div className="my-3 rounded-xl bg-muted/50 py-3 text-center">
           <Tex tex="x^2 - x - 6 = 0" display className="text-2xl" />
         </div>
+        {/* An answered problem: in the app the graph of the roots only appears once you've solved it. */}
+        <div className="mb-3 flex items-center gap-2 rounded-lg bg-success/12 px-3 py-2 text-sm">
+          <span className="grid size-5 place-items-center rounded-full bg-success text-white">
+            <Check className="size-3.5" />
+          </span>
+          <span className="font-semibold">Spot on!</span>
+          <span className="text-muted-foreground">
+            <Tex tex="x = -2 \text{ or } x = 3" />
+          </span>
+        </div>
         <Visual
           visual={{
             type: "functionPlot",
@@ -113,7 +123,7 @@ function HeroDemo() {
 
 const FEATURES = [
   { icon: Gauge, title: "Difficulty that adapts", text: "Every problem is generated for you. Two clean solves and we step up; a struggle and we ease back — in real time.", color: "from-primary to-chart-5" },
-  { icon: BrainCircuit, title: "Knows when you struggle", text: "Wrong answers are weighted, time is compared to a baseline, hints count. Tricky topics land in your challenge queue.", color: "from-chart-4 to-chart-3" },
+  { icon: BrainCircuit, title: "Knows when you struggle", text: "Wrong answers are weighted, time is compared to a baseline, hints count. Tricky topics land in your Strengthen queue.", color: "from-chart-4 to-chart-3" },
   { icon: CalendarClock, title: "Reviews before you forget", text: "Spaced repetition schedules each topic so memory sticks, with intervals that stretch as you master it.", color: "from-chart-3 to-chart-2" },
   { icon: Network, title: "Every idea is connected", text: "Each lesson links to the ideas it builds on. New to a topic? See exactly what background helps, then follow the path in order or explore freely.", color: "from-chart-2 to-primary" },
 ];

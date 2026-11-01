@@ -81,7 +81,7 @@ export default function TermsPage() {
           You can register with email and a password, or with Google when that option is shown. A verified email from Google signs into the account that already uses that address. An unverified address is not linked. A password has to be at least 10 characters and no more than 128. Keep it to yourself. Tell us if you think someone else is using the account.
         </p>
         <p>
-          Practice and the saved plan need a confirmed email. You can change your name, email, password, daily goal, and learning mode in Settings. You can download a copy of your data there, reset course progress, and delete the account. Deletion removes the account, the sessions, the linked Google identity, the learning record, and the notices, as the <LegalLink href="/privacy">Privacy policy</LegalLink> describes.
+          Practice and the saved plan need a confirmed email. You can change your name, password, daily goal, learning mode, and notification choices in Settings. To change the email address on the account, email us. You can download a copy of your data there, reset course progress, and delete the account. Deletion removes the account, the sessions, the linked Google identity, the learning record, and the notices, as the <LegalLink href="/privacy">Privacy policy</LegalLink> describes.
         </p>
         <p>
           We can suspend or close an account that breaks these terms, that is being used to attack the service, or that the law requires us to close. Where we can do so safely, we will tell you the reason first and let you ask for a copy of your data. We will act first where waiting would leave the service, or another person, at risk. Closing an account for misuse does not by itself delete a copy you already downloaded.
@@ -90,7 +90,7 @@ export default function TermsPage() {
 
       <LegalSection id="course" title="Using the course">
         <p>
-          Lessons explain an idea, show it, and then practise it. Problems are generated for you. In the default mode, lessons are meant to be taken in order. You can switch to a mode that opens every lesson. Earlier lessons are background. They are not a lock that hides the explanation.
+          Lessons explain an idea, show it, and then practise it. Problems are generated for you. In the default mode, Path mode, lessons open in order: a lesson unlocks when you finish a practice session on the one before it. Audit mode opens every lesson, and you can switch at any time. The public lesson pages can be read without an account.
         </p>
         <p>
           A session is marked from your answers. Mastery, struggle, review dates, and the daily plan are a learning record for you. They are not a qualification, a certificate, a grade, or a reference we give to a school or an employer. Do not present them as one.

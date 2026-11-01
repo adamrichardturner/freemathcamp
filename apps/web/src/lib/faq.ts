@@ -19,11 +19,11 @@ export const FAQS = [
     a: "Problems are generated fresh for you. The engine raises the difficulty after two clean solves and eases off when you struggle. It measures struggle from wrong attempts, hints and time taken, estimates your mastery with Bayesian knowledge tracing, and schedules spaced reviews so ideas stick.",
   },
   {
-    q: "Do I have to complete prerequisites first?",
-    a: "No. Every lesson lists the earlier lessons it builds on so you can fill gaps if a topic is new, but nothing is locked — you can start anywhere.",
+    q: "Do I have to take the lessons in order?",
+    a: "By default, yes: in Path mode each lesson unlocks when you finish a practice session on the one before it. If you'd rather explore, switch to Audit mode on the course page or in Settings and every lesson opens. Either way, each lesson lists the earlier lessons it builds on, and anyone can read the lessons without an account.",
   },
   {
     q: "What topics does Free Math Camp cover?",
-    a: "Number sense and arithmetic, integers, fractions, decimals and percentages, ratios and proportions, exponents and roots, algebra and equations, graphs and linear equations, functions, polynomials and quadratics, exponentials and logarithms, geometry, trigonometry, and sequences and series.",
+    a: "Number sense and arithmetic, integers, fractions, decimals and percentages, ratios and proportions, exponents and roots, algebra, equations and inequalities, graphs and linear equations, functions, polynomials, quadratics and rational functions, exponentials and logarithms (including e and natural logs), geometry, trigonometry, and sequences and series. A final unit introduces the difference quotient and limits, so you start calculus ready.",
   },
 ];

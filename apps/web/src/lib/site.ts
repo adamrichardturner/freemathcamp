@@ -16,7 +16,7 @@ export const SITE = {
   title: "Free Math Camp — Learn All the Math You Need Before Calculus",
   tagline: "All the maths you need before calculus — free.",
   description:
-    "Free Math Camp is a free, adaptive online math course covering everything you need before calculus: arithmetic, fractions, algebra, functions, geometry and trigonometry. Interactive visuals, unlimited practice and spaced review.",
+    "Free Math Camp is a free, adaptive online math course covering everything you need before calculus: arithmetic, fractions, algebra, functions, geometry, trigonometry and a first look at limits. Interactive visuals, unlimited practice and spaced review.",
   keywords: [
     "free math camp",
     "freemathcamp",

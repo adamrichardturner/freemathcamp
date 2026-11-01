@@ -92,7 +92,7 @@ export default function PrivacyPage() {
         <p>We collect the data needed to run an account and the course. We do not buy data about you. You can read the public lessons without an account. Your answers are not on those pages.</p>
         <LegalSubhead>Account</LegalSubhead>
         <p>
-          Name, email address, the time the account was created, and whether the email is confirmed. We also store a daily goal, a learning mode (lessons in order, or every lesson open), a timezone you set or that we default to UTC, whether practice reminders, progress notices and reminder emails are on, when you finished the short introduction, and when you were last active. If Google sends a picture link, we store the link. We do not analyse the picture.
+          Name, email address, the time the account was created, and whether the email is confirmed. We also store a daily goal, a learning mode (lessons in order, or every lesson open), a timezone taken from your browser (UTC until then) so reminders arrive in your daytime, whether practice reminders, progress notices and reminder emails are on, when you finished the short introduction, and when you were last active. If Google sends a picture link, we store the link. We do not analyse the picture.
         </p>
         <LegalSubhead>Password</LegalSubhead>
         <p>If you set a password, we store an Argon2id hash. We do not store the password itself. A password has to be at least 10 characters. An email confirmation link stores a SHA-256 hash of a token that works once and expires in 24 hours.</p>
@@ -221,7 +221,7 @@ export default function PrivacyPage() {
           <li>Email confirmation token: 24 hours, or sooner when it is used.</li>
           <li>Google sign-in check cookie: about 10 minutes.</li>
           <li>Dismissed notices: deleted about 30 days after you dismiss them. Read notices you have not kept: deleted about 180 days after you read them. Notices you keep stay until you dismiss them or delete the account.</li>
-          <li>Push subscription: until it fails repeatedly, you turn notifications off, or you delete the account.</li>
+          <li>Push subscription: until the push service reports that it is no longer valid, you turn notifications off on that device, or you delete the account.</li>
           <li>Host logs: for the host’s ordinary security retention, separate from your account.</li>
         </ul>
         <p>
@@ -244,7 +244,7 @@ export default function PrivacyPage() {
         <ul className={list}>
           <li>Be told what we do with your data. This page is that notice.</li>
           <li>Access the personal data we hold about you. Settings can download a JSON file of the account, the learning record, the answers, and the notices. Email us if you need something that file does not include, such as sign-in sessions.</li>
-          <li>Correct it. Settings can change the name, email, password, daily goal, and learning mode. Reminder emails can be stopped from the link in the message.</li>
+          <li>Correct it. Settings can change the name, password, daily goal, learning mode, and notification choices. To change the email address on the account, email us. Reminder emails can be stopped from the link in the message.</li>
           <li>Delete it. Settings includes Delete account. You can also email us. Deletion covers the account, the learning record, the sessions, the linked Google identity, the notices, and the push subscriptions.</li>
           <li>Restrict what we do with it while a correction or an objection is open.</li>
           <li>Receive a portable copy. The JSON download is that copy. Email us if you need it in another ordinary format.</li>
