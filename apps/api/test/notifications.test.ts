@@ -18,6 +18,8 @@ const PASSWORD = "correct-horse-42";
 const FCM = "https://fcm.googleapis.com/fcm/send/abc123";
 const CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36";
 const FIREFOX = "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0";
+/** Lets a test vouch for a client IP the way the Next.js proxy does. */
+const PROXY_SECRET = "test-proxy-secret";
 
 const correctInput = (a: Answer) => (a.kind === "choice" ? `${a.correct}` : a.kind === "number" ? `${a.value}` : a.values.join(", "));
 
@@ -36,7 +38,7 @@ describe.skipIf(!enabled)("notifications", () => {
 
   beforeAll(() => {
     runtime = makeRuntime(buildAppLayer(recordingPushGateway(pushed)));
-    app = createApp(runtime, { webOrigin: ORIGIN, secureCookies: false });
+    app = createApp(runtime, { webOrigin: ORIGIN, secureCookies: false, proxySecret: PROXY_SECRET });
     agent = request.agent(app);
   });
   afterAll(() => runtime.dispose());
@@ -50,15 +52,24 @@ describe.skipIf(!enabled)("notifications", () => {
     expect((await send("post", "/api/me/notifications/seen")).body).toMatchObject({ unseen: 0, unread: 1 });
   });
 
-  it("flags sign-ins from a new browser, and emails the security notice", async () => {
-    const other = request(app);
-    const res = await other.post("/api/auth/login").set("Origin", ORIGIN).set("User-Agent", FIREFOX).send({ email, password: PASSWORD });
-    expect(res.status).toBe(200);
-    // Same browser again: nothing new.
-    await request(app).post("/api/auth/login").set("Origin", ORIGIN).set("User-Agent", CHROME).send({ email, password: PASSWORD });
-    const items = (await list()).body.items as { kind: string; body: string }[];
-    expect(items.filter((n) => n.kind === "new_sign_in")).toHaveLength(1);
-    expect(items[0]!.body).toContain("Firefox on Linux");
+  it("flags a sign-in only when the IP differs from the previous one, and emails the security notice", async () => {
+    const login = (ua: string, ip?: string) => {
+      const req = request(app).post("/api/auth/login").set("Origin", ORIGIN).set("User-Agent", ua);
+      if (ip) req.set("x-fmc-client-ip", ip).set("x-fmc-proxy-secret", PROXY_SECRET);
+      return req.send({ email, password: PASSWORD });
+    };
+    const signIns = async () => ((await list()).body.items as { kind: string; body: string }[]).filter((n) => n.kind === "new_sign_in");
+
+    // A different browser on the same network as sign-up: no notice.
+    expect((await login(FIREFOX)).status).toBe(200);
+    expect(await signIns()).toHaveLength(0);
+
+    // A new IP is flagged once; signing in from it again is not.
+    expect((await login(FIREFOX, "203.0.113.7")).status).toBe(200);
+    expect((await login(CHROME, "203.0.113.7")).status).toBe(200);
+    const flagged = await signIns();
+    expect(flagged).toHaveLength(1);
+    expect(flagged[0]!.body).toContain("Firefox on Linux (203.0.113.7)");
 
     await drain(deliverPendingEmail as Effect.Effect<number, unknown, never>);
     const mail = outbox.filter((m) => m.to === email);

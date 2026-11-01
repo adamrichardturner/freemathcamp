@@ -56,7 +56,8 @@ const startSession = (user: User, client: ClientInfo) =>
     const token = newSessionToken();
     const expiresAt = addDays(new Date(), sessionTtlDays);
     yield* sessions.create({ id: hashToken(token), userId: user.id, expiresAt, userAgent: client.userAgent?.slice(0, 300) ?? null, ip: client.ip });
-    return { token, expiresAt, user: toPublicUser(user) };
+    const previousIp = yield* Effect.flatMap(UserRepository, (u) => u.recordLoginIp(user.id, client.ip));
+    return { token, expiresAt, user: toPublicUser(user), previousIp };
   });
 
 export const register = (input: { email: string; password: string; displayName: string }, client: ClientInfo) =>
@@ -74,13 +75,15 @@ export const register = (input: { email: string; password: string; displayName: 
 /** Starts a session for a user who just proved control of their email. */
 export const signInVerified = (user: User, client: ClientInfo) => startSession(user, client);
 
-/** Starts a session, flagging sign-ins from a browser/app the account hasn't used before. */
+/**
+ * Starts a session, flagging it when the IP differs from the previous sign-in's.
+ * With nothing to compare against (no earlier IP on record) there's no notice.
+ */
 const startSessionNoticing = (user: User, client: ClientInfo) =>
   Effect.gen(function* () {
-    const ua = client.userAgent?.slice(0, 300) ?? null;
-    const known = ua ? yield* Effect.flatMap(SessionRepository, (s) => s.hasUserAgent(user.id, ua)) : false;
     const session = yield* startSession(user, client);
-    if (!known) yield* notifySafely(user, notices.newSignIn(describeDevice(ua), client.ip));
+    if (client.ip && session.previousIp && session.previousIp !== client.ip)
+      yield* notifySafely(user, notices.newSignIn(describeDevice(client.userAgent?.slice(0, 300) ?? null), client.ip));
     return session;
   });
 

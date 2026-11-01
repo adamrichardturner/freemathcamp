@@ -39,6 +39,18 @@ export const UserRepositoryLive = repo(UserRepository, (run) => ({
   findByEmail: (email) => run((db) => db.selectFrom("users").selectAll().where("email", "=", email).executeTakeFirst()),
   findById: (id) => run((db) => db.selectFrom("users").selectAll().where("id", "=", id).executeTakeFirst()),
   touch: (id) => run((db) => db.updateTable("users").set({ last_active_at: new Date() }).where("id", "=", id).execute()).pipe(Effect.asVoid),
+  recordLoginIp: (id, ip) =>
+    run((db) =>
+      // The self-join reads the row as it was before this update, so the swap is one statement.
+      db
+        .updateTable("users")
+        .from("users as prev")
+        .set({ last_login_ip: ip })
+        .whereRef("users.id", "=", "prev.id")
+        .where("users.id", "=", id)
+        .returning("prev.last_login_ip as previous")
+        .executeTakeFirst(),
+    ).pipe(Effect.map((r) => r?.previous ?? null)),
   updateDisplayName: (id, displayName) =>
     run((db) => db.updateTable("users").set({ display_name: displayName }).where("id", "=", id).returningAll().executeTakeFirstOrThrow()),
   findByOAuth: (provider, providerUserId) =>
@@ -167,17 +179,6 @@ export const SessionRepositoryLive = repo(SessionRepository, (run) => ({
     run((db) => db.deleteFrom("sessions").where("user_id", "=", userId).where("id", "!=", keepId).executeTakeFirst()).pipe(
       Effect.map((r) => Number(r.numDeletedRows)),
     ),
-  hasUserAgent: (userId, userAgent) =>
-    run((db) =>
-      db
-        .selectFrom("sessions")
-        .select("id")
-        .where("user_id", "=", userId)
-        .where("user_agent", "=", userAgent.slice(0, 300))
-        .where("expires_at", ">", new Date())
-        .limit(1)
-        .executeTakeFirst(),
-    ).pipe(Effect.map((r) => !!r)),
 }));
 
 export const AccountRepositoryLive = repo(AccountRepository, (run) => ({

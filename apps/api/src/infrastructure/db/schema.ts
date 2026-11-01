@@ -21,6 +21,8 @@ export interface UsersTable {
   email_unsubscribe_token: Generated<string>;
   created_at: Generated<Date>;
   last_active_at: Timestamp | null;
+  /** IP of the most recent sign-in; a different one raises a new-sign-in notice. */
+  last_login_ip: string | null;
 }
 
 export type AccountEventKind = "name_changed" | "password_changed" | "progress_reset" | "sessions_revoked" | "mode_changed";

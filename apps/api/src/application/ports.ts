@@ -37,6 +37,8 @@ export interface UserRepositoryShape {
   findByEmail(email: string): Db<User | undefined>;
   findById(id: string): Db<User | undefined>;
   touch(id: string): Db<void>;
+  /** Stores the IP of a new sign-in and returns the one it replaced. */
+  recordLoginIp(id: string, ip: string | null): Db<string | null>;
   updateDisplayName(id: string, displayName: string): Db<User>;
   findByOAuth(provider: "google", providerUserId: string): Db<User | undefined>;
   /** Links a provider identity to a user (creating the user if needed) atomically. */
@@ -66,8 +68,6 @@ export interface SessionRepositoryShape {
   countActive(userId: string): Db<number>;
   /** Signs out every other device, keeping the given session. Returns how many were removed. */
   deleteOthers(userId: string, keepId: string): Db<number>;
-  /** Whether the user already has a live session from this browser/app, so a new one can be flagged. */
-  hasUserAgent(userId: string, userAgent: string): Db<boolean>;
 }
 export class SessionRepository extends Context.Tag("SessionRepository")<SessionRepository, SessionRepositoryShape>() {}
 
