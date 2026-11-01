@@ -10,7 +10,7 @@ import { absoluteUrl, plainText } from "./site";
 /** Shared look for generated share images (1200×630). Rendered at build time by next/og. */
 export const OG_SIZE = { width: 1200, height: 630 };
 
-export const SITE_IMAGE_ALT = "Free Math Camp — all the maths you need before calculus, free";
+export const SITE_IMAGE_ALT = "FreeMathCamp — all the maths you need before calculus, free";
 
 /**
  * Share images live at plain `.png` paths (`/og.png`, `/og/<course>/<lesson>.png`) rather than
@@ -86,7 +86,7 @@ export async function siteImage() {
     (
       <OgFrame logo={logo} footer={`${graph.refs.length} free lessons · ${course.units.length} units · adaptive practice`}>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <div style={{ display: "flex", fontFamily: "Instrument Serif", fontSize: 96, lineHeight: 1, letterSpacing: -2 }}>Free Math Camp</div>
+          <div style={{ display: "flex", fontFamily: "Instrument Serif", fontSize: 96, lineHeight: 1, letterSpacing: -2 }}>FreeMathCamp</div>
           <div style={{ display: "flex", fontFamily: "Instrument Serif", fontSize: 54, lineHeight: 1.1, color: "#d8d4f5" }}>
             All the maths you need&nbsp;<span style={{ fontStyle: "italic", color: "#f0a3bc" }}>before</span>&nbsp;calculus.
           </div>
@@ -100,7 +100,7 @@ export async function siteImage() {
 export async function lessonImage(courseId: string, exerciseId: string) {
   const ref = getExercise(courseId, exerciseId);
   const logo = await logoDataUri();
-  const title = ref?.exercise.title ?? "Free Math Camp";
+  const title = ref?.exercise.title ?? "FreeMathCamp";
   return new ImageResponse(
     (
       <OgFrame logo={logo} footer="Free lesson · interactive visuals · adaptive practice">

@@ -43,7 +43,7 @@ const unitLinks: MenuLink[] = course.units.map((u) => ({
   icon: ({ className }: { className?: string }) => <UnitIcon name={u.icon} className={className} />,
 }));
 
-const homeLink: MenuLink = { href: "/", label: "Home", detail: "What Free Math Camp is", icon: House };
+const homeLink: MenuLink = { href: "/", label: "Home", detail: "What FreeMathCamp is", icon: House };
 const courseLink: MenuLink = { href: COURSE_PATH, label: "Foundations", detail: "The course map", icon: BookOpen };
 
 const accountLinks: MenuLink[] = [

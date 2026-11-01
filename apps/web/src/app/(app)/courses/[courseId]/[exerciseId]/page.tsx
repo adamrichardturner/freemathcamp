@@ -19,8 +19,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const ref = getExercise(courseId, exerciseId);
   if (!ref) return {};
   const description = lessonDescription(ref);
-  const title = `${ref.exercise.title} · Free Math Camp`;
-  const share = shareImage(ogImagePath(courseId, exerciseId), `${ref.exercise.title}: a free lesson from Free Math Camp`);
+  const title = `${ref.exercise.title} · FreeMathCamp`;
+  const share = shareImage(ogImagePath(courseId, exerciseId), `${ref.exercise.title}: a free lesson from FreeMathCamp`);
   return {
     title: `${ref.exercise.title} — Free ${ref.unit.title} Lesson`,
     description,
@@ -40,7 +40,7 @@ async function Exercise({ params }: Pick<Props, "params">) {
         data={graph(
           lessonSchema(ref),
           breadcrumbs([
-            { name: "Free Math Camp", path: "/" },
+            { name: "FreeMathCamp", path: "/" },
             { name: ref.course.title, path: `/courses/${ref.course.id}` },
             { name: ref.exercise.title, path: lessonPath(ref) },
           ]),

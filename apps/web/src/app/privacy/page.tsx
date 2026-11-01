@@ -5,7 +5,7 @@ import { AUTHOR, SITE } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Privacy policy",
   description:
-    "How Free Math Camp uses personal data. Written for UK law first, and for learners in the EEA, Switzerland, the United States and elsewhere. The course is free. We do not sell personal data or use it for advertising.",
+    "How FreeMathCamp uses personal data. Written for UK law first, and for learners in the EEA, Switzerland, the United States and elsewhere. The course is free. We do not sell personal data or use it for advertising.",
   alternates: { canonical: "/privacy" },
 };
 
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
       lede={
         <>
           <p>
-            This policy explains what personal data <span className="text-foreground">Free Math Camp</span> uses, and why. It covers the course at{" "}
+            This policy explains what personal data <span className="text-foreground">FreeMathCamp</span> uses, and why. It covers the course at{" "}
             <LegalLink href={SITE.url}>freemathcamp.app</LegalLink>. The course is free. We do not take a payment card, sell personal data, or use it for advertising.
           </p>
           <p>
@@ -51,7 +51,7 @@ export default function PrivacyPage() {
     >
       <LegalSection id="who" title="Who is responsible">
         <p>
-          <span className="text-foreground">{AUTHOR.name}</span> created Free Math Camp and is the controller of your personal data. He is a private individual, not a company or an organisation. In this policy, “we” means him. He decides why an account exists and what data is needed to run the course. FreeMathCamp is the name of the site. It is not a registered company.
+          <span className="text-foreground">{AUTHOR.name}</span> created FreeMathCamp and is the controller of your personal data. He is a private individual, not a company or an organisation. In this policy, “we” means him. He decides why an account exists and what data is needed to run the course. FreeMathCamp is the name of the site. It is not a registered company.
         </p>
         <p>
           Email <LegalLink href={`mailto:${AUTHOR.email}`}>{AUTHOR.email}</LegalLink> for any privacy request. You do not need a special form. If you need a postal address for a formal notice, ask and he will provide one.
@@ -295,7 +295,7 @@ export default function PrivacyPage() {
         </p>
         <LegalSubhead>Email</LegalSubhead>
         <p>
-          The CAN-SPAM Act treats promotional email differently from transactional email. Security and confirmation messages are about the account you opened. Reminder emails are about this course, they identify Free Math Camp, and they include a working unsubscribe. We honour an unsubscribe promptly. A postal address for a formal notice is available if you email us.
+          The CAN-SPAM Act treats promotional email differently from transactional email. Security and confirmation messages are about the account you opened. Reminder emails are about this course, they identify FreeMathCamp, and they include a working unsubscribe. We honour an unsubscribe promptly. A postal address for a formal notice is available if you email us.
         </p>
       </LegalSection>
 
@@ -308,7 +308,7 @@ export default function PrivacyPage() {
 
       <LegalSection id="age" title="Age">
         <p>
-          Free Math Camp starts from the basics and is used by adults and by older school students getting ready for calculus. It is not directed at children under 13. Do not create an account if you are under 13. If you are under 18, a parent or guardian should know you are using it.
+          FreeMathCamp starts from the basics and is used by adults and by older school students getting ready for calculus. It is not directed at children under 13. Do not create an account if you are under 13. If you are under 18, a parent or guardian should know you are using it.
         </p>
         <p>
           In the United Kingdom the age of digital consent for an information society service is 13. In the EEA it is between 13 and 16, depending on the country. If you are under the age that applies where you live, a parent or guardian should be the one who agrees to the account. We do not knowingly keep an account for a child under 13. If you are a parent or guardian and you believe we have, email us and we will delete it.

@@ -13,10 +13,10 @@ export const SITE = {
   name: "FreeMathCamp",
   /** The phrase people search for; also used as an alternate brand name. */
   alternateName: "Free Math Camp",
-  title: "Free Math Camp — Learn All the Math You Need Before Calculus",
+  title: "FreeMathCamp — Learn All the Math You Need Before Calculus",
   tagline: "All the maths you need before calculus — free.",
   description:
-    "Free Math Camp is a free, adaptive online math course covering everything you need before calculus: arithmetic, fractions, algebra, functions, geometry, trigonometry and a first look at limits. Interactive visuals, unlimited practice and spaced review.",
+    "FreeMathCamp is a free, adaptive online math course covering everything you need before calculus: arithmetic, fractions, algebra, functions, geometry, trigonometry and a first look at limits. Interactive visuals, unlimited practice and spaced review.",
   keywords: [
     "free math camp",
     "freemathcamp",
@@ -81,7 +81,7 @@ export const lessonPath = (ref: ExerciseRef) => `/courses/${ref.course.id}/${ref
 export const lessonDescription = (ref: ExerciseRef) => {
   const summary = plainText(ref.exercise.summary).replace(/\.$/, "");
   const ideas = ref.exercise.keyIdeas.map(plainText).join(" ");
-  return `${summary}. Free ${ref.unit.title.toLowerCase()} lesson from Free Math Camp with interactive visuals and adaptive practice. ${ideas}`.slice(0, 300);
+  return `${summary}. Free ${ref.unit.title.toLowerCase()} lesson from FreeMathCamp with interactive visuals and adaptive practice. ${ideas}`.slice(0, 300);
 };
 
 export const allCourses: Course[] = courses;

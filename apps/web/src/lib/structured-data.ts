@@ -18,7 +18,7 @@ export const website = {
   "@type": "WebSite",
   "@id": SITE_ID,
   name: SITE.name,
-  alternateName: [SITE.alternateName, "Free Math Camp — Foundations"],
+  alternateName: [SITE.alternateName, "FreeMathCamp — Foundations"],
   url: SITE.url,
   inLanguage: "en",
   publisher: { "@id": ORG_ID },
