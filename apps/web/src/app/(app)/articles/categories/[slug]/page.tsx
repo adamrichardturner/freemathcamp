@@ -49,7 +49,7 @@ async function Category({ params }: Pick<Props, "params">) {
           collectionSchema(path, c.title, c.summary, `${path}#articles`),
           articleListSchema(`${path}#articles`, `${c.title} articles`, items),
           breadcrumbs([
-            { name: "Free Math Camp", path: "/" },
+            { name: "FreeMathCamp", path: "/" },
             { name: "Articles", path: "/articles" },
             { name: c.title, path },
           ]),

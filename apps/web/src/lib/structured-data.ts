@@ -121,7 +121,7 @@ export const articleSchema = (a: ArticleLike, section: { title: string; path: st
     "@type": "DefinedTerm",
     name: a.name,
     description: plainText(a.definition),
-    inDefinedTermSet: { "@type": "DefinedTermSet", name: `${SITE.alternateName} maths glossary`, url: absoluteUrl("/articles") },
+    inDefinedTermSet: { "@type": "DefinedTermSet", name: `${SITE.name} maths glossary`, url: absoluteUrl("/articles") },
   },
   teaches: a.name,
   ...(extra.lessons.length ? { isBasedOn: extra.lessons.map((l) => ({ "@type": "LearningResource", name: l.name, url: absoluteUrl(l.path) })) } : {}),

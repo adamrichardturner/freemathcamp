@@ -31,7 +31,7 @@ export default function ArticlesPage() {
           collectionSchema("/articles", "Maths articles", description, "/articles#articles"),
           articleListSchema("/articles#articles", "All maths articles", articles),
           breadcrumbs([
-            { name: "Free Math Camp", path: "/" },
+            { name: "FreeMathCamp", path: "/" },
             { name: "Articles", path: "/articles" },
           ]),
         )}

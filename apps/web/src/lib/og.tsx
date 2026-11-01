@@ -124,7 +124,7 @@ export async function articleImage(slug: string) {
   const a = articleBySlug(slug);
   const logo = await logoDataUri();
   // The share-image font covers Latin-1; titles with superscripts or Greek fall back to the concept's plain name.
-  const title = a ? (/[^\u0000-\u00ff\u2013\u2014\u2019]/.test(a.title) ? a.name : a.title) : "Free Math Camp";
+  const title = a ? (/[^\u0000-\u00ff\u2013\u2014\u2019]/.test(a.title) ? a.name : a.title) : "FreeMathCamp";
   const category = a ? categoryById(a.category).title : "";
   return new ImageResponse(
     (

@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!a) return {};
   const description = articleDescription(a);
   const path = `/articles/${a.slug}`;
-  const share = shareImage(articleImagePath(a.slug), `${a.title}: a free explainer from Free Math Camp`);
+  const share = shareImage(articleImagePath(a.slug), `${a.title}: a free explainer from FreeMathCamp`);
   return {
     title: a.title,
     description,
@@ -65,7 +65,7 @@ async function Article({ params }: Pick<Props, "params">) {
         data={graph(
           articleSchema(a, section, { words: articleWords(a), minutes, image: articleImagePath(a.slug), lessons }),
           breadcrumbs([
-            { name: "Free Math Camp", path: "/" },
+            { name: "FreeMathCamp", path: "/" },
             { name: "Articles", path: "/articles" },
             { name: section.title, path: section.path },
             { name: a.title, path: `/articles/${a.slug}` },
