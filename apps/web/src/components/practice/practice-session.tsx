@@ -237,7 +237,14 @@ function ProblemCard({
             <Tex tex={problem.tex} display className="text-2xl sm:text-3xl" />
           </div>
         )}
-        {problem.visual && <Visual visual={problem.visual} />}
+        {/* The question's visual never shows the answer; once resolved, the solution's version (if any) takes its place. */}
+        {resolved && problem.solutionVisual ? (
+          <motion.div key="solution-visual" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <Visual visual={problem.solutionVisual} />
+          </motion.div>
+        ) : (
+          problem.visual && <Visual visual={problem.visual} />
+        )}
 
         {isChoice && problem.choices ? (
           <div className="grid gap-2.5 sm:grid-cols-2">

@@ -158,7 +158,7 @@ export const polynomials: Unit = {
           tex: `${quadratic(lead, -lead * (p + q), lead * p * q)} = 0`,
           answer: { kind: "set", values: p === q ? [p] : [p, q] },
           inputHint: "e.g. -4, 3",
-          visual: level === 1 ? { type: "functionPlot", functions: [{ fn: (x) => (x - p) * (x - q), tone: "muted" }], viewBox: { x: [-11, 11], y: [-25, 15] } } : undefined,
+          solutionVisual: level === 1 ? { type: "functionPlot", functions: [{ fn: (x) => (x - p) * (x - q), tone: "muted" }], points: [...new Set([p, q])].map((r) => ({ x: r, y: 0, label: `x = ${r}` })), viewBox: { x: [-11, 11], y: [-25, 15] } } : undefined,
           hints: [lead > 1 ? `Factor out ${lead} first.` : "Factor into two brackets.", "Set each bracket equal to zero."],
           solution: [step("Factor.", `${lead > 1 ? lead : ""}${factor(p)}${factor(q)} = 0`), step("Solve.", p === q ? `x = ${p}` : `x = ${p} \\text{ or } x = ${q}`)],
         };

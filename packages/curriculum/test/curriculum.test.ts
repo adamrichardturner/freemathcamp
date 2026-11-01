@@ -107,3 +107,29 @@ describe("lesson access", () => {
     expect(unlockedLessons(graph, "audit", () => undefined).size).toBe(graph.refs.length);
   });
 });
+
+describe("questions don't give their answers away", () => {
+  /** Visuals that display a computed result; they belong in `solutionVisual`, shown once the problem is resolved. */
+  const REVEALING = new Set(["exponentBlocks", "factorTree", "percentGrid", "fractionBars", "unitCircle"]);
+  const answerValues = (a: Answer) => (a.kind === "number" ? [a.value] : a.kind === "choice" ? [] : a.values);
+
+  for (const course of courses)
+    for (const unit of course.units)
+      for (const ex of unit.exercises)
+        it(`${ex.id}: the question's visual and prompt hide the answer`, () => {
+          for (const level of [1, 2, 3] as Level[])
+            for (let seed = 1; seed <= 40; seed++) {
+              const p = generateProblem({ exercise: ex, unit, course, order: 0 }, seed * 7919 + level, level);
+              const v = p.visual;
+              if (!v) continue;
+              expect(REVEALING.has(v.type), `${v.type} shows its result`).toBe(false);
+              if (v.type === "areaModel" || v.type === "placeValue") expect(v.conceal, `${v.type} must be concealed in a question`).toBe(true);
+              if (v.type === "triangleAngles" && p.answer.kind === "number") {
+                const shown = v.angles.filter((_, i) => i !== v.hidden);
+                expect(shown).not.toContain(p.answer.value);
+              }
+              if (v.type === "sequenceBars") for (const value of answerValues(p.answer)) expect(v.terms).not.toContain(value);
+              if (v.type === "functionPlot" && p.answer.kind === "set") expect(v.functions, "a plotted curve shows its roots").toHaveLength(0);
+            }
+        });
+});

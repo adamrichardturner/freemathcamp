@@ -21,10 +21,12 @@ export type Visual =
     }
   | { type: "fractionBars"; fractions: [number, number][]; labels?: boolean }
   | { type: "fractionCircle"; numerator: number; denominator: number }
-  | { type: "areaModel"; a: number; b: number }
+  /** `conceal` leaves the products blank so it can scaffold a question without answering it. */
+  | { type: "areaModel"; a: number; b: number; conceal?: boolean }
   | { type: "arrayGrid"; rows: number; cols: number; groupBy?: "rows" | "cols" }
   | { type: "percentGrid"; percent: number }
-  | { type: "placeValue"; value: number; highlight?: number }
+  /** `conceal` hides the place names and values, leaving just the digits. */
+  | { type: "placeValue"; value: number; highlight?: number; conceal?: boolean }
   | { type: "tapeDiagram"; parts: { label: string; value: number; tone?: Tone }[]; totalLabel?: string }
   | { type: "balance"; left: string; right: string; note?: string }
   | { type: "factorTree"; value: number }
@@ -71,7 +73,10 @@ export interface Problem {
   prompt: Md;
   /** Optional display-math expression rendered large under the prompt. */
   tex?: string;
+  /** Shown while the learner works on it, so it must never give the answer away. */
   visual?: Visual;
+  /** Shown with the worked solution once the problem is resolved; free to show the answer. */
+  solutionVisual?: Visual;
   choices?: Md[];
   answer: Answer;
   /** Short placeholder/format hint shown in the answer box. */

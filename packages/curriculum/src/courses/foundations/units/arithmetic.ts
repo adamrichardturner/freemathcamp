@@ -37,7 +37,8 @@ export const arithmetic: Unit = {
         const names = ["ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands", "millions"];
         return {
           prompt: `What is the value of the digit **${digit}** in the highlighted position of $${formatThousands(n).replace(/,/g, "{,}")}$? (It is ${ordinal(pos + 1)} from the left.)`,
-          visual: { type: "placeValue", value: n, highlight: pos },
+          visual: { type: "placeValue", value: n, highlight: pos, conceal: true },
+          solutionVisual: { type: "placeValue", value: n, highlight: pos },
           answer: numberAnswer(digit * place),
           hints: [`The ${ordinal(pos + 1)} digit from the left is in the **${names[str.length - 1 - pos]}** place.`, `Multiply the digit by ${formatThousands(place)}.`],
           solution: [step(`The digit sits in the ${names[str.length - 1 - pos]} place, worth ${formatThousands(place)}.`, r`${digit}\times ${place} = ${digit * place}`)],
@@ -96,7 +97,8 @@ export const arithmetic: Unit = {
         return {
           prompt: "Compute the product.",
           tex: r`${a} \times ${b}`,
-          visual: level > 1 ? { type: "areaModel", a, b } : undefined,
+          visual: level > 1 ? { type: "areaModel", a, b, conceal: true } : undefined,
+          solutionVisual: level > 1 ? { type: "areaModel", a, b } : undefined,
           answer: numberAnswer(a * b),
           hints: ["Split the larger number into tens and ones.", "Multiply each piece, then add the partial products."],
           solution: [step("Use the area model and add the partial products.", r`${a}\times${b} = ${a * b}`)],
@@ -255,7 +257,7 @@ export const arithmetic: Unit = {
           ? {
               prompt: `Which is the prime factorization of $${n}$?`,
               ...multipleChoice(rng, correct, [wrong1, wrong2, wrong3]),
-              visual: { type: "factorTree", value: n },
+              solutionVisual: { type: "factorTree", value: n },
               hints: ["Divide by the smallest prime repeatedly.", "Every factor in the answer must be prime."],
               solution: [step(`$${n} = ${primeFactors(n).join(" \\times ")} = ${texPrimeFactorization(n)}$`)],
             }

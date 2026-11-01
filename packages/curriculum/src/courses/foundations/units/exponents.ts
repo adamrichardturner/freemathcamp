@@ -40,7 +40,7 @@ export const exponents: Unit = {
         return {
           prompt: "Evaluate.",
           tex: `${paren(b)}^{${n}}`,
-          visual: level === 1 && n <= 3 ? { type: "exponentBlocks", base: b, exponent: n } : undefined,
+          solutionVisual: level === 1 && n <= 3 ? { type: "exponentBlocks", base: b, exponent: n } : undefined,
           answer: numberAnswer(b ** n),
           hints: [`Multiply ${b} by itself ${n} times.`, b < 0 ? "An even number of negatives makes a positive." : "Go step by step."],
           solution: [step("Repeated multiplication.", r`${Array(n).fill(paren(b)).join(r`\times`)} = ${b ** n}`)],
@@ -253,14 +253,14 @@ export const exponents: Unit = {
       generate: (rng, level) => {
         const root = rng.pick(level === 1 ? [2, 3] : [2, 3, 4]);
         const base = rng.int(2, root === 2 ? 9 : root === 3 ? 5 : 3);
-        const m = level === 1 ? 1 : rng.int(1, 3);
+        // Numerators that don't cancel with the root, so the exponent is already in lowest terms.
+        const m = level === 1 ? 1 : rng.pick([1, 2, 3].filter((k) => k % root !== 0));
         const neg = level === 3 && rng.chance(0.5);
-        const value = (neg ? -1 : 1) * 1;
         const result = base ** (m * (neg ? -1 : 1));
         return {
           prompt: "Evaluate.",
           tex: `${base ** root}^{${neg ? "-" : ""}${m === 1 ? `1/${root}` : `${m}/${root}`}}`,
-          answer: numberAnswer(result * value),
+          answer: numberAnswer(result),
           inputHint: neg ? "e.g. 1/4" : undefined,
           hints: [`The denominator ${root} means take the ${root === 2 ? "square" : root === 3 ? "cube" : "fourth"} root.`, m > 1 ? `Then raise to the power ${m}.` : "That's it!"],
           solution: [step("Root first.", r`\sqrt[${root}]{${base ** root}} = ${base}`), step("Then power.", r`${base}^{${neg ? "-" : ""}${m}} = ${neg ? texFrac(1, base ** m) : base ** m}`)],

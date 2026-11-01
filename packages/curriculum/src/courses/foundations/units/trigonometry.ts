@@ -136,7 +136,7 @@ export const trigonometry: Unit = {
         return {
           prompt: `Find the exact value of $\\${fn}(${level === 3 ? radTex(deg) : `${deg}^\\circ`})$.`,
           ...multipleChoice(rng, correct, [`$${value < 0 ? "" : "-"}${mag}$`, `$${value < 0 ? "-" : ""}${other}$`, `$${value < 0 ? "" : "-"}${other}$`]),
-          visual: level === 1 ? { type: "unitCircle", angle: deg } : undefined,
+          solutionVisual: level === 1 ? { type: "unitCircle", angle: deg } : undefined,
           hints: [`The reference angle is ${base}°.`, `In quadrant ${["I", "II", "III", "IV"][quadrant]}, ${fn} is ${value < 0 ? "negative" : "positive"}.`],
           solution: [step(`Reference angle ${base}°, sign from the quadrant.`, `${value < 0 ? "-" : ""}${mag}`)],
         };

@@ -237,7 +237,7 @@ export const algebra: Unit = {
         const d = a * x + b - c * x;
         if (level >= 2) {
           const k = rng.int(2, 4);
-          const p = rng.int(-6, 6);
+          const p = rng.nonZero(-6, 6);
           const rhsConst = k * (x + p) - c * x;
           return {
             prompt: "Solve for $x$.",

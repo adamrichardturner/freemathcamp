@@ -109,7 +109,7 @@ export const decimals: Unit = {
           return {
             prompt: `Write $\\frac{${n}}{${d}}$ as a percentage.`,
             answer: numberAnswer(pct, { unit: "%" }),
-            visual: Number.isInteger(pct) ? { type: "percentGrid", percent: pct } : undefined,
+            solutionVisual: Number.isInteger(pct) ? { type: "percentGrid", percent: pct } : undefined,
             inputHint: "e.g. 35%",
             hints: [`Divide ${n} by ${d}.`, "Multiply the decimal by 100."],
             solution: [step("Divide, then multiply by 100.", r`${n}\div${d} = ${n / d} = ${pct}\%`)],

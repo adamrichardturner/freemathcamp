@@ -111,7 +111,7 @@ export const fractions: Unit = {
         return {
           prompt: `Which fraction is **larger**?`,
           ...multipleChoice(rng, `$${bigger}$`, [`$${smaller}$`]),
-          visual: level === 1 ? { type: "fractionBars", fractions: [[a, b], [c, d]] } : undefined,
+          solutionVisual: level === 1 ? { type: "fractionBars", fractions: [[a, b], [c, d]] } : undefined,
           hints: [`Use common denominator ${lcm(b, d)}.`, `Or cross-multiply: ${a}×${d} vs ${c}×${b}.`],
           solution: [step(`Cross-multiply: ${a}×${d} = ${a * d} and ${c}×${b} = ${c * b}.`), step(`The larger product belongs to $${bigger}$.`)],
         };

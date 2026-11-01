@@ -185,7 +185,7 @@ const splitPlace = (n: number) => {
   return parts.length ? parts : [0];
 };
 
-export function AreaModel({ a, b }: V<"areaModel">) {
+export function AreaModel({ a, b, conceal }: V<"areaModel">) {
   const A = splitPlace(a), B = splitPlace(b);
   const W = 520, H = 300, pad = 46;
   const sx = (W - pad - 8) / a, sy = (H - pad - 8) / b;
@@ -221,8 +221,8 @@ export function AreaModel({ a, b }: V<"areaModel">) {
                       animate={{ opacity: 1 }}
                       transition={{ delay: (i + j) * 0.12 }}
                     />
-                    <text x={x0 + w / 2} y={y0 + h / 2 + 5} textAnchor="middle" className="fill-foreground text-[14px] font-medium tabular-nums">
-                      {pa * pb}
+                    <text x={x0 + w / 2} y={y0 + h / 2 + 5} textAnchor="middle" className={cn("text-[14px] font-medium tabular-nums", conceal ? "fill-muted-foreground" : "fill-foreground")}>
+                      {conceal ? "?" : pa * pb}
                     </text>
                   </g>
                 );
@@ -232,7 +232,11 @@ export function AreaModel({ a, b }: V<"areaModel">) {
         })}
       </svg>
       <div className="mt-1 text-center text-sm text-muted-foreground">
-        <Tex tex={`${a}\\times${b} = ${A.flatMap((x) => B.map((y) => x * y)).join(" + ")} = ${a * b}`} />
+        {conceal ? (
+          <Tex tex={`${a}\\times${b} = ${A.flatMap((x) => B.map((y) => `${x}\\times${y}`)).join(" + ")}`} />
+        ) : (
+          <Tex tex={`${a}\\times${b} = ${A.flatMap((x) => B.map((y) => x * y)).join(" + ")} = ${a * b}`} />
+        )}
       </div>
     </VisualFrame>
   );
@@ -269,7 +273,7 @@ export function ArrayGrid({ rows, cols, groupBy }: V<"arrayGrid">) {
 
 /* ---------------- Place value, percent, tape ---------------- */
 
-export function PlaceValue({ value, highlight }: V<"placeValue">) {
+export function PlaceValue({ value, highlight, conceal }: V<"placeValue">) {
   const names = ["ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands", "millions", "ten-millions"];
   const digits = String(value).split("");
   return (
@@ -290,8 +294,12 @@ export function PlaceValue({ value, highlight }: V<"placeValue">) {
               )}
             >
               <span className={cn("font-mono text-2xl font-semibold sm:text-3xl", on && "text-primary")}>{d}</span>
-              <span className="mt-1 text-center text-[9px] leading-tight text-muted-foreground sm:text-[10px]">{names[place]}</span>
-              <span className="text-[10px] tabular-nums text-muted-foreground/70">×{(10 ** place).toLocaleString()}</span>
+              {!conceal && (
+                <>
+                  <span className="mt-1 text-center text-[9px] leading-tight text-muted-foreground sm:text-[10px]">{names[place]}</span>
+                  <span className="text-[10px] tabular-nums text-muted-foreground/70">×{(10 ** place).toLocaleString()}</span>
+                </>
+              )}
             </motion.div>
           );
         })}

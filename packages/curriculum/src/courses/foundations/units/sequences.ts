@@ -63,7 +63,8 @@ export const sequences: Unit = {
         key("This idea — adding infinitely many shrinking pieces — is exactly what calculus formalises."),
       ],
       generate: (rng, level) => {
-        const a1 = rng.nonZero(-5, 6), ratio = rng.pick(level === 1 ? [2, 3] : [2, 3, -2, 0.5]), n = rng.int(4, level === 1 ? 6 : 8);
+        // The prompt lists four terms, so ask for one beyond them.
+        const a1 = rng.nonZero(-5, 6), ratio = rng.pick(level === 1 ? [2, 3] : [2, 3, -2, 0.5]), n = rng.int(5, level === 1 ? 6 : 8);
         if (level === 3) {
           const a = rng.int(2, 20), rr = rng.pick([0.5, 0.25, 0.2, -0.5, 0.75]);
           return {
@@ -77,6 +78,7 @@ export const sequences: Unit = {
         return {
           prompt: `Find term number $${n}$ of $${terms.join(", ")}, \\dots$`,
           visual: level === 1 && a1 > 0 ? { type: "sequenceBars", terms } : undefined,
+          solutionVisual: level === 1 && a1 > 0 ? { type: "sequenceBars", terms: Array.from({ length: n }, (_, i) => a1 * ratio ** i) } : undefined,
           answer: numberAnswer(a1 * ratio ** (n - 1)),
           hints: [`The common ratio is ${ratio}.`, "a_n = a₁ · r^(n−1)"],
           solution: [step("Apply the formula.", r`${a1}\cdot(${ratio})^{${n - 1}} = ${a1 * ratio ** (n - 1)}`)],
