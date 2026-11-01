@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { LearningModeSwitch } from "@/components/course/learning-mode";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { keys, useSession } from "@/hooks/queries";
 import { api, type User } from "@/lib/api";
@@ -19,8 +20,9 @@ const STEPS = [
   {
     icon: Route,
     image: "/onboarding/step-1.png",
-    title: "Follow your path",
-    text: "Foundations is a sequence of short lessons. In Path mode each one unlocks when you finish a practice session on the one before it. Want to roam? Switch to Audit mode on the course page or in Settings to open everything.",
+    title: "Choose your path",
+    text: "Foundations is a sequence of short lessons. Path mode (recommended) unlocks each one when you finish a practice session on the one before it; Audit mode opens everything so you can explore in any order. You can change this any time in Settings or on the course page.",
+    choosesMode: true,
   },
   {
     icon: BookOpen,
@@ -48,6 +50,8 @@ export function Onboarding() {
   const [replay, setReplay] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [step, setStep] = useState(0);
+  // While a mode change is saving, the tour holds still so it can't be left half-applied.
+  const [savingMode, setSavingMode] = useState(false);
   const firstVisit = verified && !!user && !user.onboarded && !dismissed;
   const open = firstVisit || replay;
 
@@ -66,6 +70,7 @@ export function Onboarding() {
   });
 
   const close = () => {
+    if (savingMode) return;
     if (firstVisit) complete.mutate();
     setDismissed(true);
     setReplay(false);
@@ -98,6 +103,7 @@ export function Onboarding() {
                   role="tab"
                   aria-selected={i === step}
                   aria-label={`Step ${i + 1}: ${s.title}`}
+                  disabled={savingMode}
                   onClick={() => setStep(i)}
                   className={cn("h-2 rounded-full transition-all", i === step ? "w-6 bg-primary" : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50")}
                 />
@@ -115,17 +121,19 @@ export function Onboarding() {
             </div>
           </div>
 
+          {"choosesMode" in current && user && <LearningModeSwitch mode={user.learningMode} variant="cards" confirm={false} onPendingChange={setSavingMode} />}
+
           <div className="flex items-center justify-between gap-2 pt-1">
-            <Button variant="ghost" onClick={close} className="text-muted-foreground">
+            <Button variant="ghost" onClick={close} disabled={savingMode} className="text-muted-foreground">
               Skip
             </Button>
             <div className="flex gap-2">
               {step > 0 && (
-                <Button variant="outline" onClick={() => setStep(step - 1)}>
+                <Button variant="outline" onClick={() => setStep(step - 1)} disabled={savingMode}>
                   <ArrowLeft /> Back
                 </Button>
               )}
-              <Button onClick={() => (last ? close() : setStep(step + 1))}>
+              <Button onClick={() => (last ? close() : setStep(step + 1))} disabled={savingMode}>
                 {last ? "Get started" : "Next"} <ArrowRight />
               </Button>
             </div>
