@@ -14,6 +14,11 @@ export interface UsersTable {
   daily_goal: Generated<number>;
   learning_mode: Generated<LearningMode>;
   onboarded_at: Timestamp | null;
+  timezone: Generated<string>;
+  notify_reminders: Generated<boolean>;
+  notify_progress: Generated<boolean>;
+  notify_email_reminders: Generated<boolean>;
+  email_unsubscribe_token: Generated<string>;
   created_at: Generated<Date>;
   last_active_at: Timestamp | null;
 }
@@ -125,6 +130,53 @@ export interface AttemptsTable {
   created_at: Generated<Date>;
 }
 
+export type NotificationCategory = "account" | "progress" | "reminder";
+export type PushStatus = "pending" | "sent" | "skipped" | "failed";
+
+export interface NotificationsTable {
+  id: Generated<string>;
+  user_id: string;
+  kind: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  href: string | null;
+  data: ColumnType<Record<string, unknown>, string | undefined, string>;
+  dedupe_key: string | null;
+  created_at: Generated<Date>;
+  seen_at: Timestamp | null;
+  read_at: Timestamp | null;
+  kept_at: Timestamp | null;
+  dismissed_at: Timestamp | null;
+  push_status: Generated<PushStatus>;
+  push_attempts: Generated<number>;
+  push_next_at: Generated<Date>;
+  email_status: Generated<PushStatus>;
+  email_attempts: Generated<number>;
+  email_next_at: Generated<Date>;
+}
+
+export type PushPlatform = "web" | "ios";
+
+export interface PushSubscriptionsTable {
+  id: Generated<string>;
+  user_id: string;
+  platform: PushPlatform;
+  endpoint: string;
+  p256dh: string | null;
+  auth: string | null;
+  user_agent: string | null;
+  created_at: Generated<Date>;
+  last_success_at: Timestamp | null;
+  failure_count: Generated<number>;
+}
+
+export interface JobLeasesTable {
+  name: string;
+  locked_until: Date;
+  holder: string;
+}
+
 export interface DB {
   users: UsersTable;
   oauth_accounts: OAuthAccountsTable;
@@ -135,6 +187,9 @@ export interface DB {
   practice_sessions: PracticeSessionsTable;
   item_results: ItemResultsTable;
   attempts: AttemptsTable;
+  notifications: NotificationsTable;
+  push_subscriptions: PushSubscriptionsTable;
+  job_leases: JobLeasesTable;
 }
 
 export type User = Selectable<UsersTable>;
@@ -143,3 +198,5 @@ export type ExerciseProgress = Selectable<ExerciseProgressTable>;
 export type ExerciseProgressUpdate = Updateable<ExerciseProgressTable>;
 export type PracticeSession = Selectable<PracticeSessionsTable>;
 export type ItemResult = Selectable<ItemResultsTable>;
+export type Notification = Selectable<NotificationsTable>;
+export type PushSubscription = Selectable<PushSubscriptionsTable>;

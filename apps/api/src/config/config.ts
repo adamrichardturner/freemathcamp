@@ -13,6 +13,12 @@ export interface AppConfigShape {
   /** Without a key, emails are logged instead of sent (development and tests). */
   readonly resendApiKey: Option.Option<Redacted.Redacted<string>>;
   readonly emailFrom: string;
+  /** Web Push (VAPID) keys; without them browser push is off and notifications stay in-app. */
+  readonly vapid: Option.Option<{ publicKey: string; privateKey: Redacted.Redacted<string>; subject: string }>;
+  /** APNs token auth for the iOS app; without it iOS push is off. */
+  readonly apns: Option.Option<{ keyId: string; teamId: string; bundleId: string; privateKey: Redacted.Redacted<string>; production: boolean }>;
+  /** Background jobs (push delivery, reminders). Off in tests, which drive them directly. */
+  readonly jobsEnabled: boolean;
 }
 
 export class AppConfig extends Context.Tag("AppConfig")<AppConfig, AppConfigShape>() {}
@@ -38,6 +44,24 @@ const config = Config.all({
   proxySecret: Config.option(Config.redacted("PROXY_SECRET")),
   resendApiKey: Config.option(Config.redacted("RESEND_API_KEY")),
   emailFrom: Config.string("EMAIL_FROM").pipe(Config.withDefault("FreeMathCamp <noreply@freemathcamp.app>")),
+  vapid: Config.option(
+    Config.all({
+      publicKey: Config.nonEmptyString("VAPID_PUBLIC_KEY"),
+      privateKey: Config.redacted("VAPID_PRIVATE_KEY"),
+      // Push services contact this if something goes wrong.
+      subject: Config.string("VAPID_SUBJECT").pipe(Config.withDefault("https://freemathcamp.app")),
+    }),
+  ),
+  apns: Config.option(
+    Config.all({
+      keyId: Config.nonEmptyString("APNS_KEY_ID"),
+      teamId: Config.nonEmptyString("APNS_TEAM_ID"),
+      bundleId: Config.nonEmptyString("APNS_BUNDLE_ID"),
+      privateKey: Config.redacted("APNS_PRIVATE_KEY"),
+      production: Config.boolean("APNS_PRODUCTION").pipe(Config.withDefault(false)),
+    }),
+  ),
+  jobsEnabled: Config.boolean("JOBS_ENABLED").pipe(Config.withDefault(true)),
 });
 
 export const AppConfigLive = Layer.effect(AppConfig, Effect.map(config, (c) => c as AppConfigShape));

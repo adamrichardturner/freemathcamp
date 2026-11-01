@@ -9,6 +9,7 @@ import { csrfGuard, noStore } from "./middleware/security";
 import { accountRoutes } from "./routes/account";
 import { authRoutes } from "./routes/auth";
 import { learningRoutes } from "./routes/learning";
+import { emailRoutes, notificationRoutes, pushRoutes } from "./routes/notifications";
 import type { AppRuntime } from "./runtime";
 
 export interface AppOptions {
@@ -34,8 +35,11 @@ export const createApp = (runtime: AppRuntime, opts: AppOptions) => {
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
+  app.use("/api/email", noStore, express.urlencoded({ extended: false, limit: "2kb" }), emailRoutes(runtime));
   app.use("/api", noStore, csrfGuard(opts.webOrigin), loadUser(runtime, opts.secureCookies));
   app.use("/api/auth", authRoutes(runtime, { secure: opts.secureCookies, webOrigin: opts.webOrigin }));
+  app.use("/api/me/notifications", notificationRoutes(runtime));
+  app.use("/api/me/push", pushRoutes(runtime));
   app.use("/api/me", accountRoutes(runtime, { secure: opts.secureCookies }));
   app.use("/api", learningRoutes(runtime));
 

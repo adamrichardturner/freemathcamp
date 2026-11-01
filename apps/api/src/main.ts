@@ -1,7 +1,9 @@
 import { Effect, Option, Redacted } from "effect";
 import { AppConfig } from "./config/config";
 import { createApp } from "./http/app";
-import { makeRuntime } from "./http/runtime";
+import { makeRuntime, type AppServices } from "./http/runtime";
+import { hostname } from "node:os";
+import { deliverPendingEmail, deliverPendingPush, pruneNotifications, runReminders, withLease } from "./application/jobs";
 import { SessionRepository } from "./application/ports";
 import { createMigrator } from "./infrastructure/db/database";
 import { Database } from "./infrastructure/db/database";
@@ -25,11 +27,37 @@ const main = Effect.gen(function* () {
   });
   const server = app.listen(config.port, () => console.log(`API listening on :${config.port} (${config.env})`));
 
-  // Hourly sweep of expired sessions.
-  const sweep = setInterval(() => void runtime.runPromise(Effect.flatMap(SessionRepository, (s) => s.deleteExpired())).catch(() => {}), 3_600_000);
+  // Background jobs. Each tick is skipped while the previous one is still running.
+  const every = (ms: number, job: Effect.Effect<unknown, unknown, AppServices>) => {
+    let running = false;
+    return setInterval(() => {
+      if (running) return;
+      running = true;
+      void runtime
+        .runPromise(job)
+        .catch((e) => console.error("[job]", e))
+        .finally(() => (running = false));
+    }, ms);
+  };
+  const holder = `${hostname()}:${process.pid}`;
+  const timers = [
+    // Hourly: expired sessions, and dismissed or long-read notifications.
+    every(3_600_000, Effect.flatMap(SessionRepository, (s) => s.deleteExpired())),
+    every(3_600_000, withLease("prune-notifications", holder, 10 * 60_000, pruneNotifications)),
+    ...(config.jobsEnabled
+      ? [
+          // Push outbox: near-real-time delivery; row locking makes this safe on several instances.
+          every(5_000, deliverPendingPush),
+          // Email outbox: security notices and re-engagement reminders.
+          every(15_000, deliverPendingEmail),
+          // Reminders: one instance at a time; each learner gets at most one nudge a day.
+          every(10 * 60_000, withLease("reminders", holder, 9 * 60_000, Effect.suspend(() => runReminders()))),
+        ]
+      : []),
+  ];
 
   const shutdown = () => {
-    clearInterval(sweep);
+    timers.forEach(clearInterval);
     server.close(() => void runtime.dispose().then(() => process.exit(0)));
     setTimeout(() => process.exit(1), 10_000).unref();
   };

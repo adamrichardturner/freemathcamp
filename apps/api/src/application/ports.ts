@@ -1,7 +1,20 @@
 import type { LearningMode } from "@fmc/curriculum";
 import { Context, type Effect } from "effect";
 import type { Conflict, DatabaseError, EmailDeliveryError } from "../domain/errors";
-import type { AccountEventKind, ExerciseProgress, ExerciseProgressUpdate, ItemResult, PracticeItem, PracticeSession, User } from "../infrastructure/db/schema";
+import type { NotificationDraft } from "../domain/notifications";
+import type {
+  AccountEventKind,
+  ExerciseProgress,
+  ExerciseProgressUpdate,
+  ItemResult,
+  Notification,
+  NotificationCategory,
+  PracticeItem,
+  PracticeSession,
+  PushPlatform,
+  PushSubscription,
+  User,
+} from "../infrastructure/db/schema";
 
 /*
  * Ports: what the use cases need from persistence. Implementations live in
@@ -9,6 +22,15 @@ import type { AccountEventKind, ExerciseProgress, ExerciseProgressUpdate, ItemRe
  */
 
 type Db<A> = Effect.Effect<A, DatabaseError>;
+
+export interface UserPreferencesPatch {
+  dailyGoal?: number | undefined;
+  learningMode?: LearningMode | undefined;
+  timezone?: string | undefined;
+  notifyReminders?: boolean | undefined;
+  notifyProgress?: boolean | undefined;
+  notifyEmailReminders?: boolean | undefined;
+}
 
 export interface UserRepositoryShape {
   create(input: { email: string; displayName: string; passwordHash: string | null }): Effect.Effect<User, DatabaseError | Conflict>;
@@ -20,7 +42,9 @@ export interface UserRepositoryShape {
   /** Links a provider identity to a user (creating the user if needed) atomically. */
   upsertOAuthUser(input: { provider: "google"; providerUserId: string; email: string; displayName: string; avatarUrl: string | null }): Db<User>;
   markEmailVerified(id: string): Db<User>;
-  updatePreferences(id: string, prefs: { dailyGoal?: number | undefined; learningMode?: LearningMode | undefined }): Db<User>;
+  /** Turns reminder emails off for whoever owns this token; returns the user, if any. */
+  unsubscribeReminderEmails(token: string): Db<User | undefined>;
+  updatePreferences(id: string, prefs: UserPreferencesPatch): Db<User>;
   markOnboarded(id: string): Db<User>;
   updatePasswordHash(id: string, passwordHash: string): Db<User>;
   /** Deletes the user; every owned row cascades with it. */
@@ -42,6 +66,8 @@ export interface SessionRepositoryShape {
   countActive(userId: string): Db<number>;
   /** Signs out every other device, keeping the given session. Returns how many were removed. */
   deleteOthers(userId: string, keepId: string): Db<number>;
+  /** Whether the user already has a live session from this browser/app, so a new one can be flagged. */
+  hasUserAgent(userId: string, userAgent: string): Db<boolean>;
 }
 export class SessionRepository extends Context.Tag("SessionRepository")<SessionRepository, SessionRepositoryShape>() {}
 
@@ -69,6 +95,8 @@ export interface OutgoingEmail {
   subject: string;
   html: string;
   text: string;
+  /** Extra headers, e.g. List-Unsubscribe on reminder emails. */
+  headers?: Record<string, string>;
 }
 export interface EmailSenderShape {
   send(email: OutgoingEmail): Effect.Effect<void, EmailDeliveryError>;
@@ -138,3 +166,91 @@ export interface AnalyticsRepositoryShape {
   masteryTimeline(userId: string, courseId: string, exerciseId: string): Db<{ at: Date; mastery: number; struggle: number }[]>;
 }
 export class AnalyticsRepository extends Context.Tag("AnalyticsRepository")<AnalyticsRepository, AnalyticsRepositoryShape>() {}
+
+/* ---- Notifications ---- */
+
+export type NotificationFilter = "all" | "unread" | "kept";
+
+export interface NotificationRepositoryShape {
+  /** Stores a notification; returns undefined when its dedupe key was already used. */
+  create(userId: string, draft: NotificationDraft & { category: NotificationCategory; email: boolean }): Db<Notification | undefined>;
+  /** Newest first, excluding dismissed. `before` is the cursor (created_at of the last item seen). */
+  list(userId: string, opts: { filter: NotificationFilter; limit: number; before?: { createdAt: Date; id: string } | undefined }): Db<Notification[]>;
+  counts(userId: string): Db<{ unseen: number; unread: number; kept: number; total: number }>;
+  markAllSeen(userId: string): Db<void>;
+  setRead(userId: string, id: string, read: boolean): Db<Notification | undefined>;
+  markAllRead(userId: string): Db<number>;
+  setKept(userId: string, id: string, kept: boolean): Db<Notification | undefined>;
+  dismiss(userId: string, id: string): Db<boolean>;
+  /** Dismisses every read notification that isn't kept. */
+  dismissRead(userId: string): Db<number>;
+  /** Reminders created since a time, for "one nudge a day". */
+  countSince(userId: string, category: NotificationCategory, since: Date): Db<number>;
+  /** Removes progress notifications (e.g. after a progress reset) so milestones can be earned again. */
+  deleteCategory(userId: string, category: NotificationCategory): Db<void>;
+  /** Leases a batch of notifications awaiting push delivery so concurrent workers don't double-send. */
+  claimPush(limit: number, leaseMs: number): Db<Notification[]>;
+  finishPush(id: string, status: "sent" | "skipped" | "failed" | "pending", retryAt?: Date): Db<void>;
+  claimEmail(limit: number, leaseMs: number): Db<Notification[]>;
+  finishEmail(id: string, status: "sent" | "skipped" | "failed" | "pending", retryAt?: Date): Db<void>;
+  /** Deletes dismissed notifications and old read ones that aren't kept. */
+  prune(): Db<number>;
+}
+export class NotificationRepository extends Context.Tag("NotificationRepository")<NotificationRepository, NotificationRepositoryShape>() {}
+
+export interface NewPushSubscription {
+  userId: string;
+  platform: PushPlatform;
+  endpoint: string;
+  p256dh: string | null;
+  auth: string | null;
+  userAgent: string | null;
+}
+
+export interface PushSubscriptionRepositoryShape {
+  /** Registers (or moves to this user) an endpoint/device token. */
+  upsert(input: NewPushSubscription): Db<PushSubscription>;
+  remove(userId: string, endpoint: string): Db<boolean>;
+  listForUser(userId: string): Db<PushSubscription[]>;
+  recordResult(id: string, ok: boolean): Db<void>;
+  deleteById(id: string): Db<void>;
+}
+export class PushSubscriptionRepository extends Context.Tag("PushSubscriptionRepository")<PushSubscriptionRepository, PushSubscriptionRepositoryShape>() {}
+
+/** A lease so a background job runs on one API instance at a time. */
+export interface JobLeaseRepositoryShape {
+  acquire(name: string, holder: string, ttlMs: number): Db<boolean>;
+  release(name: string, holder: string): Db<void>;
+}
+export class JobLeaseRepository extends Context.Tag("JobLeaseRepository")<JobLeaseRepository, JobLeaseRepositoryShape>() {}
+
+export interface ReminderCandidate {
+  user: User;
+  lastPracticedAt: Date | null;
+}
+export interface ReminderRepositoryShape {
+  /** Verified learners with reminders switched on, with when they last practised. */
+  candidates(): Db<ReminderCandidate[]>;
+  /** Problems solved and lessons first mastered in the window. */
+  activitySince(userId: string, since: Date): Db<{ problems: number; mastered: number }>;
+}
+export class ReminderRepository extends Context.Tag("ReminderRepository")<ReminderRepository, ReminderRepositoryShape>() {}
+
+export interface PushMessage {
+  id: string;
+  kind: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  href: string | null;
+  /** Unread count, for the app icon badge. */
+  badge: number;
+}
+/** "gone": the endpoint is permanently invalid and should be removed. */
+export type PushResult = "ok" | "gone" | "retry" | "unsupported";
+export interface PushGatewayShape {
+  readonly webPublicKey: string | null;
+  readonly enabled: { web: boolean; ios: boolean };
+  send(subscription: PushSubscription, message: PushMessage): Effect.Effect<PushResult>;
+}
+export class PushGateway extends Context.Tag("PushGateway")<PushGateway, PushGatewayShape>() {}

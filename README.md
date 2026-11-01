@@ -75,7 +75,9 @@ Lessons are read on the page. They are not videos.
 
 The progress page fills in once practice begins: an activity heatmap, first-try accuracy, time spent, hints and reveals, mastery by unit, a difficulty breakdown, and a view of strengths and weak spots.
 
-Accounts support email and password, with email verification, and optional Google sign-in. Settings cover profile, daily goal, light, dark and system appearance, password, active sessions, a data export, resetting progress, and deleting the account.
+Accounts support email and password, with email verification, and optional Google sign-in. Settings cover profile, daily goal, light, dark and system appearance, notifications, password, active sessions, a data export, resetting progress, and deleting the account.
+
+A notification centre (behind the avatar) collects account notices, milestones and practice reminders. Notifications can be kept or dismissed. The API delivers them itself, by Web Push, APNs for the coming iOS app, and email for security notices and re-engagement reminders, with no Firebase. See [docs/notifications.md](docs/notifications.md).
 
 ## Stack
 

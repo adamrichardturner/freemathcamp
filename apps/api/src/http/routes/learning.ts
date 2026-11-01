@@ -74,7 +74,7 @@ export const learningRoutes = (runtime: AppRuntime) => {
   );
   router.post(
     "/practice/:sessionId/complete",
-    h((req) => Effect.flatMap(decode(SessionParams, req.params), ({ sessionId }) => withUser(req, (uid, u) => completePractice(uid, sessionId, u.learning_mode)))),
+    h((req) => Effect.flatMap(decode(SessionParams, req.params), ({ sessionId }) => withUser(req, (_uid, u) => completePractice(u, sessionId)))),
   );
 
   return router;

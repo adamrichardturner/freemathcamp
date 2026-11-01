@@ -1,11 +1,16 @@
 "use client";
 
-import { BadgeCheck, ChartLine, Compass, Flame, GraduationCap, LayoutDashboard, Loader2, LogOut, Settings, Target } from "lucide-react";
+import { BadgeCheck, Bell, ChartLine, Compass, Flame, GraduationCap, LayoutDashboard, Loader2, LogOut, Settings, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { AllNotificationsLink, NotificationCentre } from "@/components/notifications/notification-centre";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNotificationCounts } from "@/hooks/notifications";
 import { openOnboarding } from "./onboarding";
 import { useDashboard, useLogout, useSession } from "@/hooks/queries";
 import type { User } from "@/lib/api";
@@ -36,60 +41,96 @@ export function UserMenu({ user }: { user: User }) {
   const { data } = useDashboard(verified);
   const stats = data?.stats;
   const memberSince = new Date(user.createdAt).toLocaleDateString("en", { month: "short", year: "numeric" });
+  const { data: counts } = useNotificationCounts();
+  const unseen = counts?.unseen ?? 0;
+  const [centreOpen, setCentreOpen] = useState(false);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full" aria-label="Account menu" />}>
-        <UserAvatar user={user} className="size-8" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8} className="w-72 p-0">
-        <div className="flex items-center gap-3 border-b bg-gradient-to-br from-primary/[0.07] to-transparent p-4">
-          <UserAvatar user={user} className="size-11" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-1 font-semibold">
-              <span className="truncate">{user.displayName}</span>
-              {user.emailVerified && <BadgeCheck className="size-4 shrink-0 text-primary" aria-label="Verified email" />}
-            </div>
-            <div className="truncate text-xs text-muted-foreground">{user.email}</div>
-            <div className="mt-0.5 text-[11px] text-muted-foreground">Student since {memberSince}</div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-1 border-b p-2 text-center">
-          {verified && !stats ? (
-            Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)
-          ) : (
-            <>
-              <Stat icon={Flame} value={stats?.streak.current ?? 0} label="day streak" tone={stats?.streak.current ? "text-chart-4" : undefined} />
-              <Stat icon={GraduationCap} value={stats ? `${stats.exercisesMastered}/${stats.exercisesTotal}` : "0"} label="mastered" tone="text-success" />
-              <Stat icon={Target} value={stats?.problemsSolved ?? 0} label="problems" tone="text-primary" />
-            </>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button variant="ghost" size="icon" className="relative rounded-full" aria-label={unseen ? `Account menu, ${unseen} new notification${unseen === 1 ? "" : "s"}` : "Account menu"} />}
+        >
+          <UserAvatar user={user} className="size-8" />
+          {unseen > 0 && (
+            <span className="pointer-events-none absolute -top-0.5 -right-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-danger px-1 text-[10px] leading-none font-bold text-white tabular-nums shadow-sm ring-2 ring-background">
+              {unseen > 9 ? "9+" : unseen}
+            </span>
           )}
-        </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={8} className="w-72 p-0">
+          <div className="flex items-center gap-3 border-b bg-gradient-to-br from-primary/[0.07] to-transparent p-4">
+            <UserAvatar user={user} className="size-11" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1 font-semibold">
+                <span className="truncate">{user.displayName}</span>
+                {user.emailVerified && <BadgeCheck className="size-4 shrink-0 text-primary" aria-label="Verified email" />}
+              </div>
+              <div className="truncate text-xs text-muted-foreground">{user.email}</div>
+              <div className="mt-0.5 text-[11px] text-muted-foreground">Student since {memberSince}</div>
+            </div>
+          </div>
 
-        <DropdownMenuGroup className="p-1">
-          <DropdownMenuItem onClick={() => router.push("/learn")}>
-            <LayoutDashboard /> Dashboard
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/progress")}>
-            <ChartLine /> Progress
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push("/settings")}>
-            <Settings /> Settings
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={openOnboarding}>
-            <Compass /> Take the tour
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator className="my-0" />
-        <DropdownMenuGroup className="p-1">
-          {/* Stays open while signing out so the progress is visible until the page reloads. */}
-          <DropdownMenuItem variant="destructive" closeOnClick={false} onClick={() => logout.mutate()} disabled={logout.busy}>
-            {logout.busy ? <Loader2 className="animate-spin" /> : <LogOut />} {logout.busy ? "Signing out…" : "Sign out"}
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <div className="grid grid-cols-3 gap-1 border-b p-2 text-center">
+            {verified && !stats ? (
+              Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)
+            ) : (
+              <>
+                <Stat icon={Flame} value={stats?.streak.current ?? 0} label="day streak" tone={stats?.streak.current ? "text-chart-4" : undefined} />
+                <Stat icon={GraduationCap} value={stats ? `${stats.exercisesMastered}/${stats.exercisesTotal}` : "0"} label="mastered" tone="text-success" />
+                <Stat icon={Target} value={stats?.problemsSolved ?? 0} label="problems" tone="text-primary" />
+              </>
+            )}
+          </div>
+
+          <DropdownMenuGroup className="p-1">
+            <DropdownMenuItem onClick={() => setCentreOpen(true)}>
+              <Bell /> Notifications
+              {!!counts?.unread && (
+                <Badge className="ml-auto h-5 min-w-5 px-1.5 tabular-nums" variant={unseen ? "default" : "secondary"}>
+                  {counts.unread}
+                </Badge>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/learn")}>
+              <LayoutDashboard /> Dashboard
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/progress")}>
+              <ChartLine /> Progress
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.push("/settings")}>
+              <Settings /> Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={openOnboarding}>
+              <Compass /> Take the tour
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator className="my-0" />
+          <DropdownMenuGroup className="p-1">
+            {/* Stays open while signing out so the progress is visible until the page reloads. */}
+            <DropdownMenuItem variant="destructive" closeOnClick={false} onClick={() => logout.mutate()} disabled={logout.busy}>
+              {logout.busy ? <Loader2 className="animate-spin" /> : <LogOut />} {logout.busy ? "Signing out…" : "Sign out"}
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Sheet open={centreOpen} onOpenChange={setCentreOpen}>
+        <SheetContent className="w-full gap-0 sm:max-w-md">
+          <SheetHeader className="border-b">
+            <SheetTitle className="flex items-center gap-2 text-base">
+              <Bell className="size-4 text-primary" /> Notifications
+            </SheetTitle>
+            <SheetDescription>Progress, reminders and account notices. Keep anything you want to hold on to.</SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pt-3">
+            {centreOpen && <NotificationCentre onNavigate={() => setCentreOpen(false)} />}
+          </div>
+          <SheetFooter className="border-t">
+            <AllNotificationsLink onNavigate={() => setCentreOpen(false)} />
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 

@@ -7,6 +7,7 @@ import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/app/user-menu";
 import { LearningModeSwitch } from "@/components/course/learning-mode";
+import { NotificationSettings } from "./notification-settings";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import { Field, SettingRow, SettingsCard } from "./settings-ui";
 const SECTIONS = [
   { id: "profile", label: "Profile" },
   { id: "learning", label: "Learning" },
+  { id: "notifications", label: "Notifications" },
   { id: "security", label: "Security" },
   { id: "data", label: "Data & privacy" },
 ] as const;
@@ -63,6 +65,9 @@ export function SettingsView() {
             <CourseModeCard user={data.user} />
             <DailyGoalCard user={data.user} />
             <AppearanceCard />
+          </Section>
+          <Section id="notifications" title="Notifications">
+            <NotificationSettings user={data.user} />
           </Section>
           <Section id="security" title="Security">
             <PasswordCard user={data.user} />

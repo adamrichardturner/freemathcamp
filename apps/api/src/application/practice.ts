@@ -16,10 +16,11 @@ import {
   type PracticeMode,
 } from "../domain/engine";
 import { Conflict, NotFound } from "../domain/errors";
-import type { PracticeItem, PracticeSession } from "../infrastructure/db/schema";
+import type { PracticeItem, PracticeSession, User } from "../infrastructure/db/schema";
 import { newSeed } from "../infrastructure/security/tokens";
 import { mean, round } from "../utils/math";
 import { assertLessonOpen, learnerQueues } from "./learning";
+import { noticeSessionProgress } from "./progress-notices";
 import { PracticeRepository, ProgressRepository } from "./ports";
 
 const MAX_TIME_MS = 30 * 60_000;
@@ -173,8 +174,9 @@ export const revealAnswer = (userId: string, sessionId: string, input: { index: 
     return { answer: formatAnswer(problem.answer, problem.choices), ...resolution };
   });
 
-export const completePractice = (userId: string, sessionId: string, learningMode: LearningMode) =>
+export const completePractice = (user: User, sessionId: string) =>
   Effect.gen(function* () {
+    const userId = user.id;
     const practice = yield* PracticeRepository;
     const progressRepo = yield* ProgressRepository;
     const session = yield* practice.findSession(sessionId, userId);
@@ -201,8 +203,9 @@ export const completePractice = (userId: string, sessionId: string, learningMode
       due_at: dueAt,
     });
     yield* practice.completeSession(sessionId, progress.mastery);
+    yield* noticeSessionProgress(user, session.course_id, session.exercise_id, progress, results.length);
 
-    const queues = yield* learnerQueues(userId, session.course_id, learningMode);
+    const queues = yield* learnerQueues(userId, session.course_id, user.learning_mode);
     const struggledOn = meanStruggle >= 0.45;
     return {
       sessionId,

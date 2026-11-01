@@ -48,6 +48,8 @@ export interface User {
   dailyGoal: number;
   learningMode: LearningMode;
   onboarded: boolean;
+  timezone: string;
+  notifications: { reminders: boolean; progress: boolean; emailReminders: boolean };
   createdAt: string;
 }
 
@@ -196,4 +198,41 @@ export interface SessionSummary {
   items: { index: number; level: number; struggle: number; cleanSolve: boolean; revealed: boolean; wrongAttempts: number; timeMs: number }[];
   brushUp: string[];
   upNext: Recommendation[];
+}
+
+export type NotificationCategory = "account" | "progress" | "reminder";
+
+export interface AppNotification {
+  id: string;
+  kind: string;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  href: string | null;
+  data: Record<string, unknown>;
+  createdAt: string;
+  seen: boolean;
+  read: boolean;
+  kept: boolean;
+}
+
+export interface NotificationCounts {
+  unseen: number;
+  unread: number;
+  kept: number;
+  total: number;
+}
+
+export type NotificationFilter = "all" | "unread" | "kept";
+
+export interface NotificationPage {
+  items: AppNotification[];
+  nextCursor: string | null;
+  counts: NotificationCounts;
+}
+
+export interface PushConfig {
+  webPublicKey: string | null;
+  web: boolean;
+  ios: boolean;
 }

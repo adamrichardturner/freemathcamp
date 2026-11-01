@@ -1,9 +1,14 @@
 import { Effect, Layer } from "effect";
-import { sql } from "kysely";
+import { sql, type SelectQueryBuilder } from "kysely";
 import {
   AccountRepository,
   AnalyticsRepository,
   EmailTokenRepository,
+  JobLeaseRepository,
+  NotificationRepository,
+  PushSubscriptionRepository,
+  ReminderRepository,
+  type NotificationFilter,
   PracticeRepository,
   ProgressRepository,
   SessionRepository,
@@ -12,6 +17,7 @@ import {
 } from "../../application/ports";
 import { Conflict, DatabaseError } from "../../domain/errors";
 import { Database } from "../db/database";
+import type { DB } from "../db/schema";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -77,11 +83,22 @@ export const UserRepositoryLive = repo(UserRepository, (run) => ({
         return user;
       }),
     ),
-  updatePreferences: (id, { dailyGoal, learningMode }) =>
+  unsubscribeReminderEmails: (token) =>
+    run((db) =>
+      db.updateTable("users").set({ notify_email_reminders: false }).where("email_unsubscribe_token", "=", token).returningAll().executeTakeFirst(),
+    ),
+  updatePreferences: (id, { dailyGoal, learningMode, timezone, notifyReminders, notifyProgress, notifyEmailReminders }) =>
     run((db) =>
       db
         .updateTable("users")
-        .set({ ...(dailyGoal !== undefined && { daily_goal: dailyGoal }), ...(learningMode && { learning_mode: learningMode }) })
+        .set({
+          ...(dailyGoal !== undefined && { daily_goal: dailyGoal }),
+          ...(learningMode && { learning_mode: learningMode }),
+          ...(timezone && { timezone }),
+          ...(notifyReminders !== undefined && { notify_reminders: notifyReminders }),
+          ...(notifyProgress !== undefined && { notify_progress: notifyProgress }),
+          ...(notifyEmailReminders !== undefined && { notify_email_reminders: notifyEmailReminders }),
+        })
         .where("id", "=", id)
         .returningAll()
         .executeTakeFirstOrThrow(),
@@ -150,6 +167,17 @@ export const SessionRepositoryLive = repo(SessionRepository, (run) => ({
     run((db) => db.deleteFrom("sessions").where("user_id", "=", userId).where("id", "!=", keepId).executeTakeFirst()).pipe(
       Effect.map((r) => Number(r.numDeletedRows)),
     ),
+  hasUserAgent: (userId, userAgent) =>
+    run((db) =>
+      db
+        .selectFrom("sessions")
+        .select("id")
+        .where("user_id", "=", userId)
+        .where("user_agent", "=", userAgent.slice(0, 300))
+        .where("expires_at", ">", new Date())
+        .limit(1)
+        .executeTakeFirst(),
+    ).pipe(Effect.map((r) => !!r)),
 }));
 
 export const AccountRepositoryLive = repo(AccountRepository, (run) => ({
@@ -177,16 +205,34 @@ export const AccountRepositoryLive = repo(AccountRepository, (run) => ({
     ),
   exportData: (userId) =>
     run(async (db) => {
-      const [account, linkedAccounts, progress, sessions, results, attempts, events] = await Promise.all([
-        db.selectFrom("users").select(["id", "email", "display_name", "avatar_url", "email_verified_at", "daily_goal", "learning_mode", "onboarded_at", "created_at", "last_active_at"]).where("id", "=", userId).executeTakeFirst(),
+      const [account, linkedAccounts, progress, sessions, results, attempts, events, notifications, pushDevices] = await Promise.all([
+        db.selectFrom("users").select(["id", "email", "display_name", "avatar_url", "email_verified_at", "daily_goal", "learning_mode", "onboarded_at", "timezone", "notify_reminders", "notify_progress", "notify_email_reminders", "created_at", "last_active_at"]).where("id", "=", userId).executeTakeFirst(),
         db.selectFrom("oauth_accounts").select(["provider", "email", "created_at"]).where("user_id", "=", userId).execute(),
         db.selectFrom("exercise_progress").selectAll().where("user_id", "=", userId).execute(),
         db.selectFrom("practice_sessions").selectAll().where("user_id", "=", userId).orderBy("started_at").execute(),
         db.selectFrom("item_results").selectAll().where("user_id", "=", userId).orderBy("resolved_at").execute(),
         db.selectFrom("attempts").select(["session_id", "item_index", "answer", "correct", "time_ms", "created_at"]).where("user_id", "=", userId).orderBy("created_at").execute(),
         db.selectFrom("account_events").select(["kind", "created_at"]).where("user_id", "=", userId).orderBy("created_at").execute(),
+        db
+          .selectFrom("notifications")
+          .select(["kind", "category", "title", "body", "href", "created_at", "seen_at", "read_at", "kept_at", "dismissed_at"])
+          .where("user_id", "=", userId)
+          .orderBy("created_at")
+          .execute(),
+        db.selectFrom("push_subscriptions").select(["platform", "user_agent", "created_at", "last_success_at"]).where("user_id", "=", userId).execute(),
       ]);
-      return { exportedAt: new Date().toISOString(), account, linkedAccounts, progress, practiceSessions: sessions, problemResults: results, attempts, accountEvents: events };
+      return {
+        exportedAt: new Date().toISOString(),
+        account,
+        linkedAccounts,
+        progress,
+        practiceSessions: sessions,
+        problemResults: results,
+        attempts,
+        accountEvents: events,
+        notifications,
+        pushDevices,
+      };
     }),
 }));
 
@@ -401,6 +447,269 @@ export const AnalyticsRepositoryLive = repo(AnalyticsRepository, (run) => ({
     ),
 }));
 
+const notificationFilter = <QB extends SelectQueryBuilder<DB, "notifications", object>>(qb: QB, filter: NotificationFilter): QB =>
+  (filter === "unread" ? qb.where("read_at", "is", null) : filter === "kept" ? qb.where("kept_at", "is not", null) : qb) as QB;
+
+export const NotificationRepositoryLive = repo(NotificationRepository, (run) => ({
+  create: (userId, draft) =>
+    run((db) =>
+      db
+        .insertInto("notifications")
+        .values({
+          user_id: userId,
+          kind: draft.kind,
+          category: draft.category,
+          title: draft.title.slice(0, 160),
+          body: draft.body,
+          href: draft.href ?? null,
+          data: JSON.stringify(draft.data ?? {}),
+          dedupe_key: draft.dedupeKey ?? null,
+          email_status: draft.email ? "pending" : "skipped",
+        })
+        .onConflict((oc) => oc.columns(["user_id", "dedupe_key"]).where("dedupe_key", "is not", null).doNothing())
+        .returningAll()
+        .executeTakeFirst(),
+    ),
+  list: (userId, { filter, limit, before }) =>
+    run((db) => {
+      let qb = db.selectFrom("notifications").selectAll().where("user_id", "=", userId).where("dismissed_at", "is", null);
+      qb = notificationFilter(qb, filter);
+      if (before) qb = qb.where((eb) => eb.or([eb("created_at", "<", before.createdAt), eb.and([eb("created_at", "=", before.createdAt), eb("id", "<", before.id)])]));
+      return qb.orderBy("created_at", "desc").orderBy("id", "desc").limit(limit).execute();
+    }),
+  counts: (userId) =>
+    run((db) =>
+      db
+        .selectFrom("notifications")
+        .select([
+          sql<number>`count(*) filter (where seen_at is null)::int`.as("unseen"),
+          sql<number>`count(*) filter (where read_at is null)::int`.as("unread"),
+          sql<number>`count(*) filter (where kept_at is not null)::int`.as("kept"),
+          sql<number>`count(*)::int`.as("total"),
+        ])
+        .where("user_id", "=", userId)
+        .where("dismissed_at", "is", null)
+        .executeTakeFirstOrThrow(),
+    ),
+  markAllSeen: (userId) =>
+    run((db) => db.updateTable("notifications").set({ seen_at: new Date() }).where("user_id", "=", userId).where("seen_at", "is", null).execute()).pipe(Effect.asVoid),
+  setRead: (userId, id, read) =>
+    run((db) =>
+      db
+        .updateTable("notifications")
+        .set(read ? { read_at: new Date(), seen_at: sql`coalesce(seen_at, now())` } : { read_at: null })
+        .where("user_id", "=", userId)
+        .where("id", "=", id)
+        .where("dismissed_at", "is", null)
+        .returningAll()
+        .executeTakeFirst(),
+    ),
+  markAllRead: (userId) =>
+    run((db) =>
+      db
+        .updateTable("notifications")
+        .set({ read_at: new Date(), seen_at: sql`coalesce(seen_at, now())` })
+        .where("user_id", "=", userId)
+        .where("read_at", "is", null)
+        .where("dismissed_at", "is", null)
+        .executeTakeFirst(),
+    ).pipe(Effect.map((r) => Number(r.numUpdatedRows))),
+  setKept: (userId, id, kept) =>
+    run((db) =>
+      db
+        .updateTable("notifications")
+        .set({ kept_at: kept ? new Date() : null })
+        .where("user_id", "=", userId)
+        .where("id", "=", id)
+        .where("dismissed_at", "is", null)
+        .returningAll()
+        .executeTakeFirst(),
+    ),
+  dismiss: (userId, id) =>
+    run((db) =>
+      db
+        .updateTable("notifications")
+        // Dismissing also stops a push that hasn't gone out yet.
+        .set({ dismissed_at: new Date(), seen_at: sql`coalesce(seen_at, now())`, push_status: sql`case when push_status = 'pending' then 'skipped' else push_status end` })
+        .where("user_id", "=", userId)
+        .where("id", "=", id)
+        .where("dismissed_at", "is", null)
+        .executeTakeFirst(),
+    ).pipe(Effect.map((r) => Number(r.numUpdatedRows) > 0)),
+  dismissRead: (userId) =>
+    run((db) =>
+      db
+        .updateTable("notifications")
+        .set({ dismissed_at: new Date() })
+        .where("user_id", "=", userId)
+        .where("read_at", "is not", null)
+        .where("kept_at", "is", null)
+        .where("dismissed_at", "is", null)
+        .executeTakeFirst(),
+    ).pipe(Effect.map((r) => Number(r.numUpdatedRows))),
+  countSince: (userId, category, since) =>
+    run((db) =>
+      db
+        .selectFrom("notifications")
+        .select(sql<number>`count(*)::int`.as("n"))
+        .where("user_id", "=", userId)
+        .where("category", "=", category)
+        .where("created_at", ">=", since)
+        .executeTakeFirstOrThrow(),
+    ).pipe(Effect.map((r) => r.n)),
+  deleteCategory: (userId, category) =>
+    run((db) => db.deleteFrom("notifications").where("user_id", "=", userId).where("category", "=", category).execute()).pipe(Effect.asVoid),
+  claimPush: (limit, leaseMs) =>
+    run((db) =>
+      db
+        .updateTable("notifications")
+        .set({ push_next_at: new Date(Date.now() + leaseMs), push_attempts: sql`push_attempts + 1` })
+        .where(
+          "id",
+          "in",
+          db
+            .selectFrom("notifications")
+            .select("id")
+            .where("push_status", "=", "pending")
+            .where("push_next_at", "<=", new Date())
+            .orderBy("push_next_at")
+            .limit(limit)
+            .forUpdate()
+            .skipLocked(),
+        )
+        .returningAll()
+        .execute(),
+    ),
+  finishPush: (id, status, retryAt) =>
+    run((db) =>
+      db
+        .updateTable("notifications")
+        .set({ push_status: status, ...(retryAt && { push_next_at: retryAt }) })
+        .where("id", "=", id)
+        .execute(),
+    ).pipe(Effect.asVoid),
+  claimEmail: (limit, leaseMs) =>
+    run((db) =>
+      db
+        .updateTable("notifications")
+        .set({ email_next_at: new Date(Date.now() + leaseMs), email_attempts: sql`email_attempts + 1` })
+        .where(
+          "id",
+          "in",
+          db
+            .selectFrom("notifications")
+            .select("id")
+            .where("email_status", "=", "pending")
+            .where("email_next_at", "<=", new Date())
+            .orderBy("email_next_at")
+            .limit(limit)
+            .forUpdate()
+            .skipLocked(),
+        )
+        .returningAll()
+        .execute(),
+    ),
+  finishEmail: (id, status, retryAt) =>
+    run((db) =>
+      db
+        .updateTable("notifications")
+        .set({ email_status: status, ...(retryAt && { email_next_at: retryAt }) })
+        .where("id", "=", id)
+        .execute(),
+    ).pipe(Effect.asVoid),
+  prune: () =>
+    run((db) =>
+      db
+        .deleteFrom("notifications")
+        .where((eb) =>
+          eb.or([
+            eb("dismissed_at", "<", sql<Date>`now() - interval '30 days'`),
+            eb.and([eb("kept_at", "is", null), eb("read_at", "<", sql<Date>`now() - interval '180 days'`)]),
+          ]),
+        )
+        .executeTakeFirst(),
+    ).pipe(Effect.map((r) => Number(r.numDeletedRows))),
+}));
+
+export const PushSubscriptionRepositoryLive = repo(PushSubscriptionRepository, (run) => ({
+  upsert: ({ userId, platform, endpoint, p256dh, auth, userAgent }) =>
+    run((db) =>
+      db
+        .insertInto("push_subscriptions")
+        .values({ user_id: userId, platform, endpoint, p256dh, auth, user_agent: userAgent?.slice(0, 300) ?? null })
+        // A device that signs in as someone else now belongs to them.
+        .onConflict((oc) => oc.column("endpoint").doUpdateSet({ user_id: userId, platform, p256dh, auth, user_agent: userAgent?.slice(0, 300) ?? null, failure_count: 0 }))
+        .returningAll()
+        .executeTakeFirstOrThrow(),
+    ),
+  remove: (userId, endpoint) =>
+    run((db) => db.deleteFrom("push_subscriptions").where("user_id", "=", userId).where("endpoint", "=", endpoint).executeTakeFirst()).pipe(
+      Effect.map((r) => Number(r.numDeletedRows) > 0),
+    ),
+  listForUser: (userId) => run((db) => db.selectFrom("push_subscriptions").selectAll().where("user_id", "=", userId).execute()),
+  recordResult: (id, ok) =>
+    run((db) =>
+      db
+        .updateTable("push_subscriptions")
+        .set(ok ? { last_success_at: new Date(), failure_count: 0 } : { failure_count: sql`failure_count + 1` })
+        .where("id", "=", id)
+        .execute(),
+    ).pipe(Effect.asVoid),
+  deleteById: (id) => run((db) => db.deleteFrom("push_subscriptions").where("id", "=", id).execute()).pipe(Effect.asVoid),
+}));
+
+export const JobLeaseRepositoryLive = repo(JobLeaseRepository, (run) => ({
+  acquire: (name, holder, ttlMs) =>
+    run((db) =>
+      db
+        .insertInto("job_leases")
+        .values({ name, holder, locked_until: new Date(Date.now() + ttlMs) })
+        .onConflict((oc) =>
+          oc
+            .column("name")
+            .doUpdateSet({ holder, locked_until: new Date(Date.now() + ttlMs) })
+            .where("job_leases.locked_until", "<", new Date()),
+        )
+        .returning("holder")
+        .executeTakeFirst(),
+    ).pipe(Effect.map((r) => r?.holder === holder)),
+  release: (name, holder) =>
+    run((db) => db.updateTable("job_leases").set({ locked_until: new Date(0) }).where("name", "=", name).where("holder", "=", holder).execute()).pipe(Effect.asVoid),
+}));
+
+export const ReminderRepositoryLive = repo(ReminderRepository, (run) => ({
+  candidates: () =>
+    run((db) =>
+      db
+        .selectFrom("users")
+        .selectAll("users")
+        .select((eb) =>
+          eb.selectFrom("exercise_progress").select(sql<Date | null>`max(last_practiced_at)`.as("m")).whereRef("exercise_progress.user_id", "=", "users.id").as("last_practiced_at"),
+        )
+        .where("email_verified_at", "is not", null)
+        .where("notify_reminders", "=", true)
+        .execute(),
+    ).pipe(
+      Effect.map((rows) =>
+        rows.map(({ last_practiced_at, ...user }) => ({ user, lastPracticedAt: last_practiced_at ? new Date(last_practiced_at) : null })),
+      ),
+    ),
+  activitySince: (userId, since) =>
+    run(async (db) => {
+      const [problems, mastered] = await Promise.all([
+        db.selectFrom("item_results").select(sql<number>`count(*)::int`.as("n")).where("user_id", "=", userId).where("resolved_at", ">=", since).executeTakeFirstOrThrow(),
+        db
+          .selectFrom("notifications")
+          .select(sql<number>`count(*)::int`.as("n"))
+          .where("user_id", "=", userId)
+          .where("kind", "=", "lesson_mastered")
+          .where("created_at", ">=", since)
+          .executeTakeFirstOrThrow(),
+      ]);
+      return { problems: problems.n, mastered: mastered.n };
+    }),
+}));
+
 export const RepositoriesLive = Layer.mergeAll(
   UserRepositoryLive,
   AccountRepositoryLive,
@@ -409,4 +718,8 @@ export const RepositoriesLive = Layer.mergeAll(
   ProgressRepositoryLive,
   PracticeRepositoryLive,
   AnalyticsRepositoryLive,
+  NotificationRepositoryLive,
+  PushSubscriptionRepositoryLive,
+  JobLeaseRepositoryLive,
+  ReminderRepositoryLive,
 );

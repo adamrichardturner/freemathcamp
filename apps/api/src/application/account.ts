@@ -1,11 +1,14 @@
-import type { LearningMode } from "@fmc/curriculum";
+import { getCourse } from "@fmc/curriculum";
 import { Effect } from "effect";
 import { RateLimited, Unauthorized, ValidationError } from "../domain/errors";
 import type { User } from "../infrastructure/db/schema";
 import { PasswordHasher } from "../infrastructure/security/password";
 import { hashToken } from "../infrastructure/security/tokens";
 import { toPublicUser } from "./auth";
-import { AccountRepository, SessionRepository, UserRepository } from "./ports";
+import { notices } from "../domain/notifications";
+import { notifySafely } from "./notifications";
+import { isValidTimeZone } from "../domain/reminders";
+import { AccountRepository, NotificationRepository, SessionRepository, UserRepository, type UserPreferencesPatch } from "./ports";
 
 const DAY = 86_400_000;
 /** Names show on progress and (later) shared spaces, so changes are limited to curb abuse. */
@@ -46,9 +49,10 @@ export const changeDisplayName = (user: User, displayName: string) =>
     return toPublicUser(updated);
   });
 
-export const updatePreferences = (user: User, prefs: { dailyGoal?: number | undefined; learningMode?: LearningMode | undefined }) =>
+export const updatePreferences = (user: User, prefs: UserPreferencesPatch) =>
   Effect.gen(function* () {
-    if (prefs.dailyGoal === undefined && prefs.learningMode === undefined) return toPublicUser(user);
+    if (Object.values(prefs).every((v) => v === undefined)) return toPublicUser(user);
+    if (prefs.timezone !== undefined && !isValidTimeZone(prefs.timezone)) return yield* Effect.fail(new ValidationError({ message: "Unknown time zone." }));
     const updated = yield* Effect.flatMap(UserRepository, (u) => u.updatePreferences(user.id, prefs));
     if (prefs.learningMode && prefs.learningMode !== user.learning_mode) yield* Effect.flatMap(AccountRepository, (a) => a.recordEvent(user.id, "mode_changed"));
     return toPublicUser(updated);
@@ -72,13 +76,17 @@ export const changePassword = (user: User, sessionToken: string, input: { curren
     const updated = yield* Effect.flatMap(UserRepository, (u) => u.updatePasswordHash(user.id, passwordHash));
     const signedOut = yield* Effect.flatMap(SessionRepository, (s) => s.deleteOthers(user.id, hashToken(sessionToken)));
     yield* Effect.flatMap(AccountRepository, (a) => a.recordEvent(user.id, "password_changed"));
+    yield* notifySafely(user, notices.passwordChanged(user.password_hash !== null, signedOut));
     return { user: toPublicUser(updated), signedOutSessions: signedOut };
   });
 
 export const signOutOtherSessions = (user: User, sessionToken: string) =>
   Effect.gen(function* () {
     const removed = yield* Effect.flatMap(SessionRepository, (s) => s.deleteOthers(user.id, hashToken(sessionToken)));
-    if (removed > 0) yield* Effect.flatMap(AccountRepository, (a) => a.recordEvent(user.id, "sessions_revoked"));
+    if (removed > 0) {
+      yield* Effect.flatMap(AccountRepository, (a) => a.recordEvent(user.id, "sessions_revoked"));
+      yield* notifySafely(user, notices.sessionsRevoked(removed));
+    }
     return { signedOutSessions: removed };
   });
 
@@ -86,6 +94,9 @@ export const resetCourseProgress = (user: User, courseId: string) =>
   Effect.gen(function* () {
     yield* Effect.flatMap(AccountRepository, (a) => a.resetCourse(user.id, courseId));
     yield* Effect.flatMap(AccountRepository, (a) => a.recordEvent(user.id, "progress_reset"));
+    // Milestones can be earned again from scratch.
+    yield* Effect.flatMap(NotificationRepository, (n) => n.deleteCategory(user.id, "progress"));
+    yield* notifySafely(user, notices.progressReset(getCourse(courseId)?.title ?? "Course"));
     return { ok: true };
   });
 

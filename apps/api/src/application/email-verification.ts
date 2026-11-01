@@ -5,6 +5,8 @@ import { RateLimited, Unauthorized } from "../domain/errors";
 import type { User } from "../infrastructure/db/schema";
 import { verificationEmail } from "../infrastructure/email/templates";
 import { hashToken, newSessionToken } from "../infrastructure/security/tokens";
+import { notices } from "../domain/notifications";
+import { notifySafely } from "./notifications";
 import { EmailSender, EmailTokenRepository, UserRepository } from "./ports";
 
 const MAX_EMAILS_PER_HOUR = 3;
@@ -31,5 +33,7 @@ export const verifyEmail = (token: string) =>
   Effect.gen(function* () {
     const userId = yield* Effect.flatMap(EmailTokenRepository, (t) => t.consume(hashToken(token)));
     if (!userId) return yield* Effect.fail(new Unauthorized({ message: "This link has expired or was already used. Request a new one." }));
-    return yield* Effect.flatMap(UserRepository, (u) => u.markEmailVerified(userId));
+    const user = yield* Effect.flatMap(UserRepository, (u) => u.markEmailVerified(userId));
+    yield* notifySafely(user, notices.emailVerified());
+    return user;
   });

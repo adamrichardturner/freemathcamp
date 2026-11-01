@@ -22,7 +22,7 @@ const resendSender = (apiKey: Redacted.Redacted<string>, from: string) => ({
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { authorization: `Bearer ${Redacted.value(apiKey)}`, "content-type": "application/json" },
-          body: JSON.stringify({ from, to: [email.to], subject: email.subject, html: email.html, text: email.text }),
+          body: JSON.stringify({ from, to: [email.to], subject: email.subject, html: email.html, text: email.text, ...(email.headers && { headers: email.headers }) }),
           signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);

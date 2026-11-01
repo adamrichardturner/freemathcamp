@@ -1,17 +1,19 @@
 import { Cause, Effect, Exit, Layer, ManagedRuntime } from "effect";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import { AppConfigLive } from "../config/config";
+import { AppConfig, AppConfigLive } from "../config/config";
+import type { PushGateway } from "../application/ports";
+import { PushGatewayLive } from "../infrastructure/push/gateway";
 import type { AppError } from "../domain/errors";
 import { DatabaseLive } from "../infrastructure/db/database";
 import { RepositoriesLive } from "../infrastructure/repositories/postgres";
 import { EmailSenderLive } from "../infrastructure/email/senders";
 import { PasswordHasherLive } from "../infrastructure/security/password";
 
-/** Everything the application layer needs, wired once at startup. */
-export const AppLayer = Layer.mergeAll(RepositoriesLive, PasswordHasherLive, EmailSenderLive).pipe(
-  Layer.provideMerge(DatabaseLive),
-  Layer.provideMerge(AppConfigLive),
-);
+/** Everything the application layer needs, wired once at startup. Tests can swap the push gateway. */
+export const buildAppLayer = (push: Layer.Layer<PushGateway, never, AppConfig> = PushGatewayLive) =>
+  Layer.mergeAll(RepositoriesLive, PasswordHasherLive, EmailSenderLive, push).pipe(Layer.provideMerge(DatabaseLive), Layer.provideMerge(AppConfigLive));
+
+export const AppLayer = buildAppLayer();
 
 export type AppServices = Layer.Layer.Success<typeof AppLayer>;
 export type AppRuntime = ManagedRuntime.ManagedRuntime<AppServices, unknown>;
