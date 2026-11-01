@@ -1,9 +1,32 @@
+import { getExercise } from "@fmc/curriculum";
+import type { Metadata } from "next";
+import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ReactNode } from "react";
+import { course, graph } from "./course";
+import { absoluteUrl, plainText } from "./site";
 
 /** Shared look for generated share images (1200×630). Rendered at build time by next/og. */
 export const OG_SIZE = { width: 1200, height: 630 };
+
+export const SITE_IMAGE_ALT = "Free Math Camp — all the maths you need before calculus, free";
+
+/**
+ * Share images live at plain `.png` paths (`/og.png`, `/og/<course>/<lesson>.png`) rather than
+ * Next's `opengraph-image?<hash>` convention: WhatsApp and some other link unfurlers skip images
+ * whose URL has no extension or carries a query string.
+ */
+export const ogImagePath = (courseId?: string, exerciseId?: string) => (courseId && exerciseId ? `/og/${courseId}/${exerciseId}.png` : "/og.png");
+
+/** Open Graph and Twitter tags for a share image, with every property the unfurlers read. */
+export function shareImage(path: string, alt: string) {
+  const url = absoluteUrl(path);
+  const image = { url, secureUrl: url, type: "image/png", ...OG_SIZE, alt };
+  return { openGraph: { images: [image] }, twitter: { card: "summary_large_image", images: [image] } } satisfies Metadata;
+}
+
+const IMAGE_HEADERS = { "cache-control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" };
 
 // Cached so the images prerender at build time (uncached file reads would make them request-time).
 async function fontFile(style: "normal" | "italic") {
@@ -54,5 +77,44 @@ export function OgFrame({ logo, children, footer }: { logo: string; children: Re
         <div style={{ display: "flex", color: "#f4f3fb" }}>freemathcamp.app</div>
       </div>
     </div>
+  );
+}
+
+export async function siteImage() {
+  const logo = await logoDataUri();
+  return new ImageResponse(
+    (
+      <OgFrame logo={logo} footer={`${graph.refs.length} free lessons · ${course.units.length} units · adaptive practice`}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div style={{ display: "flex", fontFamily: "Instrument Serif", fontSize: 96, lineHeight: 1, letterSpacing: -2 }}>Free Math Camp</div>
+          <div style={{ display: "flex", fontFamily: "Instrument Serif", fontSize: 54, lineHeight: 1.1, color: "#d8d4f5" }}>
+            All the maths you need&nbsp;<span style={{ fontStyle: "italic", color: "#f0a3bc" }}>before</span>&nbsp;calculus.
+          </div>
+        </div>
+      </OgFrame>
+    ),
+    { ...OG_SIZE, fonts: await ogFonts(), headers: IMAGE_HEADERS },
+  );
+}
+
+export async function lessonImage(courseId: string, exerciseId: string) {
+  const ref = getExercise(courseId, exerciseId);
+  const logo = await logoDataUri();
+  const title = ref?.exercise.title ?? "Free Math Camp";
+  return new ImageResponse(
+    (
+      <OgFrame logo={logo} footer="Free lesson · interactive visuals · adaptive practice">
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {ref && (
+            <div style={{ display: "flex", fontSize: 26, letterSpacing: 3, textTransform: "uppercase", color: "#a99cff" }}>
+              {ref.course.title} · {ref.unit.title}
+            </div>
+          )}
+          <div style={{ display: "flex", fontFamily: "Instrument Serif", fontSize: title.length > 28 ? 80 : 100, lineHeight: 1.02, letterSpacing: -1.5 }}>{title}</div>
+          {ref && <div style={{ display: "flex", fontSize: 32, color: "#cfcbe6", maxWidth: 1000 }}>{plainText(ref.exercise.summary).replace(/≤/g, "<=").replace(/≥/g, ">=").replace(/≠/g, "!=")}</div>}
+        </div>
+      </OgFrame>
+    ),
+    { ...OG_SIZE, fonts: await ogFonts(), headers: IMAGE_HEADERS },
   );
 }

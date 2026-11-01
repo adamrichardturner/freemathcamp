@@ -2,12 +2,15 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { SiteFooter } from "@/components/app/site-footer";
 import { Providers } from "@/components/providers";
+import { ogImagePath, shareImage, SITE_IMAGE_ALT } from "@/lib/og";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 const instrumentSerif = Instrument_Serif({ variable: "--font-instrument-serif", subsets: ["latin"], weight: "400", style: ["normal", "italic"] });
+
+const siteShare = shareImage(ogImagePath(), SITE_IMAGE_ALT);
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -26,8 +29,9 @@ export const metadata: Metadata = {
     description: SITE.description,
     url: "/",
     locale: SITE.locale,
+    ...siteShare.openGraph,
   },
-  twitter: { card: "summary_large_image", title: SITE.title, description: SITE.description },
+  twitter: { ...siteShare.twitter, title: SITE.title, description: SITE.description },
   robots: {
     index: true,
     follow: true,

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ExerciseView } from "@/components/course/exercise-view";
 import { JsonLd } from "@/components/seo/json-ld";
+import { ogImagePath, shareImage } from "@/lib/og";
 import { lessonDescription, lessonPath } from "@/lib/site";
 import { breadcrumbs, graph, lessonSchema } from "@/lib/structured-data";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,11 +19,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const ref = getExercise(courseId, exerciseId);
   if (!ref) return {};
   const description = lessonDescription(ref);
+  const title = `${ref.exercise.title} · Free Math Camp`;
+  const share = shareImage(ogImagePath(courseId, exerciseId), `${ref.exercise.title}: a free lesson from Free Math Camp`);
   return {
     title: `${ref.exercise.title} — Free ${ref.unit.title} Lesson`,
     description,
     alternates: { canonical: lessonPath(ref) },
-    openGraph: { type: "article", title: `${ref.exercise.title} · Free Math Camp`, description, url: lessonPath(ref), section: ref.unit.title },
+    openGraph: { type: "article", title, description, url: lessonPath(ref), section: ref.unit.title, ...share.openGraph },
+    twitter: { ...share.twitter, title, description },
   };
 }
 
