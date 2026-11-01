@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BadgeCheck, ChevronLeft, ChevronRight, Copy, KeyRound, Loader2, Search } from "lucide-react";
 import { useDeferredValue, useState } from "react";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import { COURSE_ID } from "@/lib/course";
 import { duration, pct, relative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { adminKeys } from "./admin-view";
+import { useAction } from "@/hooks/use-action";
 
 const PAGE_SIZE = 20;
 const errorMessage = (e: unknown, fallback: string) => (e instanceof ApiError ? e.message : fallback);
@@ -263,13 +264,13 @@ function PasswordActions({ user }: { user: AdminUserDetail["user"] }) {
   const [password, setPassword] = useState("");
   const [temporary, setTemporary] = useState<string | null>(null);
   const problem = passwordProblem(password);
-  const set = useMutation({
+  const set = useAction({
     mutationFn: (body: { password?: string }) => api.post<{ signedOutSessions: number; temporaryPassword: string | null }>(`/admin/users/${user.id}/password`, body),
     onSuccess: (r) => {
       setPassword("");
       setTemporary(r.temporaryPassword);
-      void refresh();
       toast.success(`${r.temporaryPassword ? "Temporary password created" : "Password set"} · signed out ${r.signedOutSessions} session${r.signedOutSessions === 1 ? "" : "s"}`);
+      return refresh();
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't change the password.")),
   });
@@ -321,20 +322,20 @@ function PasswordActions({ user }: { user: AdminUserDetail["user"] }) {
 
 function DangerActions({ user, onDeleted }: { user: AdminUserDetail["user"]; onDeleted: () => void }) {
   const refresh = useRefreshAdmin();
-  const reset = useMutation({
+  const reset = useAction({
     mutationFn: () => api.post(`/admin/users/${user.id}/reset-progress`, { courseId: COURSE_ID }),
     onSuccess: () => {
-      void refresh();
       toast.success(`Reset ${user.displayName}'s progress`);
+      return refresh();
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't reset progress.")),
   });
-  const del = useMutation({
+  const del = useAction({
     mutationFn: () => api.delete(`/admin/users/${user.id}`, { confirmEmail: user.email }),
     onSuccess: () => {
       onDeleted();
-      void refresh();
       toast.success(`Deleted ${user.email}`);
+      return refresh();
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't delete the account.")),
   });

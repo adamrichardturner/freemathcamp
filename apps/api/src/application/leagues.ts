@@ -22,7 +22,8 @@ export const leagueOverview = (user: User) =>
   Effect.gen(function* () {
     const leagues = yield* LeagueRepository;
     const week = weekStart();
-    const membership = yield* leagues.membership(user.id, week);
+    // Opted-in learners are always in this week's table, with no separate step to join.
+    const membership = user.league_opt_in ? yield* leagues.join(user.id, week) : undefined;
     const standings = membership ? yield* leagues.standings(membership.cohortId) : [];
     const last = yield* leagues.lastSettled(user.id, week);
     const lifetimeXp = yield* leagues.lifetimeXp(user.id);
@@ -61,6 +62,9 @@ export const setLeagueOptIn = (user: User, optIn: boolean) =>
     else yield* leagues.leave(user.id, weekStart());
     return toPublicUser(updated);
   });
+
+/** Puts every opted-in learner into this week's table for their tier (Bronze for newcomers). */
+export const enrolOptedIn = Effect.flatMap(LeagueRepository, (l) => l.enrolOptedIn(weekStart()));
 
 /**
  * Settles every cohort from a finished week: ranks, promotions and demotions,

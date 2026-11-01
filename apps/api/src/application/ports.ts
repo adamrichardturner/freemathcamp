@@ -197,10 +197,12 @@ export interface SettledMember {
 }
 
 export interface LeagueRepositoryShape {
-  /** Puts an opted-in learner with a username into a cohort for the week (if not already), with the XP they've earned so far this week. */
+  /** Puts an opted-in learner with a username into their tier's cohort for the week (if not already), with the XP they've earned so far this week. */
   join(userId: string, weekStart: string): Db<LeagueMembership | undefined>;
   /** Adds XP to this week's membership, joining first if needed. No-op unless opted in. */
   addXp(userId: string, xp: number, weekStart: string): Db<void>;
+  /** Places every opted-in learner not yet in a cohort this week. Returns how many joined. */
+  enrolOptedIn(weekStart: string): Db<number>;
   leave(userId: string, weekStart: string): Db<void>;
   membership(userId: string, weekStart: string): Db<LeagueMembership | undefined>;
   /** The most recent settled week before `weekStart`. */

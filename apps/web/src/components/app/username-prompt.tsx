@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { AtSign, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { keys, useSession } from "@/hooks/queries";
 import { api, ApiError, type User } from "@/lib/api";
 import { UsernameInput, useUsernameCheck } from "./username-field";
+import { useAction } from "@/hooks/use-action";
 
 /**
  * Accounts made before usernames existed (and Google sign-ups) have none yet.
@@ -19,7 +20,7 @@ export function UsernamePrompt() {
   const qc = useQueryClient();
   const [value, setValue] = useState("");
   const check = useUsernameCheck(value);
-  const save = useMutation({
+  const save = useAction({
     mutationFn: () => api.patch<{ user: User }>("/me/username", { username: value.trim() }),
     onSuccess: ({ user: u }) => qc.setQueryData(keys.me, u),
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { BadgeCheck, Download, Eye, EyeOff, Laptop, Loader2, Monitor, Moon, ShieldCheck, Sun, TriangleAlert, Trophy, Volume2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useSyncExternalStore } from "react";
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { keys, useAccountSettings, useLeagueOptIn } from "@/hooks/queries";
+import { keys, useAccountSettings, useApplyUser, useLeagueOptIn } from "@/hooks/queries";
 import { UsernameInput, useUsernameCheck } from "@/components/app/username-field";
 import { api, ApiError, type AccountSettings, type User } from "@/lib/api";
 import { COURSE_ID } from "@/lib/course";
@@ -22,6 +22,7 @@ import { hardNavigate } from "@/lib/navigation";
 import { playSound, setSoundEffectsEnabled, useSoundEffects } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 import { Field, SettingRow, SettingsCard } from "./settings-ui";
+import { useAction } from "@/hooks/use-action";
 
 const SECTIONS = [
   { id: "profile", label: "Profile" },
@@ -99,15 +100,6 @@ function Section({ id, title, children }: { id: string; title: string; children:
   );
 }
 
-/** Keep the user everywhere in sync after an account change. */
-const useApplyUser = () => {
-  const qc = useQueryClient();
-  return (user: User) => {
-    qc.setQueryData(keys.me, user);
-    void qc.invalidateQueries({ queryKey: keys.settings });
-  };
-};
-
 /* ---------------- Profile ---------------- */
 
 function ProfileCard({ settings }: { settings: AccountSettings }) {
@@ -119,12 +111,12 @@ function ProfileCard({ settings }: { settings: AccountSettings }) {
   const error = trimmed.length === 0 ? "Your name can't be empty." : trimmed.length > 60 ? "Keep it under 60 characters." : null;
   const locked = nameChanges.remaining === 0;
 
-  const save = useMutation({
+  const save = useAction({
     mutationFn: () => api.patch<{ user: User }>("/me/profile", { displayName: trimmed }),
     onSuccess: ({ user: u }) => {
-      applyUser(u);
       setName(u.displayName);
       toast.success("Name updated");
+      return applyUser(u);
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't update your name.")),
   });
@@ -174,12 +166,12 @@ function UsernameCard({ user }: { user: User }) {
   const [value, setValue] = useState(user.username ?? "");
   const check = useUsernameCheck(value, user.username);
   const dirty = value.trim() !== (user.username ?? "");
-  const save = useMutation({
+  const save = useAction({
     mutationFn: () => api.patch<{ user: User }>("/me/username", { username: value.trim() }),
     onSuccess: ({ user: u }) => {
-      applyUser(u);
       setValue(u.username ?? "");
       toast.success(`You're now @${u.username}`);
+      return applyUser(u);
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't change your username.")),
   });
@@ -202,7 +194,7 @@ function UsernameCard({ user }: { user: User }) {
 }
 
 function EmailCard({ user }: { user: User }) {
-  const resend = useMutation({
+  const resend = useAction({
     mutationFn: () => api.post("/auth/resend-verification"),
     onSuccess: () => toast.success(`Verification link sent to ${user.email}`),
     onError: (e) => toast.error(errorMessage(e, "Couldn't send the email.")),
@@ -256,12 +248,11 @@ function DailyGoalCard({ user }: { user: User }) {
   const qc = useQueryClient();
   const [goal, setGoal] = useState(user.dailyGoal);
   const dirty = goal !== user.dailyGoal;
-  const save = useMutation({
+  const save = useAction({
     mutationFn: () => api.patch<{ user: User }>("/me/preferences", { dailyGoal: goal }),
     onSuccess: ({ user: u }) => {
-      applyUser(u);
-      void qc.invalidateQueries({ queryKey: keys.dashboard });
       toast.success(`Daily goal set to ${u.dailyGoal} problems`);
+      return Promise.all([applyUser(u), qc.invalidateQueries({ queryKey: keys.dashboard })]);
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't save your goal.")),
   });
@@ -303,7 +294,12 @@ function LeaguesCard({ user }: { user: User }) {
             ? `Shown as @${user.username} with your XP. Leaving removes you from this week's table.`
             : "Choose a username first: it's how other learners see you."
         }
-        action={<Switch id="settings-league" aria-label="Compete in leagues" checked={checked} disabled={optIn.isPending || !user.username} onCheckedChange={(on) => optIn.mutate(on)} />}
+        action={
+          <span className="flex items-center gap-2">
+            {optIn.isPending && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+            <Switch id="settings-league" aria-label="Compete in leagues" aria-busy={optIn.isPending} checked={checked} disabled={optIn.isPending || !user.username} onCheckedChange={(on) => optIn.mutate(on)} />
+          </span>
+        }
       />
     </SettingsCard>
   );
@@ -396,15 +392,15 @@ function PasswordCard({ user }: { user: User }) {
   const sameError = user.hasPassword && form.next && form.next === form.current ? "Choose a different password." : null;
   const valid = (!user.hasPassword || !!form.current) && !!form.next && !nextError && !confirmError && !sameError && form.confirm === form.next;
 
-  const save = useMutation({
+  const save = useAction({
     mutationFn: () =>
       api.post<{ user: User; signedOutSessions: number }>("/me/password", { ...(user.hasPassword ? { currentPassword: form.current } : {}), newPassword: form.next }),
     onSuccess: ({ user: u, signedOutSessions }) => {
-      applyUser(u);
       setForm(empty);
       toast.success(
         `${user.hasPassword ? "Password changed" : "Password set"}${signedOutSessions ? ` · signed out ${signedOutSessions} other device${signedOutSessions === 1 ? "" : "s"}` : ""}`,
       );
+      return applyUser(u);
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't update your password.")),
   });
@@ -438,11 +434,11 @@ function PasswordCard({ user }: { user: User }) {
 function SessionsCard({ settings }: { settings: AccountSettings }) {
   const qc = useQueryClient();
   const { otherSessions, activeSessions, linkedProviders } = settings.security;
-  const revoke = useMutation({
+  const revoke = useAction({
     mutationFn: () => api.post<{ signedOutSessions: number }>("/me/sessions/revoke-others"),
     onSuccess: ({ signedOutSessions }) => {
-      void qc.invalidateQueries({ queryKey: keys.settings });
       toast.success(`Signed out ${signedOutSessions} other device${signedOutSessions === 1 ? "" : "s"}`);
+      return qc.invalidateQueries({ queryKey: keys.settings });
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't sign out other devices.")),
   });
@@ -569,11 +565,11 @@ export function ConfirmDialog({
 
 function ResetProgressCard() {
   const qc = useQueryClient();
-  const reset = useMutation({
+  const reset = useAction({
     mutationFn: () => api.post("/me/reset-progress", { courseId: COURSE_ID }),
     onSuccess: () => {
-      void qc.invalidateQueries();
       toast.success("Course progress reset. A fresh start!");
+      return qc.invalidateQueries();
     },
     onError: (e) => toast.error(errorMessage(e, "Couldn't reset your progress.")),
   });
@@ -599,7 +595,7 @@ function ResetProgressCard() {
 
 function DeleteAccountCard({ user }: { user: User }) {
   const [password, setPassword] = useState("");
-  const del = useMutation({
+  const del = useAction({
     mutationFn: () => api.delete<{ deleted: boolean }>("/me", { confirmEmail: user.email, ...(user.hasPassword ? { password } : {}) }),
     // A full reload leaves nothing of the deleted account in memory; the toast shows on the next page.
     onSuccess: () => hardNavigate("/", "Your account and all of its data have been deleted."),

@@ -1,15 +1,15 @@
 "use client";
 
 import type { LearningMode } from "@fmc/curriculum";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Compass, Loader2, Route } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { keys, useInvalidateLearner } from "@/hooks/queries";
+import { useApplyUser, useInvalidateLearner } from "@/hooks/queries";
 import { api, ApiError, type User } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/hooks/use-action";
 
 export const MODE_META: Record<LearningMode, { label: string; icon: typeof Route; short: string; points: string[] }> = {
   path: {
@@ -35,15 +35,14 @@ export const MODE_META: Record<LearningMode, { label: string; icon: typeof Route
 };
 
 const useSetLearningMode = () => {
-  const qc = useQueryClient();
+  const applyUser = useApplyUser();
   const invalidateLearner = useInvalidateLearner();
-  return useMutation({
+  return useAction({
     mutationFn: (learningMode: LearningMode) => api.patch<{ user: User }>("/me/preferences", { learningMode }),
     onSuccess: ({ user }) => {
-      qc.setQueryData(keys.me, user);
-      void qc.invalidateQueries({ queryKey: keys.settings });
-      void invalidateLearner();
       toast.success(`${MODE_META[user.learningMode].label} is on`);
+      // Lesson locks depend on the mode; hold the switch until they've reloaded.
+      return Promise.all([applyUser(user), invalidateLearner()]);
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn't change the course mode."),
   });

@@ -1,12 +1,13 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { unlockedBy, unlockedLessons } from "@fmc/curriculum";
 import { useMemo, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { api, ApiError, type AccountSettings, type Analytics, type CourseProgress, type Dashboard, type ExerciseDetail, type League, type User } from "@/lib/api";
 import { COURSE_ID, graph } from "@/lib/course";
 import { hardNavigate } from "@/lib/navigation";
+import { useAction } from "@/hooks/use-action";
 
 export const keys = {
   me: ["me"] as const,
@@ -79,18 +80,33 @@ export const useAnalytics = (enabled = true) =>
 export const useExerciseDetail = (id: string, enabled = true) =>
   useQuery({ queryKey: keys.exercise(id), queryFn: () => api.get<ExerciseDetail>(`/courses/${COURSE_ID}/exercises/${id}`), enabled });
 
+/**
+ * After an account change: the new user goes into every cached copy at once,
+ * then settings refetch. The returned promise lets a mutation hold its pending
+ * state until that's done, so no form compares against a stale copy and
+ * re-enables its button for a moment.
+ */
+export const useApplyUser = () => {
+  const qc = useQueryClient();
+  return (user: User) => {
+    qc.setQueryData(keys.me, user);
+    qc.setQueryData<AccountSettings>(keys.settings, (old) => old && { ...old, user });
+    return qc.invalidateQueries({ queryKey: keys.settings });
+  };
+};
+
 export const useLeague = (enabled = true) => useQuery({ queryKey: keys.league, queryFn: () => api.get<League>("/leagues/me"), enabled });
 
 /** Joins or leaves leagues, keeping the user and the league view in step wherever the switch is. */
 export const useLeagueOptIn = () => {
   const qc = useQueryClient();
-  return useMutation({
+  const applyUser = useApplyUser();
+  return useAction({
     mutationFn: (optIn: boolean) => api.put<{ user: User }>("/me/league", { optIn }),
+    // Stays pending until the league view has refetched, so the page swaps once.
     onSuccess: ({ user }) => {
-      qc.setQueryData(keys.me, user);
-      void qc.invalidateQueries({ queryKey: keys.league });
-      void qc.invalidateQueries({ queryKey: keys.settings });
       toast.success(user.leagueOptIn ? "You're in this week's league" : "You've left the leagues");
+      return Promise.all([applyUser(user), qc.invalidateQueries({ queryKey: keys.league })]);
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn't update your league setting."),
   });
@@ -114,7 +130,7 @@ export const useInvalidateLearner = () => {
  * `busy` stays true from the click until the browser leaves the page.
  */
 export const useLogout = () => {
-  const logout = useMutation({
+  const logout = useAction({
     mutationFn: () => api.post("/auth/logout"),
     onSuccess: () => hardNavigate("/"),
   });

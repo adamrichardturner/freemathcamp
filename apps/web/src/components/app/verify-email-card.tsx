@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, MailCheck, RefreshCw } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
@@ -8,20 +8,21 @@ import { Button } from "@/components/ui/button";
 import { keys, useLogout } from "@/hooks/queries";
 import { api, ApiError, type User } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/hooks/use-action";
 
 /** Shown in place of learner features until the account's email is confirmed. */
 export function VerifyEmailCard({ user, compact = false }: { user: User; compact?: boolean }) {
   const qc = useQueryClient();
   const logout = useLogout();
-  const resend = useMutation({
+  const resend = useAction({
     mutationFn: () => api.post<{ sent: boolean; alreadyVerified: boolean }>("/auth/resend-verification"),
     onSuccess: (r) => {
-      if (r.alreadyVerified) return void qc.invalidateQueries({ queryKey: keys.me });
+      if (r.alreadyVerified) return qc.invalidateQueries({ queryKey: keys.me });
       toast.success(`New link sent to ${user.email}`);
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn't send the email."),
   });
-  const refresh = useMutation({
+  const refresh = useAction({
     mutationFn: () => qc.refetchQueries({ queryKey: keys.me }),
     onSuccess: () => {
       const fresh = qc.getQueryData<User | null>(keys.me);

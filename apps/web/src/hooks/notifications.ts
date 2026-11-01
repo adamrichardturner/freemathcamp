@@ -4,6 +4,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteD
 import { useSyncExternalStore } from "react";
 import { api, type AppNotification, type NotificationCounts, type NotificationFilter, type NotificationPage, type PushConfig } from "@/lib/api";
 import { useSession } from "./queries";
+import { useAction } from "@/hooks/use-action";
 
 export const notificationKeys = {
   all: ["notifications"] as const,
@@ -73,31 +74,31 @@ export const useNotificationActions = () => {
     mutationFn: () => api.post<NotificationCounts>("/me/notifications/seen"),
     onSuccess: (counts) => qc.setQueryData(notificationKeys.counts, counts),
   });
-  const setRead = useMutation({
+  const setRead = useAction({
     mutationFn: ({ id, read }: { id: string; read: boolean }) => api.patch(`/me/notifications/${id}`, { read }),
     onMutate: ({ id, read }) => o.apply((n) => ({ ...n, read, seen: true }), [id]),
     onError: (_e, _v, snap) => o.rollback(snap),
     onSettled: o.settle,
   });
-  const setKept = useMutation({
+  const setKept = useAction({
     mutationFn: ({ id, kept }: { id: string; kept: boolean }) => api.patch(`/me/notifications/${id}`, { kept }),
     onMutate: ({ id, kept }) => o.apply((n) => ({ ...n, kept }), [id]),
     onError: (_e, _v, snap) => o.rollback(snap),
     onSettled: o.settle,
   });
-  const dismiss = useMutation({
+  const dismiss = useAction({
     mutationFn: (id: string) => api.delete(`/me/notifications/${id}`),
     onMutate: (id) => o.apply(() => null, [id]),
     onError: (_e, _v, snap) => o.rollback(snap),
     onSettled: o.settle,
   });
-  const readAll = useMutation({
+  const readAll = useAction({
     mutationFn: () => api.post("/me/notifications/read-all"),
     onMutate: () => o.apply((n) => ({ ...n, read: true, seen: true }), "all"),
     onError: (_e, _v, snap) => o.rollback(snap),
     onSettled: o.settle,
   });
-  const dismissRead = useMutation({
+  const dismissRead = useAction({
     mutationFn: () => api.post<{ dismissed: number }>("/me/notifications/dismiss-read"),
     onMutate: () => o.apply((n) => (n.read && !n.kept ? null : n), "all"),
     onError: (_e, _v, snap) => o.rollback(snap),
@@ -141,7 +142,7 @@ export const usePush = () => {
   const subscribed = subscription.data ?? null;
   const refresh = () => qc.invalidateQueries({ queryKey: notificationKeys.subscription });
 
-  const enable = useMutation({
+  const enable = useAction({
     mutationFn: async () => {
       const key = config.data?.webPublicKey;
       if (!key) throw new Error("Push isn't set up on the server yet.");
@@ -156,7 +157,7 @@ export const usePush = () => {
     onSettled: refresh,
   });
 
-  const disable = useMutation({
+  const disable = useAction({
     mutationFn: async () => {
       const reg = await navigator.serviceWorker.getRegistration("/");
       const sub = await reg?.pushManager.getSubscription();

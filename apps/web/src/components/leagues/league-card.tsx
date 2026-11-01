@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Trophy, Zap } from "lucide-react";
+import { ArrowRight, Loader2, Trophy, Zap } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,8 +28,8 @@ export function LeagueCard() {
           <Trophy className="size-4 text-chart-4" /> Leagues
         </CardTitle>
         <label htmlFor="dashboard-league" className="flex items-center gap-2 text-xs text-muted-foreground">
-          {joined ? "Competing" : "Not joined"}
-          <Switch id="dashboard-league" aria-label="Compete in leagues" size="sm" checked={joined} disabled={optIn.isPending || !user.username} onCheckedChange={(on) => optIn.mutate(on)} />
+          {optIn.isPending ? <Loader2 className="size-3.5 animate-spin" /> : joined ? "Competing" : "Not joined"}
+          <Switch id="dashboard-league" aria-label="Compete in leagues" aria-busy={optIn.isPending} size="sm" checked={joined} disabled={optIn.isPending || !user.username} onCheckedChange={(on) => optIn.mutate(on)} />
         </label>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -45,7 +45,7 @@ export function LeagueCard() {
                 <div className="text-sm font-semibold" style={{ color: tierColour(tier.index) }}>
                   {tier.name} League
                 </div>
-                <div className="text-xs text-muted-foreground">{cohort ? `#${cohort.rank} of ${cohort.size}` : "Solve a problem to be placed"}</div>
+                <div className="text-xs text-muted-foreground">{cohort ? `#${cohort.rank} of ${cohort.size}` : "Placing you in this week's table…"}</div>
               </div>
               <div className="text-right">
                 <div className="flex items-center justify-end gap-1 text-2xl font-semibold tabular-nums">

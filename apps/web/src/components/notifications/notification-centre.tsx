@@ -142,8 +142,8 @@ export function NotificationCentre({ onNavigate, className }: { onNavigate?: () 
             <span className="hidden sm:inline">Mark all read</span>
           </Button>
           <DropdownMenu>
-            <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="More notification actions" disabled={bulkBusy} />}>
-              <MoreHorizontal />
+            <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="More notification actions" disabled={bulkBusy} aria-busy={actions.dismissRead.isPending} />}>
+              {actions.dismissRead.isPending ? <Loader2 className="animate-spin" /> : <MoreHorizontal />}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem onClick={() => actions.dismissRead.mutate()} disabled={!counts?.total}>

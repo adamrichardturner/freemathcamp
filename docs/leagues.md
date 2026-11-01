@@ -1,8 +1,8 @@
 # Leagues
 
 Leagues add some optional, friendly competition. Learners who opt in are placed
-each week in a table of up to 30 people at the same tier, ranked by the XP they
-earn by solving problems. When the week ends, the top of each table moves up a
+automatically each week in a table with everyone else at the same tier (no size
+limit for now), ranked by the XP they earn by solving problems. When the week ends, the top of each table moves up a
 tier and the bottom moves down.
 
 ## Usernames
@@ -49,12 +49,15 @@ learner's all-time XP is the sum of those rows; resetting course progress clears
 ## Weeks, cohorts and promotion
 
 - Weeks run Monday 00:00 to Monday 00:00 UTC.
-- An opted-in learner joins a cohort with their first solved problem of the
-  week (or immediately, when they opt in). XP already earned that week counts.
-  Cohorts fill to 30 in order of joining; an advisory lock per tier and week
-  keeps concurrent joins from overfilling one.
-- At the end of the week a background job (every 5 minutes, under a lease)
-  settles each cohort from a finished week:
+- Opted-in learners never have to join by hand. They're placed in their tier's
+  table as soon as they opt in, when they open the Leagues page or the Dashboard,
+  when they solve a problem, and by the leagues job at the start of each week.
+  Newcomers start in Bronze. XP already earned that week counts.
+- There's one table per tier and week, with no size limit for now. A unique
+  index on open cohorts (`week_start`, `tier`) keeps concurrent joins in the same one.
+- A background job runs every 5 minutes under a lease. It settles each cohort
+  from a finished week, then enrols every opted-in learner in the new week with
+  two set-based statements:
   - the **top 20%** (rounded up, at least one) move up a tier, provided they
     earned at least **150 XP**, so a quiet table doesn't hand out free promotions;
   - the **bottom 20%** (rounded down) move down, only in tables of five or more,
@@ -70,7 +73,7 @@ learner's all-time XP is the sum of those rows; resetting course progress clears
 | --- | --- |
 | `users.username`, `league_opt_in`, `league_tier` | Handle, opt-in and current tier |
 | `item_results.xp` | XP for each finished problem |
-| `league_cohorts` | One row per table per week and tier; `finalized_at` once settled |
+| `league_cohorts` | One row per tier per week; `finalized_at` once settled |
 | `league_members` | One row per learner per week: cohort, running XP, and after settling, rank and result |
 
 Standings are one indexed read (`league_members (cohort_id, xp desc, xp_at)`

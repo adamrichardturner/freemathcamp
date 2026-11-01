@@ -21,7 +21,6 @@ import {
 import { Conflict, DatabaseError } from "../../domain/errors";
 import { Database } from "../db/database";
 import type { DB, LeagueMembersTable } from "../db/schema";
-import { COHORT_SIZE } from "../../domain/leagues";
 import type { AdminUserRow } from "../../application/ports";
 
 const UNIQUE_VIOLATION = "23505";
@@ -749,27 +748,25 @@ const toMembership = (m: import("kysely").Selectable<LeagueMembersTable>): Leagu
 
 const weekStartDate = (weekStart: string) => new Date(`${weekStart}T00:00:00Z`);
 
-/** Places a learner in the first cohort of their tier with room, or opens a new one. Runs inside a transaction. */
+/** The week's open cohort for a tier. There's one per tier and week (no size limit for now), created on first use. */
+const cohortFor = async (trx: Kdb, weekStart: string, tier: number) => {
+  await trx
+    .insertInto("league_cohorts")
+    .values({ week_start: weekStart, tier })
+    .onConflict((oc) => oc.columns(["week_start", "tier"]).where("finalized_at", "is", null).doNothing())
+    .execute();
+  return (
+    await trx.selectFrom("league_cohorts").select("id").where("week_start", "=", weekStart).where("tier", "=", tier).where("finalized_at", "is", null).executeTakeFirstOrThrow()
+  ).id;
+};
+
+/** Places an opted-in learner in their tier's cohort for the week, counting XP already earned that week. */
 const joinCohort = async (trx: Kdb, userId: string, weekStart: string): Promise<LeagueMembership | undefined> => {
   const existing = await trx.selectFrom("league_members").selectAll().where("week_start", "=", weekStart).where("user_id", "=", userId).executeTakeFirst();
   if (existing) return toMembership(existing);
   const user = await trx.selectFrom("users").select(["league_opt_in", "username", "league_tier"]).where("id", "=", userId).executeTakeFirst();
   if (!user?.league_opt_in || !user.username) return undefined;
-  const tier = user.league_tier;
-  // One joiner per tier and week at a time, so a cohort never overfills.
-  await sql`select pg_advisory_xact_lock(hashtext(${`league:${weekStart}:${tier}`}))`.execute(trx);
-  const open = await trx
-    .selectFrom("league_cohorts as c")
-    .select("c.id")
-    .where("c.week_start", "=", weekStart)
-    .where("c.tier", "=", tier)
-    .where("c.finalized_at", "is", null)
-    .where(sql<boolean>`(select count(*) from league_members m where m.cohort_id = c.id) < ${COHORT_SIZE}`)
-    .orderBy("c.created_at")
-    .limit(1)
-    .executeTakeFirst();
-  const cohortId = open?.id ?? (await trx.insertInto("league_cohorts").values({ week_start: weekStart, tier }).returning("id").executeTakeFirstOrThrow()).id;
-  // XP earned earlier in the week counts, so joining mid-week is fair.
+  const cohortId = await cohortFor(trx, weekStart, user.league_tier);
   const earned = await trx
     .selectFrom("item_results")
     .select(sql<number>`coalesce(sum(xp), 0)::int`.as("xp"))
@@ -779,7 +776,7 @@ const joinCohort = async (trx: Kdb, userId: string, weekStart: string): Promise<
   const row =
     (await trx
       .insertInto("league_members")
-      .values({ week_start: weekStart, user_id: userId, cohort_id: cohortId, tier, xp: earned.xp })
+      .values({ week_start: weekStart, user_id: userId, cohort_id: cohortId, tier: user.league_tier, xp: earned.xp })
       .onConflict((oc) => oc.columns(["week_start", "user_id"]).doNothing())
       .returningAll()
       .executeTakeFirst()) ?? (await trx.selectFrom("league_members").selectAll().where("week_start", "=", weekStart).where("user_id", "=", userId).executeTakeFirstOrThrow());
@@ -817,6 +814,27 @@ export const LeagueRepositoryLive = repo(LeagueRepository, (run) => ({
             if (!updated) await joinCohort(trx, userId, weekStart);
           }),
         ),
+  enrolOptedIn: (weekStart) =>
+    run((db) =>
+      db.transaction().execute(async (trx) => {
+        // One open cohort per tier that has opted-in learners, then everyone not yet placed this week, in two set-based statements.
+        await sql`
+          insert into league_cohorts (week_start, tier)
+          select distinct ${weekStart}::date, u.league_tier from users u where u.league_opt_in and u.username is not null
+          on conflict (week_start, tier) where finalized_at is null do nothing
+        `.execute(trx);
+        const inserted = await sql`
+          insert into league_members (week_start, user_id, cohort_id, tier, xp)
+          select ${weekStart}::date, u.id, c.id, u.league_tier,
+                 coalesce((select sum(r.xp) from item_results r where r.user_id = u.id and r.resolved_at >= ${weekStartDate(weekStart)}), 0)
+          from users u
+          join league_cohorts c on c.week_start = ${weekStart}::date and c.tier = u.league_tier and c.finalized_at is null
+          where u.league_opt_in and u.username is not null
+          on conflict (week_start, user_id) do nothing
+        `.execute(trx);
+        return Number(inserted.numAffectedRows ?? 0);
+      }),
+    ),
   leave: (userId, weekStart) =>
     run((db) => db.deleteFrom("league_members").where("week_start", "=", weekStart).where("user_id", "=", userId).where("result", "is", null).execute()).pipe(Effect.asVoid),
   membership: (userId, weekStart) =>

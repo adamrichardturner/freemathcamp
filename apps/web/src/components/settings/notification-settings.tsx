@@ -1,15 +1,15 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { BellRing, Clock, Loader2, Mail, ShieldCheck, Smartphone, Sparkles, Trophy } from "lucide-react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { usePush, type PushState } from "@/hooks/notifications";
-import { keys } from "@/hooks/queries";
+import { useApplyUser } from "@/hooks/queries";
 import { api, ApiError, type User } from "@/lib/api";
 import { SettingRow, SettingsCard } from "./settings-ui";
+import { useAction } from "@/hooks/use-action";
 
 type Pref = "notifyProgress" | "notifyReminders" | "notifyEmailReminders";
 
@@ -63,13 +63,10 @@ function PushCard() {
 }
 
 function PreferencesCard({ user }: { user: User }) {
-  const qc = useQueryClient();
-  const save = useMutation({
+  const applyUser = useApplyUser();
+  const save = useAction({
     mutationFn: (patch: Partial<Record<Pref, boolean>>) => api.patch<{ user: User }>("/me/preferences", patch),
-    onSuccess: ({ user: u }) => {
-      qc.setQueryData(keys.me, u);
-      void qc.invalidateQueries({ queryKey: keys.settings });
-    },
+    onSuccess: ({ user: u }) => applyUser(u),
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn't save your notification settings."),
   });
   const pending = save.isPending ? Object.keys(save.variables ?? {})[0] : null;

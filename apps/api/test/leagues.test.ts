@@ -1,7 +1,7 @@
 import { generateProblem, getExercise, type Answer } from "@fmc/curriculum";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { settleFinishedWeeks } from "../src/application/leagues";
+import { enrolOptedIn, settleFinishedWeeks } from "../src/application/leagues";
 import { PROMOTION_MIN_XP, previousWeek, settle, weekStart, xpFor, zones } from "../src/domain/leagues";
 import { createApp } from "../src/http/app";
 import { makeRuntime, type AppRuntime } from "../src/http/runtime";
@@ -139,6 +139,23 @@ describe.skipIf(!enabled)("usernames and leagues", () => {
     // Opting out takes you off this week's table.
     await a.send("put", "/api/me/league", { optIn: false });
     expect((await a.agent.get("/api/leagues/me")).body).toMatchObject({ optedIn: false, cohort: null, lifetimeXp: earned });
+  });
+
+  it("enrols every opted-in learner automatically, in Bronze, with no cap on table size", async () => {
+    const players = await Promise.all(Array.from({ length: 3 }, () => signUp()));
+    // Opted in without going through the switch, as existing accounts or a new week would be.
+    await db.updateTable("users").set({ league_opt_in: true }).where("id", "in", players.map((p) => p.id)).execute();
+    expect(await runtime.runPromise(enrolOptedIn)).toBeGreaterThanOrEqual(3);
+    const rows = await db.selectFrom("league_members").select(["cohort_id", "tier"]).where("week_start", "=", weekStart()).where("user_id", "in", players.map((p) => p.id)).execute();
+    expect(rows).toHaveLength(3);
+    expect(new Set(rows.map((r) => r.cohort_id)).size).toBe(1);
+    expect(rows.every((r) => r.tier === 0)).toBe(true);
+    // Everyone in Bronze this week shares one table, however many there are.
+    const open = await db.selectFrom("league_cohorts").select("id").where("week_start", "=", weekStart()).where("tier", "=", 0).where("finalized_at", "is", null).execute();
+    expect(open).toHaveLength(1);
+    // Running again places no one twice; the page shows the table straight away.
+    expect(await runtime.runPromise(enrolOptedIn)).toBe(0);
+    expect((await players[0]!.agent.get("/api/leagues/me")).body.cohort.size).toBeGreaterThanOrEqual(3);
   });
 
   it("settles a finished week: promotions, demotions and a notice", async () => {

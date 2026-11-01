@@ -1,5 +1,6 @@
 /**
- * Leagues: weekly cohorts of up to 30 learners in the same tier, ranked by XP.
+ * Leagues: weekly cohorts of every opted-in learner in the same tier (no size
+ * limit for now), ranked by XP.
  * At the end of each week (Monday 00:00 UTC) the top of every cohort moves up
  * a tier and the bottom moves down. Pure functions only; see docs/leagues.md.
  */
@@ -8,7 +9,6 @@ export const TIERS = ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Obsidi
 export type TierName = (typeof TIERS)[number];
 export const TOP_TIER = TIERS.length - 1;
 
-export const COHORT_SIZE = 30;
 /** Share of a cohort that moves up, and down, each week. */
 export const PROMOTE_SHARE = 0.2;
 export const DEMOTE_SHARE = 0.2;

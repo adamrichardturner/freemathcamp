@@ -1,12 +1,12 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
 import { CircleCheck, Loader2, MailX } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { ButtonLink } from "@/components/app/button-link";
 import { Logo } from "@/components/app/logo";
 import { Button } from "@/components/ui/button";
 import { api, ApiError } from "@/lib/api";
+import { useAction } from "@/hooks/use-action";
 
 /**
  * Landing page for "Unsubscribe" in reminder emails. It asks for a click rather
@@ -14,7 +14,7 @@ import { api, ApiError } from "@/lib/api";
  */
 export function UnsubscribeView() {
   const token = useSearchParams().get("token") ?? "";
-  const unsubscribe = useMutation({ mutationFn: () => api.post(`/email/unsubscribe?token=${encodeURIComponent(token)}`) });
+  const unsubscribe = useAction({ mutationFn: () => api.post(`/email/unsubscribe?token=${encodeURIComponent(token)}`) });
   const done = unsubscribe.isSuccess;
 
   return (

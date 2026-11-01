@@ -3,7 +3,6 @@
 import { ArrowDown, ArrowUp, Clock, Loader2, Sparkles, Trophy, Zap } from "lucide-react";
 import { motion } from "motion/react";
 import { Fragment } from "react";
-import { ButtonLink } from "@/components/app/button-link";
 import { VerifyEmailCard } from "@/components/app/verify-email-card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
@@ -75,7 +74,7 @@ function Hero({ league }: { league: League }) {
                 #{cohort.rank} <span className="text-xl text-muted-foreground">of {cohort.size}</span>
               </div>
             ) : (
-              <div className="font-display text-3xl leading-tight">Not placed yet</div>
+              <div className="font-display text-3xl leading-tight">Placing you…</div>
             )}
             <div className="text-sm text-muted-foreground">@{league.username}</div>
           </div>
@@ -88,7 +87,7 @@ function Hero({ league }: { league: League }) {
               <p className="text-sm">{s.hint}</p>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">Solve a problem this week and you&apos;ll be placed in a {tier.name} league with up to 30 learners.</p>
+            <p className="text-sm text-muted-foreground">Placing you in this week&apos;s {tier.name} table…</p>
           )}
         </div>
 
@@ -109,13 +108,6 @@ function Hero({ league }: { league: League }) {
           </div>
         </div>
       </CardContent>
-      {!cohort && (
-        <div className="relative border-t px-4 pt-3">
-          <ButtonLink href="/learn" size="sm">
-            Go to today&apos;s plan
-          </ButtonLink>
-        </div>
-      )}
     </Card>
   );
 }
@@ -132,7 +124,7 @@ function JoinCard({ league }: { league: League }) {
         <div className="min-w-0 flex-1 space-y-1">
           <h2 className="text-xl font-semibold">Compete in weekly leagues</h2>
           <p className="text-sm text-muted-foreground">
-            Join a table of up to 30 learners in your tier. Every problem you solve earns XP; finish near the top to move up from Bronze towards Obsidian. Others see only{" "}
+            Join a weekly table with everyone in your tier, starting in Bronze. Every problem you solve earns XP; finish near the top to move up from Bronze towards Obsidian. Others see only{" "}
             <span className="font-medium text-foreground">@{league.username ?? "your username"}</span> and your XP.
           </p>
           <p className="text-xs text-muted-foreground">
@@ -282,7 +274,7 @@ function HowItWorks() {
           <AccordionItem value="weeks">
             <AccordionTrigger>Weeks, promotion and demotion</AccordionTrigger>
             <AccordionContent className="space-y-2 text-sm text-muted-foreground">
-              <p>Weeks run Monday to Sunday (UTC). Your first solved problem each week places you in a table of up to 30 learners in your tier.</p>
+              <p>Weeks run Monday to Sunday (UTC). Once you&apos;ve joined, you&apos;re placed automatically each week in a table with everyone in your tier, starting in Bronze.</p>
               <p>When the week ends, the top fifth move up a tier (with at least 150 XP) and the bottom fifth of a table of five or more move down. Ties go to whoever reached the score first.</p>
             </AccordionContent>
           </AccordionItem>

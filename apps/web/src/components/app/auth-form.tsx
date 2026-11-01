@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -14,6 +14,7 @@ import { keys, useProviders } from "@/hooks/queries";
 import { UsernameInput, useUsernameCheck } from "./username-field";
 import { api, ApiError, type User } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/hooks/use-action";
 
 const OAUTH_ERRORS: Record<string, string> = {
   google_unavailable: "Google sign-in isn't set up on this server yet.",
@@ -54,7 +55,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
     return () => window.removeEventListener("pageshow", onShow);
   }, []);
 
-  const submit = useMutation({
+  const submit = useAction({
     mutationFn: () => api.post<{ user: User }>(mode === "login" ? "/auth/login" : "/auth/register", mode === "login" ? { email: form.email, password: form.password } : { ...form, username: form.username.trim() }),
     onSuccess: ({ user }) => {
       qc.setQueryData(keys.me, user);
