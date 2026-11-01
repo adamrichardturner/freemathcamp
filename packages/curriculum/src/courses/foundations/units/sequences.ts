@@ -1,5 +1,5 @@
-import { example, key, numberAnswer, rule, step, text, tip, visual } from "../../../core/builders";
-import { round } from "../../../core/math";
+import { example, key, math, numberAnswer, rule, step, text, tip, visual } from "../../../core/builders";
+import { choose, paren, round, signed } from "../../../core/math";
 import type { Unit } from "../../../core/types";
 
 const r = String.raw;
@@ -108,6 +108,52 @@ export const sequences: Unit = {
           answer: numberAnswer(total),
           hints: [level === 1 ? "Write out each term and add them." : "Split it: a·Σk + Σb.", `Σk from 1 to ${n} = ${(n * (n + 1)) / 2}.`],
           solution: [step("Split the sum.", r`${a}\cdot\frac{${n}\cdot${n + 1}}{2} + ${b}\cdot${n} = ${total}`)],
+        };
+      },
+    },
+    {
+      id: "binomial-theorem",
+      title: "The Binomial Theorem",
+      summary: "Expanding $(a + b)^n$ with Pascal's triangle.",
+      prerequisites: ["sigma-notation", "multiplying-polynomials"],
+      estimatedMinutes: 11,
+      expectedSeconds: 60,
+      keyIdeas: [
+        "$\\binom{n}{k} = \\frac{n!}{k!\\,(n - k)!}$ counts the ways to choose $k$ things from $n$.",
+        "$(a + b)^n = \\sum_{k=0}^{n} \\binom{n}{k} a^{n-k} b^k$",
+        "Row $n$ of Pascal's triangle gives the coefficients of $(a + b)^n$.",
+      ],
+      lesson: [
+        text("Expanding $(x + 2)^5$ by multiplying out five brackets is slow and error-prone. The **binomial theorem** jumps straight to the answer, with coefficients from Pascal's triangle."),
+        math(
+          r`\begin{array}{c} 1 \\ 1 \quad 1 \\ 1 \quad 2 \quad 1 \\ 1 \quad 3 \quad 3 \quad 1 \\ 1 \quad 4 \quad 6 \quad 4 \quad 1 \end{array}`,
+          "Each number is the sum of the two above it. Row $n$ (counting the top row as row 0) gives the coefficients of $(a + b)^n$.",
+        ),
+        rule("Binomial coefficients", r`\binom{n}{k} = \frac{n!}{k!\,(n - k)!}`, "For example, $\\binom{4}{2} = \\frac{24}{2 \\cdot 2} = 6$."),
+        rule("Binomial theorem", r`(a + b)^n = \sum_{k=0}^{n} \binom{n}{k}\, a^{\,n-k}\, b^{\,k}`),
+        example("Expand $(x + 2)^3$.", [["Coefficients from row 3: $1, 3, 3, 1$.", r`x^3 + 3x^2(2) + 3x(2)^2 + 2^3`], ["Simplify.", r`x^3 + 6x^2 + 12x + 8`]]),
+        key("$(x + h)^n = x^n + nx^{n-1}h + \\dots$, where every later term has $h^2$ or a higher power. That's exactly why the derivative of $x^n$ is $nx^{n-1}$."),
+      ],
+      generate: (rng, level) => {
+        if (level === 1) {
+          const n = rng.int(4, 9), k = rng.int(1, n - 1);
+          return {
+            prompt: "Evaluate.",
+            tex: r`\binom{${n}}{${k}}`,
+            answer: numberAnswer(choose(n, k)),
+            hints: ["n! / (k! (n − k)!)", "Or read it from row n of Pascal's triangle."],
+            solution: [step("Use the formula.", r`\frac{${n}!}{${k}!\,${n - k}!} = ${choose(n, k)}`)],
+          };
+        }
+        const n = rng.int(3, level === 2 ? 6 : 5), k = rng.int(1, n - 1);
+        const a = rng.nonZero(-3, 3), b = level === 2 ? 1 : rng.pick([2, 3, -2]);
+        const coefficient = choose(n, k) * b ** k * a ** (n - k);
+        const base = `${b === 1 ? "" : b === -1 ? "-" : b}x${signed(a)}`;
+        return {
+          prompt: `Find the coefficient of $x^{${k}}$ in the expansion of $(${base})^{${n}}$.`,
+          answer: numberAnswer(coefficient),
+          hints: [`The x^${k} term is C(${n}, ${k}) · (${b === 1 ? "" : b}x)^${k} · (${a})^${n - k}.`, "Keep track of the signs."],
+          solution: [step("The term with that power of $x$.", r`\binom{${n}}{${k}}(${b === 1 ? "" : b}x)^{${k}}(${a})^{${n - k}} = ${choose(n, k)}\cdot${paren(b ** k)}\cdot${paren(a ** (n - k))}\,x^{${k}} = ${coefficient}x^{${k}}`)],
         };
       },
     },

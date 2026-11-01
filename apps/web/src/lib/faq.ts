@@ -1,8 +1,10 @@
+import { course, graph } from "@/lib/course";
+
 /** Shown on the landing page and mirrored as FAQPage structured data — keep both in sync by using this list. */
 export const FAQS = [
   {
     q: "What is Free Math Camp?",
-    a: "Free Math Camp (FreeMathCamp) is a free online course that teaches all the math you need before calculus. Its Foundations course has 81 connected lessons across 14 units — from place value and fractions through algebra, functions, exponentials, geometry and trigonometry — with interactive visuals and unlimited adaptive practice.",
+    a: `Free Math Camp (FreeMathCamp) is a free online course that teaches all the math you need before calculus. Its Foundations course has ${graph.refs.length} connected lessons across ${course.units.length} units, from place value and fractions through algebra, functions, exponentials, geometry and trigonometry to a first look at limits, with interactive visuals and unlimited adaptive practice.`,
   },
   {
     q: "Is Free Math Camp really free?",

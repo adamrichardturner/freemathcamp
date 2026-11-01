@@ -96,6 +96,13 @@ export const quadratic = (a: number, b: number, c: number, v = "x") =>
 /** " + 3" or " - 3" for appending a constant. */
 export const signed = (x: number) => (x < 0 ? ` - ${num(-x)}` : ` + ${num(x)}`);
 
+/** Interval notation; null is an infinite end. interval(-2, null, true) → [-2, \infty) */
+export const interval = (lo: number | null, hi: number | null, incLo = false, incHi = false) =>
+  `${lo === null ? "(-\\infty" : `${incLo ? "[" : "("}${num(lo)}`}, ${hi === null ? "\\infty)" : `${num(hi)}${incHi ? "]" : ")"}`}`;
+
+/** Binomial coefficient n choose k. */
+export const choose = (n: number, k: number): number => (k < 0 || k > n ? 0 : k === 0 || k === n ? 1 : (choose(n - 1, k - 1) * n) / k);
+
 /** (x - r) factor display. */
 export const factor = (r: number, v = "x") => (r === 0 ? v : r > 0 ? `(${v} - ${r})` : `(${v} + ${-r})`);
 

@@ -43,7 +43,7 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
             All the maths you need <em className="bg-gradient-to-r from-primary to-chart-4 bg-clip-text text-transparent">before</em> calculus.
           </motion.h1>
           <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }} className="mt-5 max-w-xl text-lg text-muted-foreground">
-            {graph.refs.length} connected lessons — from place value to the unit circle — with interactive visuals and an engine that adapts every problem to you, spots where you struggle, and brings ideas back right before you forget them.
+            {graph.refs.length} connected lessons, from place value to your first limits, with interactive visuals and an engine that adapts every problem to you, spots where you struggle, and brings ideas back right before you forget them.
           </motion.p>
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-8 flex flex-wrap gap-3">
             <ButtonLink href={cta.href} size="lg" className="h-12 px-6 text-base shadow-lg shadow-primary/25">
@@ -115,7 +115,7 @@ const FEATURES = [
   { icon: Gauge, title: "Difficulty that adapts", text: "Every problem is generated for you. Two clean solves and we step up; a struggle and we ease back — in real time.", color: "from-primary to-chart-5" },
   { icon: BrainCircuit, title: "Knows when you struggle", text: "Wrong answers are weighted, time is compared to a baseline, hints count. Tricky topics land in your challenge queue.", color: "from-chart-4 to-chart-3" },
   { icon: CalendarClock, title: "Reviews before you forget", text: "Spaced repetition schedules each topic so memory sticks, with intervals that stretch as you master it.", color: "from-chart-3 to-chart-2" },
-  { icon: Network, title: "Every idea is connected", text: "Each lesson links to the ideas it builds on. New to a topic? See exactly what background helps — never locked out.", color: "from-chart-2 to-primary" },
+  { icon: Network, title: "Every idea is connected", text: "Each lesson links to the ideas it builds on. New to a topic? See exactly what background helps, then follow the path in order or explore freely.", color: "from-chart-2 to-primary" },
 ];
 
 function Features() {
@@ -147,7 +147,7 @@ function Curriculum() {
         <motion.div {...fadeUp} className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <div className="text-xs font-semibold tracking-widest text-primary uppercase">The Foundations course</div>
-            <h2 className="mt-2 font-display text-4xl sm:text-5xl">From counting to the unit circle</h2>
+            <h2 className="mt-2 font-display text-4xl sm:text-5xl">From counting to calculus-ready</h2>
           </div>
           <ButtonLink href="/courses/foundations" variant="outline">
             See every lesson <ArrowRight />

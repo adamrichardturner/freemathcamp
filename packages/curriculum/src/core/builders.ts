@@ -1,3 +1,4 @@
+import { round } from "./math";
 import type { Rng } from "./rng";
 import type { Answer, Block, Md, Visual } from "./types";
 
@@ -13,6 +14,10 @@ export const numberAnswer = (value: number, opts: Omit<Extract<Answer, { kind: "
   value,
   ...opts,
 });
+
+/** An answer that may be typed rounded to `dp` decimal places, or exactly (e.g. ln(5)/2). */
+export const decimalAnswer = (value: number, dp = 2): Answer =>
+  numberAnswer(round(value, 8), { tolerance: (0.6 * 10 ** -dp) / Math.max(1, Math.abs(value)) });
 
 /* Lesson block shorthands keep the content files readable. */
 export const text = (md: Md): Block => ({ kind: "text", md });

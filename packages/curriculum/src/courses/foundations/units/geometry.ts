@@ -1,6 +1,6 @@
 import { example, key, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { round, simplifyRoot, texRoot } from "../../../core/math";
-import type { Unit } from "../../../core/types";
+import { linear, paren, poly, round, simplifyRoot, texRoot } from "../../../core/math";
+import type { Unit, Visual } from "../../../core/types";
 
 const r = String.raw;
 
@@ -250,6 +250,93 @@ export const geometry: Unit = {
           answer: numberAnswer(Math.hypot(a, b)),
           hints: [`Horizontal gap: ${a}. Vertical gap: ${b}.`, "Use Pythagoras."],
           solution: [step("Distance formula.", r`\sqrt{${a}^2 + ${b}^2} = ${Math.hypot(a, b)}`)],
+        };
+      },
+    },
+    {
+      id: "circle-equations",
+      title: "Equations of Circles",
+      summary: "$(x - h)^2 + (y - k)^2 = r^2$, straight from the distance formula.",
+      prerequisites: ["distance-midpoint", "completing-the-square"],
+      estimatedMinutes: 10,
+      expectedSeconds: 60,
+      keyIdeas: [
+        "A circle is every point at distance $r$ from its centre $(h, k)$.",
+        "$(x - h)^2 + (y - k)^2 = r^2$. Watch the signs: $(x + 3)^2$ means $h = -3$.",
+        "Given the expanded form, complete the square in $x$ and in $y$.",
+      ],
+      lesson: [
+        text("Every point on a circle is the same distance $r$ from its centre $(h, k)$. Write that with the distance formula, square both sides, and you have the circle's equation."),
+        rule("Circle", r`(x - h)^2 + (y - k)^2 = r^2`),
+        visual(
+          { type: "functionPlot", functions: [], circles: [{ x: 2, y: 1, r: 3 }], points: [{ x: 2, y: 1, label: "(2, 1)" }], viewBox: { x: [-3, 7], y: [-4, 5] }, equalAspect: true },
+          "$(x - 2)^2 + (y - 1)^2 = 9$ has centre $(2, 1)$ and radius 3.",
+        ),
+        warn("$(x + 3)^2 + (y - 5)^2 = 16$ has centre $(-3, 5)$ and radius $4$, not 16."),
+        example("Find the centre and radius of $x^2 + y^2 - 6x + 4y - 3 = 0$.", [
+          ["Group the $x$ and $y$ terms and complete each square.", r`(x^2 - 6x + 9) + (y^2 + 4y + 4) = 3 + 9 + 4`],
+          ["Factor.", r`(x - 3)^2 + (y + 2)^2 = 16`],
+          ["Read off the centre and radius.", r`\text{centre } (3, -2), \quad r = 4`],
+        ]),
+        key("In calculus you'll find the slope of a circle at any point using **implicit differentiation**, starting from exactly this equation."),
+      ],
+      generate: (rng, level) => {
+        const h = rng.int(-6, 6), k = rng.int(-6, 6), rad = rng.int(1, 9);
+        const sq = (v: string, c: number) => (c === 0 ? `${v}^2` : `(${linear(1, -c, v)})^2`);
+        const solutionVisual: Visual = {
+          type: "functionPlot",
+          functions: [],
+          circles: [{ x: h, y: k, r: rad }],
+          points: [{ x: h, y: k, label: `(${h}, ${k})` }],
+          viewBox: { x: [h - rad - 2, h + rad + 2], y: [k - rad - 2, k + rad + 2] },
+          equalAspect: true,
+        };
+        if (level === 1) {
+          const eq = `${sq("x", h)} + ${sq("y", k)} = ${rad * rad}`;
+          return rng.chance(0.5)
+            ? {
+                prompt: "What is the radius of this circle?",
+                tex: eq,
+                answer: numberAnswer(rad),
+                hints: ["The right-hand side is r², not r."],
+                solution: [step("Take the square root.", r`r = \sqrt{${rad * rad}} = ${rad}`)],
+                solutionVisual,
+              }
+            : {
+                prompt: "What is the centre of this circle? Enter it as $(h, k)$.",
+                tex: eq,
+                answer: { kind: "tuple", values: [h, k] },
+                inputHint: "e.g. (2, -3)",
+                hints: ["Compare with (x − h)² + (y − k)² = r².", "The signs inside the brackets are opposite to the coordinates."],
+                solution: [step("Read h and k with the opposite signs.", `(${h}, ${k})`)],
+                solutionVisual,
+              };
+        }
+        if (level === 2) {
+          const [dx, dy] = rng.pick([[3, 4], [4, 3], [0, 5], [5, 0], [6, 8], [5, 12], [1, 1], [2, 1], [1, 3]] as [number, number][]);
+          const sx = rng.sign(), sy = rng.sign();
+          const px = h + sx * dx, py = k + sy * dy, r2 = dx * dx + dy * dy;
+          return {
+            prompt: `A circle has centre $(${h}, ${k})$ and passes through $(${px}, ${py})$. Its equation is $${sq("x", h)} + ${sq("y", k)} = c$. Find $c$.`,
+            answer: numberAnswer(r2),
+            hints: ["c is r², the squared distance from the centre to the point.", "Use (x₂ − x₁)² + (y₂ − y₁)²."],
+            solution: [step("Squared distance from the centre to the point.", r`(${px} - ${paren(h)})^2 + (${py} - ${paren(k)})^2 = ${dx * dx} + ${dy * dy} = ${r2}`)],
+          };
+        }
+        const D = -2 * h, E = -2 * k, F = h * h + k * k - rad * rad;
+        const expanded = `${poly([[1, "x^2"], [1, "y^2"], [D, "x"], [E, "y"], [F, ""]])} = 0`;
+        const centre = rng.chance(0.5);
+        return {
+          prompt: centre ? "Find the centre of this circle. Enter it as $(h, k)$." : "Find the radius of this circle.",
+          tex: expanded,
+          answer: centre ? { kind: "tuple", values: [h, k] } : numberAnswer(rad),
+          inputHint: centre ? "e.g. (2, -3)" : undefined,
+          hints: ["Complete the square in x, then in y.", "Add the same amounts to both sides."],
+          solution: [
+            step("Complete both squares.", `${sq("x", h)} + ${sq("y", k)} = ${-F} + ${h * h} + ${k * k}`),
+            step("Read off the circle.", r`(${h}, ${k}),\quad r^2 = ${rad * rad},\quad r = ${rad}`),
+          ],
+          solutionVisual,
         };
       },
     },

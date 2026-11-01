@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { decimalAnswer } from "../src/core/builders";
 import { checkAnswer, courses, createRng, evaluate, generateProblem, getGraph, unlockedLessons, type Answer, type Level } from "../src";
 
 /** The text a perfect learner would type for an answer. */
@@ -27,6 +28,10 @@ describe("answer evaluation", () => {
     ["2^10", 1024],
     ["3(4+1)", 15],
     ["1,000", 1000],
+    ["ln(5)/2", Math.log(5) / 2],
+    ["e^2", Math.E ** 2],
+    ["log(1000)", 3],
+    ["100e^(0.05*10)", 100 * Math.exp(0.5)],
   ])("evaluates %s", (input, expected) => {
     expect(evaluate(input)).toBeCloseTo(expected, 9);
   });
@@ -41,6 +46,14 @@ describe("answer evaluation", () => {
     const a: Answer = { kind: "number", value: 0.75, requireSimplest: true };
     expect(checkAnswer(a, "3/4").correct).toBe(true);
     expect(checkAnswer(a, "6/8").correct).toBe(false);
+  });
+
+  it("accepts rounded decimals and exact forms for decimal answers", () => {
+    const a = decimalAnswer(Math.log(7) / 3);
+    expect(checkAnswer(a, "0.65").correct).toBe(true);
+    expect(checkAnswer(a, "ln(7)/3").correct).toBe(true);
+    expect(checkAnswer(a, "0.7").correct).toBe(false);
+    expect(checkAnswer(decimalAnswer(2718.2818), "2718.28").correct).toBe(true);
   });
 
   it("checks unordered sets and ordered tuples", () => {

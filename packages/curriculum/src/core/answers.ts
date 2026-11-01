@@ -3,8 +3,8 @@ import type { Answer } from "./types";
 
 /**
  * Safe arithmetic evaluator for learner input. Supports + - * / ^, parentheses,
- * implicit multiplication (2sqrt(3), 3pi, 2(4)), sqrt/√, pi/π, mixed numbers (1 1/2)
- * and a trailing %. Never uses eval.
+ * implicit multiplication (2sqrt(3), 3pi, 2(4)), sqrt/√, pi/π, e, ln and log (base 10),
+ * mixed numbers (1 1/2) and a trailing %. Never uses eval.
  */
 export const evaluate = (raw: string): number | null => {
   const src = normalize(raw);
@@ -68,6 +68,8 @@ export const evaluate = (raw: string): number | null => {
       if (t.value === "pi") return Math.PI;
       if (t.value === "e") return Math.E;
       if (t.value === "sqrt") return Math.sqrt(parsePower());
+      if (t.value === "ln") return Math.log(parsePower());
+      if (t.value === "log") return Math.log10(parsePower());
       throw new Error(`unknown ${t.value}`);
     }
     if (t.value === "√") return Math.sqrt(parsePower());
@@ -136,7 +138,7 @@ const tokenize = (src: string): Token[] | null => {
       i++;
       continue;
     }
-    const id = /^(sqrt|pi|e)/.exec(src.slice(i));
+    const id = /^(sqrt|pi|ln|log|e)/.exec(src.slice(i));
     if (id) {
       out.push({ type: "ident", value: id[0] });
       i += id[0].length;

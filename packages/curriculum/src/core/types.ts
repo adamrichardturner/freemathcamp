@@ -34,8 +34,12 @@ export type Visual =
   | {
       type: "functionPlot";
       functions: { fn: (x: number) => number; label?: string; tone?: Tone; dashed?: boolean }[];
-      points?: { x: number; y: number; label?: string; tone?: Tone }[];
+      /** `open` draws a hollow dot: a point missing from the graph, like a hole. */
+      points?: { x: number; y: number; label?: string; tone?: Tone; open?: boolean }[];
+      circles?: { x: number; y: number; r: number; tone?: Tone }[];
       viewBox?: { x: [number, number]; y: [number, number] };
+      /** Keep one unit the same length on both axes (circles stay round). */
+      equalAspect?: boolean;
     }
   | { type: "slopeExplorer"; a?: [number, number]; b?: [number, number] }
   | { type: "lineExplorer"; m?: number; b?: number }

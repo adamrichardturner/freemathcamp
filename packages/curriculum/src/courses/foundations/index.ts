@@ -1,6 +1,7 @@
 import type { Course } from "../../core/types";
 import { algebra } from "./units/algebra";
 import { arithmetic } from "./units/arithmetic";
+import { calculusReady } from "./units/calculus-ready";
 import { decimals } from "./units/decimals";
 import { exponentials } from "./units/exponentials";
 import { exponents } from "./units/exponents";
@@ -19,6 +20,6 @@ export const foundations: Course = {
   title: "Foundations",
   tagline: "Everything you need before calculus.",
   description:
-    "From place value to the unit circle: a complete, connected path through arithmetic, algebra, functions, geometry and trigonometry. Every lesson links to the ideas it builds on.",
-  units: [arithmetic, integers, fractions, decimals, ratios, exponents, algebra, linearUnit, functionsUnit, polynomials, exponentials, geometry, trigonometry, sequences],
+    "From place value to your first limits: a complete, connected path through arithmetic, algebra, functions, geometry and trigonometry, ending with the ideas calculus is built on. Every lesson links to the ideas it builds on.",
+  units: [arithmetic, integers, fractions, decimals, ratios, exponents, algebra, linearUnit, functionsUnit, polynomials, exponentials, geometry, trigonometry, sequences, calculusReady],
 };

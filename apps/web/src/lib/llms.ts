@@ -13,7 +13,7 @@ const header = () => {
     "",
     `> ${SITE.description}`,
     "",
-    `${SITE.alternateName} is free with no ads or paywall. It has ${lessons} lessons; each has an explanation with worked examples and interactive visuals, links to the earlier lessons it builds on (advisory, never locked), and unlimited generated practice problems. An adaptive engine adjusts difficulty, measures struggle from wrong attempts, hints and time, tracks mastery with Bayesian knowledge tracing, and schedules spaced reviews.`,
+    `${SITE.alternateName} is free with no ads or paywall. It has ${lessons} lessons; each has an explanation with worked examples and interactive visuals, links to the earlier lessons it builds on, and unlimited generated practice problems. Learners choose Path mode (lessons unlock in order) or Audit mode (every lesson open). An adaptive engine adjusts difficulty, measures struggle from wrong attempts, hints and time, tracks mastery with Bayesian knowledge tracing, and schedules spaced reviews.`,
     "",
   ];
 };

@@ -2,7 +2,7 @@
 
 ![The Foundations course on FreeMathCamp, with Number Sense & Arithmetic open and each lesson marked by progress.](preview.png)
 
-FreeMathCamp is a free online maths course for everything a learner needs before calculus. The first course, **Foundations**, is a connected path of 81 lessons across 14 units, from place value to the unit circle.
+FreeMathCamp is a free online maths course for everything a learner needs before calculus. The first course, **Foundations**, is a connected path of 95 lessons across 15 units, from place value to a first look at limits.
 
 Each lesson explains an idea, shows it, and then practises it. Problems are generated for the person in front of the screen. Difficulty moves with them, reviews return before an idea fades, and nothing is locked behind a prerequisite.
 
@@ -20,7 +20,7 @@ You can open any lesson. Earlier lessons are listed as background, and the cours
 
 ## The Foundations course
 
-Fourteen units, taught in order and linked by the ideas they share.
+Fifteen units, taught in order and linked by the ideas they share. The last one bridges straight into calculus.
 
 | | Unit | Lessons |
 | --- | --- | --- |
@@ -30,14 +30,15 @@ Fourteen units, taught in order and linked by the ideas they share.
 | 4 | Decimals & Percentages | 5 |
 | 5 | Ratios & Proportions | 3 |
 | 6 | Exponents & Roots | 7 |
-| 7 | Algebra Foundations | 9 |
+| 7 | Algebra Foundations | 11 |
 | 8 | Graphs & Linear Equations | 5 |
-| 9 | Functions | 6 |
-| 10 | Polynomials & Quadratics | 8 |
-| 11 | Exponentials & Logarithms | 4 |
-| 12 | Geometry | 7 |
-| 13 | Trigonometry | 5 |
-| 14 | Sequences & Series | 3 |
+| 9 | Functions | 8 |
+| 10 | Polynomials, Quadratics & Rational Functions | 12 |
+| 11 | Exponentials & Logarithms | 5 |
+| 12 | Geometry | 8 |
+| 13 | Trigonometry | 6 |
+| 14 | Sequences & Series | 4 |
+| 15 | Ready for Calculus | 2 |
 
 The course map shows where each lesson sits: not started, learning, needs work, review due, or mastered. A prerequisite map draws the whole graph, so a topic’s dependencies are visible at a glance.
 

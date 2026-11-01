@@ -1,7 +1,7 @@
 "use client";
 
 import type { Visual } from "@fmc/curriculum";
-import { Coordinates, Line, Mafs, MovablePoint, Plot, Point, Polygon, Text, vec } from "mafs";
+import { Circle, Coordinates, Line, Mafs, MovablePoint, Plot, Point, Polygon, Text, vec } from "mafs";
 import { useState } from "react";
 import { Tex } from "@/components/math/tex";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -18,17 +18,25 @@ const MUTED = "var(--muted-foreground)";
 /** Signed term for equations: "+ 3" / "− 3". */
 const sgn = (x: number, dp = 2) => (x < 0 ? `- ${fmt(-x, dp)}` : `+ ${fmt(x, dp)}`);
 
-export function FunctionPlot({ functions, points = [], viewBox }: V<"functionPlot">) {
+export function FunctionPlot({ functions, points = [], circles = [], viewBox, equalAspect }: V<"functionPlot">) {
   return (
     <VisualFrame>
-      <Mafs height={HEIGHT} viewBox={viewBox ?? { x: [-6, 6], y: [-6, 6] }} preserveAspectRatio={false} zoom={false} pan={false}>
+      <Mafs height={HEIGHT} viewBox={viewBox ?? { x: [-6, 6], y: [-6, 6] }} preserveAspectRatio={equalAspect ? "contain" : false} zoom={false} pan={false}>
         <Coordinates.Cartesian subdivisions={false} />
+        {circles.map((c, i) => (
+          <Circle key={`c${i}`} center={[c.x, c.y]} radius={c.r} color={tone(c.tone ?? "primary")} weight={3} fillOpacity={0.06} />
+        ))}
         {functions.map((f, i) => (
           <Plot.OfX key={i} y={f.fn} color={tone(f.tone ?? (i === 0 ? "primary" : "accent"))} weight={3} style={f.dashed ? "dashed" : "solid"} />
         ))}
         {points.map((p, i) => (
           <g key={i}>
-            <Point x={p.x} y={p.y} color={tone(p.tone)} />
+            <Point
+              x={p.x}
+              y={p.y}
+              color={tone(p.tone)}
+              svgCircleProps={p.open ? { style: { fill: "var(--card)", stroke: tone(p.tone), strokeWidth: 2.5 } } : undefined}
+            />
             {p.label && (
               <Text x={p.x} y={p.y} attach="ne" attachDistance={12} size={14} color={tone(p.tone)}>
                 {p.label}

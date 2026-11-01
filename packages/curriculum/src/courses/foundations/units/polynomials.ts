@@ -1,14 +1,14 @@
-import { example, math, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { factor, gcd, poly, quadratic, round, simplifyRoot, texRoot } from "../../../core/math";
+import { example, key, math, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
+import { factor, gcd, linear, poly, quadratic, round, signed, simplifyRoot, texRoot } from "../../../core/math";
 import type { Unit } from "../../../core/types";
 
 const r = String.raw;
 
 export const polynomials: Unit = {
   id: "polynomials",
-  title: "Polynomials & Quadratics",
+  title: "Polynomials, Quadratics & Rational Functions",
   icon: "Spline",
-  description: "Expanding, factoring, and every method for solving quadratic equations.",
+  description: "Expanding, factoring, every method for solving quadratics, polynomial division, and the algebra of rational functions.",
   exercises: [
     {
       id: "polynomial-arithmetic",
@@ -233,6 +233,139 @@ export const polynomials: Unit = {
       },
     },
     {
+      id: "rationalizing",
+      title: "Rationalising & Conjugates",
+      summary: "Clearing roots from denominators with conjugates.",
+      prerequisites: ["simplifying-radicals", "multiplying-polynomials"],
+      estimatedMinutes: 10,
+      expectedSeconds: 60,
+      keyIdeas: [
+        "Multiplying top and bottom by the same thing doesn't change a fraction's value.",
+        "$\\dfrac{k}{\\sqrt n} = \\dfrac{k\\sqrt n}{n}$",
+        "Conjugates: $(a + \\sqrt b)(a - \\sqrt b) = a^2 - b$, and the root disappears.",
+      ],
+      lesson: [
+        text("A fraction with a root in its denominator is correct, but awkward to compare or simplify. **Rationalising** rewrites it with a whole-number denominator, without changing its value."),
+        rule("A single root", r`\frac{k}{\sqrt n} = \frac{k}{\sqrt n}\cdot\frac{\sqrt n}{\sqrt n} = \frac{k\sqrt n}{n}`),
+        example("Rationalise $\\dfrac{6}{\\sqrt3}$.", [["Multiply top and bottom by $\\sqrt3$.", r`\frac{6\sqrt3}{3}`], ["Simplify.", r`2\sqrt3`]]),
+        rule("Conjugates", r`(a + \sqrt b)(a - \sqrt b) = a^2 - b`, "It's a difference of two squares, so the root cancels out."),
+        example("Rationalise $\\dfrac{1}{3 + \\sqrt2}$.", [["Multiply by the conjugate over itself, $\\frac{3 - \\sqrt2}{3 - \\sqrt2}$.", r`\frac{3 - \sqrt2}{9 - 2}`], ["Simplify.", r`\frac{3 - \sqrt2}{7}`]]),
+        key("Calculus uses this exact trick. $\\dfrac{\\sqrt{x + 4} - 2}{x}$ can't be evaluated at $x = 0$, but after rationalising the **numerator** it becomes $\\dfrac{1}{\\sqrt{x + 4} + 2}$, which can: it's $\\frac14$."),
+      ],
+      generate: (rng, level) => {
+        const n = rng.pick([2, 3, 5, 6, 7]);
+        if (level === 1) {
+          const m = rng.int(1, 4), k = n * m; // k/√n = m√n
+          const root = (c: number, v: number) => `${c === 1 ? "" : c}\\sqrt{${v}}`;
+          return {
+            prompt: "Rationalise the denominator and simplify.",
+            tex: r`\frac{${k}}{\sqrt{${n}}}`,
+            ...multipleChoice(rng, `$${root(m, n)}$`, [`$${root(k, n)}$`, `$\\frac{\\sqrt{${n}}}{${k}}$`, `$${root(m, k)}$`]),
+            hints: [`Multiply the top and bottom by √${n}.`, `Then simplify ${k}/${n}.`],
+            solution: [step(`Multiply by $\\frac{\\sqrt{${n}}}{\\sqrt{${n}}}$.`, r`\frac{${k}\sqrt{${n}}}{${n}}`), step("Simplify.", root(m, n))],
+          };
+        }
+        if (level === 2) {
+          const a = rng.int(3, 5), plus = rng.chance(0.5), den = a * a - n;
+          const over = (top: string, bottom: number) => (bottom === 1 ? top : `\\frac{${top}}{${bottom}}`);
+          const conj = `${a} ${plus ? "-" : "+"} \\sqrt{${n}}`;
+          return {
+            prompt: "Rationalise the denominator.",
+            tex: r`\frac{1}{${a} ${plus ? "+" : "-"} \sqrt{${n}}}`,
+            ...multipleChoice(rng, `$${over(conj, den)}$`, [`$${over(`${a} ${plus ? "+" : "-"} \\sqrt{${n}}`, den)}$`, `$${over(conj, a * a + n)}$`, `$${over(conj, a - n)}$`]),
+            hints: [`Multiply the top and bottom by the conjugate, ${conj.replace("\\sqrt", "√").replace(/[{}]/g, "")}.`, "The bottom becomes a² − b."],
+            solution: [step("Multiply by the conjugate.", r`\frac{${conj}}{(${a})^2 - ${n}}`), step("Simplify.", over(conj, den))],
+          };
+        }
+        const c = rng.int(1, 5);
+        if (rng.chance(0.4)) {
+          const a = rng.int(2, 9);
+          return {
+            prompt: "Multiply out the conjugates.",
+            tex: r`(${a} + \sqrt{${n}})(${a} - \sqrt{${n}})`,
+            answer: numberAnswer(a * a - n),
+            hints: ["It's a difference of two squares.", "(a + √b)(a − √b) = a² − b"],
+            solution: [step("Difference of two squares.", r`${a}^2 - (\sqrt{${n}})^2 = ${a * a} - ${n} = ${a * a - n}`)],
+          };
+        }
+        return {
+          prompt: `Rationalise the numerator, then find the value the expression approaches as $x \\to 0$.`,
+          tex: r`\frac{\sqrt{x + ${c * c}} - ${c}}{x}`,
+          answer: numberAnswer(1 / (2 * c)),
+          inputHint: "e.g. 1/6",
+          hints: [`Multiply the top and bottom by √(x + ${c * c}) + ${c}.`, "The x on top cancels with the x on the bottom."],
+          solution: [
+            step("Multiply by the conjugate.", r`\frac{(x + ${c * c}) - ${c * c}}{x(\sqrt{x + ${c * c}} + ${c})} = \frac{1}{\sqrt{x + ${c * c}} + ${c}}`),
+            step("Now set $x = 0$.", r`\frac{1}{${c} + ${c}} = \frac{1}{${2 * c}}`),
+          ],
+        };
+      },
+    },
+    {
+      id: "polynomial-division",
+      title: "Polynomial Division & the Factor Theorem",
+      summary: "Dividing polynomials, and finding factors from roots.",
+      prerequisites: ["factoring-trinomials", "function-notation"],
+      estimatedMinutes: 12,
+      expectedSeconds: 70,
+      keyIdeas: [
+        "Remainder theorem: dividing $p(x)$ by $(x - a)$ leaves the remainder $p(a)$.",
+        "Factor theorem: $(x - a)$ is a factor exactly when $p(a) = 0$.",
+        "Find one root, divide it out, then factor the quadratic that's left.",
+      ],
+      lesson: [
+        text("Polynomials divide like whole numbers: you get a quotient and a remainder. You'll rarely need long division by hand, because two theorems do most of the work."),
+        rule("Remainder theorem", r`p(x) \div (x - a) \;\text{ leaves the remainder }\; p(a)`),
+        rule("Factor theorem", r`p(a) = 0 \;\Leftrightarrow\; (x - a) \text{ is a factor of } p(x)`),
+        example("Factor $p(x) = x^3 - 2x^2 - 5x + 6$ completely.", [
+          ["Try small values: $p(1) = 1 - 2 - 5 + 6 = 0$, so $(x - 1)$ is a factor.", r`p(1) = 0`],
+          ["Divide it out. Synthetic division with the coefficients $1, -2, -5, 6$ and the root $1$ gives $1, -1, -6$.", r`p(x) = (x - 1)(x^2 - x - 6)`],
+          ["Factor the quadratic.", r`p(x) = (x - 1)(x - 3)(x + 2)`],
+        ]),
+        tip("Whole-number roots must divide the constant term. For $x^3 - 2x^2 - 5x + 6$, you only need to try $\\pm1, \\pm2, \\pm3$ and $\\pm6$."),
+        key("In calculus, dividing out $(x - a)$ is how you simplify limits like $\\lim_{x\\to a}\\dfrac{p(x)}{x - a}$."),
+      ],
+      generate: (rng, level) => {
+        const cubic = (cs: number[]) => poly([[cs[0]!, "x^3"], [cs[1]!, "x^2"], [cs[2]!, "x"], [cs[3]!, ""]]);
+        if (level === 1) {
+          const cs = [rng.nonZero(-3, 3), rng.int(-6, 6), rng.int(-8, 8), rng.int(-9, 9)];
+          const k = rng.nonZero(-3, 3);
+          const value = cs[0]! * k ** 3 + cs[1]! * k * k + cs[2]! * k + cs[3]!;
+          return {
+            prompt: `Find the remainder when $p(x) = ${cubic(cs)}$ is divided by $${factor(k)}$.`,
+            answer: numberAnswer(value),
+            hints: ["You don't need to divide: use the remainder theorem.", `The remainder is p(${k}).`],
+            solution: [step("Remainder theorem: substitute the root of the divisor.", r`p(${k}) = ${cubic(cs).replace(/x/g, `(${k})`)} = ${value}`)],
+          };
+        }
+        if (level === 2) {
+          const [r1, r2, r3] = rng.shuffle([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]) as [number, number, number];
+          const cs = [1, -(r1 + r2 + r3), r1 * r2 + r1 * r3 + r2 * r3, -r1 * r2 * r3];
+          return {
+            prompt: `Given that $${factor(r1)}$ is a factor of $p(x) = ${cubic(cs)}$, solve $p(x) = 0$. Enter every solution.`,
+            answer: { kind: "set", values: [r1, r2, r3] },
+            inputHint: "e.g. -2, 1, 3",
+            hints: [`Divide p(x) by ${factor(r1)} to get a quadratic.`, "Factor the quadratic and set each factor equal to zero."],
+            solution: [
+              step("Divide out the known factor.", `p(x) = ${factor(r1)}(${quadratic(1, -(r2 + r3), r2 * r3)})`),
+              step("Factor completely.", `p(x) = ${factor(r1)}${factor(r2)}${factor(r3)}`),
+              step("Set each factor to zero.", `x = ${r1}, \\; ${r2}, \\; ${r3}`),
+            ],
+          };
+        }
+        const a = rng.nonZero(-3, 3), b = rng.int(-5, 5), k = rng.int(-9, 9);
+        const c = -(a ** 3 + b * a * a + k * a);
+        const known = a ** 3 + b * a * a + c;
+        const ka = Math.abs(a) === 1 ? "k" : `${Math.abs(a)}k`;
+        return {
+          prompt: `Find $k$ so that $${factor(a)}$ is a factor of $p(x) = ${poly([[1, "x^3"], [b, "x^2"]])} + kx${c === 0 ? "" : signed(c)}$.`,
+          answer: numberAnswer(k),
+          hints: ["Factor theorem: (x − a) is a factor exactly when p(a) = 0.", `Substitute x = ${a} and solve for k.`],
+          solution: [step(`Set $p(${a}) = 0$.`, `${known} ${a < 0 ? "-" : "+"} ${ka} = 0`), step("Solve.", `k = ${k}`)],
+        };
+      },
+    },
+    {
       id: "rational-expressions",
       title: "Rational Expressions",
       summary: "Simplifying algebraic fractions.",
@@ -257,6 +390,144 @@ export const polynomials: Unit = {
           ...multipleChoice(rng, correct, [`$\\dfrac{${p * q}}{${p * s}}$`, `$\\dfrac{${factor(q).replace(/^\(|\)$/g, "")}}{${factor(s).replace(/^\(|\)$/g, "")}}$`, `$\\dfrac{${factor(-p).replace(/^\(|\)$/g, "")}}{${factor(-s).replace(/^\(|\)$/g, "")}}$`]),
           hints: ["Factor the numerator and denominator.", "Look for a shared bracket."],
           solution: [step("Factor.", r`\frac{${factor(-p)}${factor(-q)}}{${factor(-p)}${factor(-s)}}`), step("Cancel the common factor.")],
+        };
+      },
+    },
+    {
+      id: "rational-operations",
+      title: "Operations with Rational Expressions",
+      summary: "Multiplying, dividing, adding and subtracting algebraic fractions.",
+      prerequisites: ["rational-expressions", "add-subtract-fractions"],
+      estimatedMinutes: 12,
+      expectedSeconds: 75,
+      keyIdeas: [
+        "Multiply: factor everything, cancel common factors, multiply what's left.",
+        "Divide: flip the second fraction and multiply.",
+        "Add or subtract: rewrite over a common denominator first.",
+      ],
+      lesson: [
+        text("Algebraic fractions follow exactly the same rules as number fractions. The only new skill is factoring, so that you can see what cancels."),
+        example("Simplify $\\dfrac{x^2 - 9}{x + 2}\\cdot\\dfrac{x + 2}{x - 3}$.", [["Factor.", r`\frac{(x - 3)(x + 3)}{x + 2}\cdot\frac{x + 2}{x - 3}`], ["Cancel the common factors.", r`x + 3`]]),
+        rule("Common denominator", r`\frac{a}{x} + \frac{b}{x + c} = \frac{a(x + c) + bx}{x(x + c)}`),
+        example("Simplify $\\dfrac{1}{x} - \\dfrac{1}{x + h}$.", [["Use the common denominator $x(x + h)$.", r`\frac{(x + h) - x}{x(x + h)}`], ["Simplify the top.", r`\frac{h}{x(x + h)}`]]),
+        warn("Only cancel **factors**, never terms: $\\dfrac{x + 3}{x}$ does not simplify to $3$."),
+        key("That last example is the first step in finding the derivative of $\\frac1x$. You'll combine fractions like this again and again in calculus."),
+      ],
+      generate: (rng, level) => {
+        const p = rng.int(1, 7);
+        let q = rng.nonZero(-6, 6);
+        while (q === p || q === -p) q = rng.nonZero(-6, 6);
+        if (level === 1)
+          return {
+            prompt: "Simplify.",
+            tex: r`\frac{x^2 - ${p * p}}{${linear(1, q)}}\cdot\frac{${linear(1, q)}}{${linear(1, -p)}}`,
+            ...multipleChoice(rng, `$${linear(1, p)}$`, [`$${linear(1, -p)}$`, `$${linear(1, q)}$`, `$\\frac{${linear(1, p)}}{${linear(1, q)}}$`]),
+            hints: [`Factor x² − ${p * p} as a difference of two squares.`, "Cancel every factor that appears on both the top and the bottom."],
+            solution: [step("Factor.", r`\frac{(${linear(1, -p)})(${linear(1, p)})}{${linear(1, q)}}\cdot\frac{${linear(1, q)}}{${linear(1, -p)}}`), step("Cancel.", linear(1, p))],
+          };
+        const a = rng.int(1, 5), b = rng.int(1, 5), c = q;
+        const den = `x(${linear(1, c)})`;
+        if (level === 2)
+          return {
+            prompt: "Write as a single fraction.",
+            tex: r`\frac{${a}}{x} + \frac{${b}}{${linear(1, c)}}`,
+            ...multipleChoice(rng, `$\\frac{${linear(a + b, a * c)}}{${den}}$`, [
+              `$\\frac{${a + b}}{${linear(2, c)}}$`,
+              `$\\frac{${a + b}}{${den}}$`,
+              `$\\frac{${linear(a + b, b * c)}}{${den}}$`,
+            ]),
+            hints: [`The common denominator is ${den.replace(/[{}]/g, "")}.`, `Multiply the first fraction by (${linear(1, c)}) on top and bottom, and the second by x.`],
+            solution: [step("Common denominator.", r`\frac{${a}(${linear(1, c)}) + ${b}x}{${den}}`), step("Expand the top.", r`\frac{${linear(a + b, a * c)}}{${den}}`)],
+          };
+        if (rng.chance(0.5))
+          return {
+            prompt: "Write as a single fraction.",
+            tex: r`\frac{${a}}{x} - \frac{${a}}{${linear(1, c)}}`,
+            ...multipleChoice(rng, `$\\frac{${a * c}}{${den}}$`, [`$\\frac{${-a * c}}{${den}}$`, `$\\frac{${a * c}}{${linear(1, c)}}$`, "$0$"]),
+            hints: ["Use the common denominator x(x + c).", "Be careful with the minus sign in front of the second fraction."],
+            solution: [step("Common denominator.", r`\frac{${a}(${linear(1, c)}) - ${a}x}{${den}}`), step("The x terms cancel.", r`\frac{${a * c}}{${den}}`)],
+          };
+        return {
+          prompt: "Simplify.",
+          tex: r`\frac{x^2 - ${p * p}}{x} \div \frac{${linear(1, p)}}{x^2}`,
+          ...multipleChoice(rng, `$x(${linear(1, -p)})$`, [`$x(${linear(1, p)})$`, `$\\frac{${linear(1, -p)}}{x}$`, `$\\frac{${linear(1, -p)}}{x^3}$`]),
+          hints: ["Dividing by a fraction is multiplying by its reciprocal.", `Factor x² − ${p * p}, then cancel.`],
+          solution: [
+            step("Flip and multiply.", r`\frac{(${linear(1, -p)})(${linear(1, p)})}{x}\cdot\frac{x^2}{${linear(1, p)}}`),
+            step("Cancel the common factors.", `x(${linear(1, -p)})`),
+          ],
+        };
+      },
+    },
+    {
+      id: "rational-functions",
+      title: "Rational Functions & Asymptotes",
+      summary: "Where a graph shoots off to infinity, levels out, or has a hole.",
+      prerequisites: ["rational-operations", "transformations"],
+      estimatedMinutes: 12,
+      expectedSeconds: 60,
+      keyIdeas: [
+        "Cancel common factors first: each one leaves a **hole**.",
+        "Zeros of what's left in the denominator are **vertical asymptotes**.",
+        "Horizontal asymptote: compare degrees. Lower on top gives $y = 0$; equal degrees give the ratio of the leading coefficients.",
+      ],
+      lesson: [
+        text("A **rational function** is one polynomial divided by another, like $f(x) = \\frac{1}{x - 2}$. Its graph can do three things a polynomial's can't: shoot off to infinity, level out, or have a single missing point."),
+        visual(
+          { type: "functionPlot", functions: [{ fn: (x) => (Math.abs(x - 2) < 0.04 ? NaN : 1 / (x - 2) + 1) }, { fn: () => 1, tone: "muted", dashed: true }], viewBox: { x: [-4, 8], y: [-5, 7] } },
+          "$f(x) = \\frac{1}{x - 2} + 1$ has a vertical asymptote at $x = 2$ and a horizontal asymptote at $y = 1$.",
+        ),
+        rule("Vertical asymptotes", r`q(a) = 0 \text{ after cancelling} \;\Rightarrow\; x = a`, "Near $x = a$ the denominator is tiny, so $f(x)$ is huge."),
+        rule("Horizontal asymptotes", r`\frac{3x^2 + 1}{x^2 - 5} \to 3 \;\text{ as }\; x \to \pm\infty`, "For large $x$ only the leading terms matter. If the top's degree is lower, the asymptote is $y = 0$; if it's higher, there's no horizontal asymptote."),
+        example("Find the hole and the vertical asymptote of $f(x) = \\dfrac{x - 3}{x^2 - x - 6}$.", [
+          ["Factor the denominator.", r`\frac{x - 3}{(x - 3)(x + 2)}`],
+          ["$(x - 3)$ cancels, leaving a **hole** at $x = 3$.", r`f(x) = \frac{1}{x + 2}, \quad x \ne 3`],
+          ["What's left in the denominator gives the vertical asymptote.", r`x = -2`],
+        ]),
+        key("Asymptotes are limits in disguise: $\\lim_{x\\to\\infty} f(x) = 1$, and $f(x) \\to \\pm\\infty$ as $x \\to 2$. That's exactly how you'll write them in calculus."),
+      ],
+      generate: (rng, level) => {
+        if (level === 1) {
+          const p = rng.nonZero(-6, 6), k = rng.int(-5, 5), a = rng.nonZero(-4, 4), vertical = rng.chance(0.5);
+          return {
+            prompt: vertical ? "The graph has a vertical asymptote $x = a$. Find $a$." : "The graph has a horizontal asymptote $y = b$. Find $b$.",
+            tex: r`f(x) = \frac{${a}}{${linear(1, -p)}}${k === 0 ? "" : signed(k)}`,
+            answer: numberAnswer(vertical ? p : k),
+            hints: vertical ? ["Where is the denominator zero?"] : ["As x gets huge, what does the fraction shrink towards?", "Whatever is added to it stays."],
+            solution: [vertical ? step("The denominator is zero here.", r`${linear(1, -p)} = 0 \;\Rightarrow\; x = ${p}`) : step("The fraction tends to 0, leaving the constant.", `y = ${k}`)],
+            solutionVisual: {
+              type: "functionPlot",
+              functions: [{ fn: (x) => (Math.abs(x - p) < 0.04 ? NaN : a / (x - p) + k) }, { fn: () => k, tone: "muted", dashed: true }],
+              viewBox: { x: [p - 8, p + 8], y: [k - 8, k + 8] },
+            },
+          };
+        }
+        if (level === 2) {
+          const r0 = rng.nonZero(-5, 5);
+          let s = rng.nonZero(-5, 5);
+          while (s === r0) s = rng.nonZero(-5, 5);
+          const hole = rng.chance(0.5);
+          return {
+            prompt: hole ? "The graph has a hole at $x = a$. Find $a$." : "The graph has one vertical asymptote, $x = a$. Find $a$.",
+            tex: r`f(x) = \frac{${linear(1, -r0)}}{${quadratic(1, -(r0 + s), r0 * s)}}`,
+            answer: numberAnswer(hole ? r0 : s),
+            hints: ["Factor the denominator first.", hole ? "A factor that cancels leaves a hole, not an asymptote." : "A factor that cancels leaves a hole; the one that's left is the asymptote."],
+            solution: [
+              step("Factor.", r`\frac{${linear(1, -r0)}}{${factor(r0)}${factor(s)}} = \frac{1}{${linear(1, -s)}}, \quad x \ne ${r0}`),
+              step(hole ? "The cancelled factor gives the hole." : "The remaining factor gives the asymptote.", `x = ${hole ? r0 : s}`),
+            ],
+          };
+        }
+        const a = rng.nonZero(-6, 6), d = rng.int(1, 5), b = rng.int(-5, 5), e = rng.int(-5, 5), c = rng.int(-9, 9), f = rng.int(1, 9);
+        const lower = rng.chance(0.3);
+        const top = lower ? linear(a, c) : quadratic(a, b, c);
+        return {
+          prompt: "The graph has a horizontal asymptote $y = b$. Find $b$.",
+          tex: r`f(x) = \frac{${top}}{${quadratic(d, e, f)}}`,
+          answer: numberAnswer(lower ? 0 : a / d),
+          inputHint: "e.g. 3/2",
+          hints: ["Compare the degrees of the top and the bottom.", lower ? "The top grows more slowly than the bottom." : "With equal degrees, divide the leading coefficients."],
+          solution: [lower ? step("The top has the lower degree, so the fraction tends to 0.", "y = 0") : step("Equal degrees: divide the leading coefficients.", r`y = \frac{${a}}{${d}}`)],
         };
       },
     },

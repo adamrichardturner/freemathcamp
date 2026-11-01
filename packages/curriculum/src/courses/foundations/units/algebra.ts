@@ -1,5 +1,5 @@
 import { example, key, math, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { linear, paren, poly, signed } from "../../../core/math";
+import { interval, linear, paren, poly, signed } from "../../../core/math";
 import type { Unit } from "../../../core/types";
 
 const r = String.raw;
@@ -284,6 +284,153 @@ export const algebra: Unit = {
           ...multipleChoice(rng, correct, [`$x ${flip ? sym : flipped} ${x}$`, `$x ${final} ${-x}$`, `$x ${final} ${x + 1}$`]),
           hints: ["Solve it like an equation.", a < 0 ? "You'll divide by a negative — flip the sign!" : "Dividing by a positive keeps the sign."],
           solution: [step(`Isolate $${a}x$.`, r`${a}x ${sym} ${a * x}`), step(`Divide by ${a}${flip ? " and flip" : ""}.`, `x ${final} ${x}`)],
+        };
+      },
+    },
+    {
+      id: "interval-notation",
+      title: "Compound Inequalities & Interval Notation",
+      summary: "Writing ranges like $-2 < x \\le 5$ as $(-2, 5]$.",
+      prerequisites: ["inequalities"],
+      estimatedMinutes: 9,
+      expectedSeconds: 50,
+      keyIdeas: [
+        "A square bracket includes its endpoint; a round bracket excludes it.",
+        "$\\infty$ always takes a round bracket: it's a direction, not a number.",
+        "Do the same thing to all three parts of a compound inequality.",
+      ],
+      lesson: [
+        text("Calculus constantly describes *where* things happen: where a function is defined, where it's increasing, where it's positive. The language for that is **interval notation**, a compact way to write a range of numbers."),
+        rule("Brackets", r`a \le x \le b \;\Leftrightarrow\; [a, b] \qquad a < x < b \;\Leftrightarrow\; (a, b)`, "A square bracket means the endpoint is included (a filled dot); a round bracket means it's excluded (an open dot). They can be mixed: $[a, b)$."),
+        visual({ type: "numberLine", min: -5, max: 7, step: 1, highlight: { from: -2, to: 5, tone: "primary", openStart: true } }, "$-2 < x \\le 5$ is the interval $(-2, 5]$"),
+        rule("Unbounded intervals", r`x \ge 3 \;\Leftrightarrow\; [3, \infty) \qquad x < 1 \;\Leftrightarrow\; (-\infty, 1)`, "All real numbers is $(-\\infty, \\infty)$."),
+        example("Solve $-3 \\le 2x + 1 < 7$. Write the answer as an interval.", [
+          ["Subtract 1 from all three parts.", r`-4 \le 2x < 6`],
+          ["Divide all three parts by 2.", r`-2 \le x < 3`],
+          ["Write the interval.", r`[-2, 3)`],
+        ]),
+        warn("Dividing by a negative flips **both** signs, so the ends swap: $-4 < -2x \\le 6$ becomes $-3 \\le x < 2$, which is $[-3, 2)$."),
+        tip("**Or** joins pieces with a union, $\\cup$: $x < -1$ or $x \\ge 4$ is $(-\\infty, -1) \\cup [4, \\infty)$."),
+      ],
+      generate: (rng, level) => {
+        const lt = (inc: boolean) => (inc ? r`\le` : "<");
+        if (level === 1) {
+          if (rng.chance(0.4)) {
+            const a = rng.int(-9, 9), inc = rng.chance(0.5), up = rng.chance(0.5);
+            const correct = up ? interval(a, null, inc) : interval(null, a, false, inc);
+            const closedInfinity = up ? `${inc ? "[" : "("}${a}, \\infty]` : `[-\\infty, ${a}${inc ? "]" : ")"}`;
+            return {
+              prompt: "Write this in interval notation.",
+              tex: up ? `x ${inc ? r`\ge` : ">"} ${a}` : `x ${lt(inc)} ${a}`,
+              ...multipleChoice(rng, `$${correct}$`, [
+                `$${up ? interval(a, null, !inc) : interval(null, a, false, !inc)}$`,
+                `$${up ? interval(null, a, false, inc) : interval(a, null, inc)}$`,
+                `$${closedInfinity}$`,
+              ]),
+              hints: [inc ? "The endpoint is included, so it takes a square bracket." : "The endpoint is excluded, so it takes a round bracket.", "Infinity always gets a round bracket."],
+              solution: [step(`${up ? "Everything from" : "Everything up to"} ${a}, ${inc ? "including" : "excluding"} ${a} itself.`, correct)],
+              solutionVisual: { type: "numberLine", min: a - 6, max: a + 6, step: 1, highlight: up ? { from: a, to: a + 6, openStart: !inc } : { from: a - 6, to: a, openEnd: !inc } },
+            };
+          }
+          const lo = rng.int(-8, 3), hi = lo + rng.int(2, 7), incLo = rng.chance(0.5), incHi = rng.chance(0.5);
+          const correct = interval(lo, hi, incLo, incHi);
+          return {
+            prompt: "Write this in interval notation.",
+            tex: `${lo} ${lt(incLo)} x ${lt(incHi)} ${hi}`,
+            ...multipleChoice(rng, `$${correct}$`, [`$${interval(lo, hi, !incLo, incHi)}$`, `$${interval(lo, hi, incLo, !incHi)}$`, `$${interval(lo, hi, !incLo, !incHi)}$`]),
+            hints: ["$\\le$ includes the endpoint: square bracket.", "$<$ excludes it: round bracket."],
+            solution: [step("Match each sign to a bracket.", correct)],
+            solutionVisual: { type: "numberLine", min: lo - 3, max: hi + 3, step: 1, highlight: { from: lo, to: hi, openStart: !incLo, openEnd: !incHi } },
+          };
+        }
+        // Build from the answer: x between lo and hi, wrapped in a·x + b.
+        const lo = rng.int(-6, 2), hi = lo + rng.int(2, 6), incLo = rng.chance(0.5), incHi = rng.chance(0.5);
+        const a = level === 2 ? rng.int(2, 5) : -rng.int(2, 4), b = rng.int(-9, 9);
+        const correct = interval(lo, hi, incLo, incHi);
+        // With a negative a, the larger x gives the smaller value, so the ends swap.
+        const middle = (l: number | string, m: string, h: number | string) => (a > 0 ? `${l} ${lt(incLo)} ${m} ${lt(incHi)} ${h}` : `${h} ${lt(incHi)} ${m} ${lt(incLo)} ${l}`);
+        const unsolved = a > 0 ? interval(a * lo + b, a * hi + b, incLo, incHi) : interval(a * hi + b, a * lo + b, incHi, incLo);
+        return {
+          prompt: "Solve, and give the answer in interval notation.",
+          tex: middle(a * lo + b, linear(a, b), a * hi + b),
+          ...multipleChoice(rng, `$${correct}$`, [`$${interval(lo, hi, incHi, incLo)}$`, `$${unsolved}$`, `$${interval(-hi, -lo, incHi, incLo)}$`, `$${interval(lo, hi, !incLo, !incHi)}$`]),
+          hints: [
+            `Work on all three parts at once: ${b === 0 ? "" : `${b > 0 ? "subtract" : "add"} ${Math.abs(b)}, then `}divide by ${a}.`,
+            a < 0 ? "Dividing by a negative flips both signs, so the ends swap places." : "Dividing by a positive keeps the signs as they are.",
+          ],
+          solution: [
+            step(`Isolate the $${linear(a, 0)}$ term.`, middle(a * lo, linear(a, 0), a * hi)),
+            step(`Divide by ${a}${a < 0 ? " and flip the signs" : ""}.`, `${lo} ${lt(incLo)} x ${lt(incHi)} ${hi}`),
+            step("Write the interval.", correct),
+          ],
+          solutionVisual: { type: "numberLine", min: lo - 3, max: hi + 3, step: 1, highlight: { from: lo, to: hi, openStart: !incLo, openEnd: !incHi } },
+        };
+      },
+    },
+    {
+      id: "absolute-value-equations",
+      title: "Absolute Value Equations & Inequalities",
+      summary: "$|x - a|$ is a distance, and that solves them all.",
+      prerequisites: ["absolute-value", "interval-notation"],
+      estimatedMinutes: 10,
+      expectedSeconds: 60,
+      keyIdeas: [
+        "$|x - a|$ is the distance from $x$ to $a$.",
+        "$|x - a| = d$ has two solutions, $a - d$ and $a + d$ (none if $d < 0$).",
+        "$|x - a| < d$ is one interval; $|x - a| > d$ is two separate pieces.",
+      ],
+      lesson: [
+        text("$|x - a|$ measures the **distance** between $x$ and $a$ on the number line. Read any absolute value equation or inequality as a statement about distance and the answer appears."),
+        visual(
+          { type: "numberLine", min: -1, max: 9, step: 1, points: [{ value: 4, label: "4", tone: "muted" }, { value: 1, label: "1" }, { value: 7, label: "7" }], jumps: [{ from: 4, to: 1, label: "3" }, { from: 4, to: 7, label: "3" }] },
+          "$|x - 4| = 3$: the two points 3 away from 4",
+        ),
+        rule("Equations", r`|x - a| = d \;\Rightarrow\; x = a - d \;\text{ or }\; x = a + d`, "If $d < 0$ there's no solution: a distance can't be negative."),
+        example("Solve $|2x - 3| = 7$.", [["The inside is either $7$ or $-7$.", r`2x - 3 = 7 \quad\text{or}\quad 2x - 3 = -7`], ["Solve each.", r`x = 5 \quad\text{or}\quad x = -2`]]),
+        rule("Inequalities", r`|x - a| < d \;\Leftrightarrow\; a - d < x < a + d`, "*Within* $d$ of $a$ is one interval. *More than* $d$ away, $|x - a| > d$, means $x < a - d$ or $x > a + d$."),
+        key("This is the language of limits: $|x - a| < \\delta$ says that $x$ is within $\\delta$ of $a$. You'll meet it again in calculus."),
+      ],
+      generate: (rng, level) => {
+        const a = rng.int(-6, 6), d = rng.int(1, 8);
+        const inside = linear(1, -a);
+        if (level === 1)
+          return {
+            prompt: "Solve. Enter both solutions, separated by a comma.",
+            tex: `|${inside}| = ${d}`,
+            answer: { kind: "set", values: [a - d, a + d] },
+            inputHint: "e.g. -2, 5",
+            hints: [`Which numbers are exactly ${d} away from ${a}?`, `Solve ${inside} = ${d} and ${inside} = −${d}.`],
+            solution: [step("The inside is either the positive or the negative value.", r`${inside} = ${d} \;\text{ or }\; ${inside} = -${d}`), step("Solve each.", r`x = ${a + d} \;\text{ or }\; x = ${a - d}`)],
+          };
+        if (level === 2) {
+          const k = rng.int(2, 4), x1 = rng.int(-5, 6), m = rng.int(1, 5), D = k * m;
+          const b = D - k * x1; // so k·x1 + b = D …
+          const x2 = x1 - 2 * m; // … and k·x2 + b = −D
+          const expr = linear(k, b);
+          return {
+            prompt: "Solve. Enter both solutions, separated by a comma.",
+            tex: `|${expr}| = ${D}`,
+            answer: { kind: "set", values: [x1, x2] },
+            inputHint: "e.g. -2, 5",
+            hints: ["The inside equals either the positive or the negative value.", `Solve ${expr} = ${D} and ${expr} = −${D}.`],
+            solution: [step("Two cases.", r`${expr} = ${D} \;\text{ or }\; ${expr} = -${D}`), step("Solve each.", r`x = ${x1} \;\text{ or }\; x = ${x2}`)],
+          };
+        }
+        const less = rng.chance(0.5), inc = rng.chance(0.5);
+        const sym = less ? (inc ? r`\le` : "<") : inc ? r`\ge` : ">";
+        const within = (i: boolean) => interval(a - d, a + d, i, i);
+        const beyond = (i: boolean) => `${interval(null, a - d, false, i)} \\cup ${interval(a + d, null, i)}`;
+        const correct = less ? within(inc) : beyond(inc);
+        return {
+          prompt: "Solve, and give the answer in interval notation.",
+          tex: `|${inside}| ${sym} ${d}`,
+          ...multipleChoice(rng, `$${correct}$`, [`$${less ? beyond(inc) : within(inc)}$`, `$${less ? within(!inc) : beyond(!inc)}$`, `$${interval(-a - d, -a + d, inc, inc)}$`]),
+          hints: [`Read it as: x is ${less ? "within" : "further than"} ${d} of ${a}.`, less ? "Being within a distance gives one interval." : "Being further away gives two separate pieces."],
+          solution: [
+            step(`${less ? "Within" : "Beyond"} ${d} of ${a}.`, less ? `${a - d} ${sym} x ${sym} ${a + d}` : r`x ${inc ? r`\le` : "<"} ${a - d} \;\text{ or }\; x ${sym} ${a + d}`),
+            step("Write the intervals.", correct),
+          ],
+          solutionVisual: less ? { type: "numberLine", min: a - d - 3, max: a + d + 3, step: 1, highlight: { from: a - d, to: a + d, openStart: !inc, openEnd: !inc } } : undefined,
         };
       },
     },

@@ -183,17 +183,38 @@ export const trigonometry: Unit = {
       prerequisites: ["unit-circle", "pythagorean-theorem"],
       estimatedMinutes: 10,
       expectedSeconds: 55,
-      keyIdeas: ["$\\sin^2\\theta + \\cos^2\\theta = 1$ is Pythagoras on the unit circle.", "$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$"],
+      keyIdeas: [
+        "$\\sin^2\\theta + \\cos^2\\theta = 1$ is Pythagoras on the unit circle.",
+        "$\\tan\\theta = \\frac{\\sin\\theta}{\\cos\\theta}$",
+        "Double angles: $\\sin 2\\theta = 2\\sin\\theta\\cos\\theta$ and $\\cos 2\\theta = \\cos^2\\theta - \\sin^2\\theta$.",
+      ],
       lesson: [
         text("On the unit circle the point $(\\cos\\theta, \\sin\\theta)$ is distance 1 from the origin. Pythagoras immediately gives the most important identity in trigonometry."),
         rule("Pythagorean identity", r`\sin^2\theta + \cos^2\theta = 1`),
         rule("Quotient identity", r`\tan\theta = \frac{\sin\theta}{\cos\theta}`),
         example("If $\\sin\\theta = \\frac35$ and $\\theta$ is acute, find $\\cos\\theta$.", [["Use the identity.", r`\cos^2\theta = 1 - \frac{9}{25} = \frac{16}{25}`], ["Acute → positive.", r`\cos\theta = \frac45`]]),
         warn("$\\sin^2\\theta$ means $(\\sin\\theta)^2$, not $\\sin(\\theta^2)$."),
+        rule("Double-angle identities", r`\sin 2\theta = 2\sin\theta\cos\theta \qquad \cos 2\theta = \cos^2\theta - \sin^2\theta = 1 - 2\sin^2\theta`, "Calculus leans on these to simplify integrals like $\\int \\sin^2 x\\,dx$."),
+        example("If $\\sin\\theta = \\frac35$ and $\\theta$ is acute, find $\\sin 2\\theta$.", [["From the first example, $\\cos\\theta = \\frac45$.", r`\sin 2\theta = 2\cdot\frac35\cdot\frac45`], ["Multiply.", r`\sin 2\theta = \frac{24}{25}`]]),
       ],
       generate: (rng, level) => {
         const [o, a, h] = rng.pick([[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25]] as [number, number, number][]);
         const givenSin = rng.chance(0.5);
+        if (level === 3 && rng.chance(0.5)) {
+          const sin2 = rng.chance(0.5);
+          return {
+            prompt: `If $\\${givenSin ? "sin" : "cos"}\\theta = \\frac{${givenSin ? o : a}}{${h}}$ and $\\theta$ is acute, find $\\${sin2 ? "sin" : "cos"} 2\\theta$.`,
+            answer: numberAnswer(sin2 ? (2 * o * a) / (h * h) : (a * a - o * o) / (h * h)),
+            inputHint: "e.g. 24/25",
+            hints: ["Find the other ratio first with sin²θ + cos²θ = 1.", sin2 ? "sin 2θ = 2 sin θ cos θ" : "cos 2θ = cos²θ − sin²θ"],
+            solution: [
+              step("Both ratios.", r`\sin\theta = \frac{${o}}{${h}}, \quad \cos\theta = \frac{${a}}{${h}}`),
+              sin2
+                ? step("Double angle.", r`\sin 2\theta = 2\cdot\frac{${o}}{${h}}\cdot\frac{${a}}{${h}} = \frac{${2 * o * a}}{${h * h}}`)
+                : step("Double angle.", r`\cos 2\theta = \frac{${a * a}}{${h * h}} - \frac{${o * o}}{${h * h}} = \frac{${a * a - o * o}}{${h * h}}`),
+            ],
+          };
+        }
         if (level === 3)
           return {
             prompt: `If $\\${givenSin ? "sin" : "cos"}\\theta = \\frac{${givenSin ? o : a}}{${h}}$ and $\\theta$ is acute, find $\\tan\\theta$.`,
@@ -208,6 +229,107 @@ export const trigonometry: Unit = {
           inputHint: "e.g. 4/5",
           hints: ["Use sin²θ + cos²θ = 1.", "Acute angle → positive value."],
           solution: [step("Identity.", r`1 - \left(\frac{${givenSin ? o : a}}{${h}}\right)^2 = \frac{${(givenSin ? a : o) ** 2}}{${h * h}}`), step("Square root.", r`\frac{${givenSin ? a : o}}{${h}}`)],
+        };
+      },
+    },
+    {
+      id: "trig-equations",
+      title: "Solving Trig Equations",
+      summary: "Inverse trig functions, and finding every angle that works.",
+      prerequisites: ["unit-circle", "trig-identities"],
+      estimatedMinutes: 12,
+      expectedSeconds: 70,
+      keyIdeas: [
+        "$\\sin^{-1}$, $\\cos^{-1}$ and $\\tan^{-1}$ each return one **principal** angle.",
+        "Use the reference angle and each quadrant's signs to find every solution in $[0°, 360°)$.",
+        "Isolate the trig function first, just as you'd isolate $x$.",
+      ],
+      lesson: [
+        text("$\\sin x = \\frac12$ has infinitely many solutions, because sine repeats every 360°. Usually we want every solution in one turn: $0° \\le x < 360°$."),
+        rule(
+          "Inverse trig functions",
+          r`\sin^{-1}\!\left(\tfrac12\right) = 30^\circ, \quad \cos^{-1}\!\left(-\tfrac12\right) = 120^\circ, \quad \tan^{-1}(1) = 45^\circ`,
+          "Each returns one **principal** value: $\\sin^{-1}$ in $[-90°, 90°]$, $\\cos^{-1}$ in $[0°, 180°]$ and $\\tan^{-1}$ in $(-90°, 90°)$.",
+        ),
+        visual({ type: "unitCircle", angle: 30 }, "$\\sin x = \\frac12$ at $30°$, and again at $150°$, its mirror image across the $y$-axis."),
+        rule("Where each function is positive", r`\sin > 0:\ \text{QI, QII} \qquad \cos > 0:\ \text{QI, QIV} \qquad \tan > 0:\ \text{QI, QIII}`),
+        example("Solve $2\\cos x + \\sqrt3 = 0$ for $0° \\le x < 360°$.", [
+          ["Isolate cosine.", r`\cos x = -\frac{\sqrt3}{2}`],
+          ["The reference angle is $30°$, and cosine is negative in quadrants II and III.", r`x = 180^\circ - 30^\circ = 150^\circ \;\text{ or }\; x = 180^\circ + 30^\circ = 210^\circ`],
+        ]),
+        key("Calculus finds turning points by solving $f'(x) = 0$. For trig functions, that means solving equations exactly like these."),
+      ],
+      generate: (rng, level) => {
+        type Fn = "sin" | "cos" | "tan";
+        const fns: Record<Fn, (d: number) => number> = { sin: (d) => Math.sin(d * DEG), cos: (d) => Math.cos(d * DEG), tan: (d) => Math.tan(d * DEG) };
+        // Every solution in [0°, 360°) among the special angles.
+        const solve = (fn: Fn, value: number) =>
+          Array.from({ length: 24 }, (_, i) => i * 15).filter((d) => (fn !== "tan" || d % 180 !== 90) && Math.abs(fns[fn](d) - value) < 1e-9);
+        const answerOf = (fn: Fn, value: number) => ({ kind: "set" as const, values: solve(fn, value) });
+        const prompt = "Solve for $0^\\circ \\le x < 360^\\circ$. Enter every solution in degrees.";
+        const quadrantHint = (fn: Fn, value: number) =>
+          `${fn === "sin" ? "Sine" : fn === "cos" ? "Cosine" : "Tangent"} is ${value < 0 ? "negative" : "positive"} in quadrants ${
+            { sin: value < 0 ? "III and IV" : "I and II", cos: value < 0 ? "II and III" : "I and IV", tan: value < 0 ? "II and IV" : "I and III" }[fn]
+          }.`;
+        if (level === 1) {
+          const [tex, value] = rng.pick([[r`\frac12`, 0.5], [r`\frac{\sqrt2}{2}`, Math.SQRT1_2], [r`\frac{\sqrt3}{2}`, Math.sqrt(3) / 2]] as [string, number][]);
+          const fn = rng.pick(["sin", "cos"] as const);
+          if (rng.chance(0.3)) {
+            const principal = solve(fn, value)[0]!;
+            return {
+              prompt: "Find the value in degrees.",
+              tex: `\\${fn}^{-1}\\!\\left(${tex}\\right)`,
+              answer: numberAnswer(principal),
+              hints: [`Which special angle has ${fn} equal to this?`, "Inverse trig gives the principal value, here an acute angle."],
+              solution: [step(`$\\${fn}(${principal}^\\circ) = ${tex}$.`, `${principal}^\\circ`)],
+            };
+          }
+          const sols = solve(fn, value);
+          return {
+            prompt,
+            tex: `\\${fn} x = ${tex}`,
+            answer: answerOf(fn, value),
+            inputHint: "e.g. 30, 150",
+            hints: [`The reference angle is ${sols[0]}°.`, quadrantHint(fn, value)],
+            solution: [step(`Reference angle ${sols[0]}°.`), step("Every solution in one turn.", sols.map((d) => `${d}^\\circ`).join(", "))],
+          };
+        }
+        if (level === 2) {
+          const fn = rng.pick(["sin", "cos", "tan"] as const);
+          const options: [string, number][] =
+            fn === "tan"
+              ? [["1", 1], ["-1", -1], [r`\sqrt3`, Math.sqrt(3)], [r`-\sqrt3`, -Math.sqrt(3)], [r`\frac{\sqrt3}{3}`, Math.sqrt(3) / 3], [r`-\frac{\sqrt3}{3}`, -Math.sqrt(3) / 3]]
+              : [[r`-\frac12`, -0.5], [r`-\frac{\sqrt2}{2}`, -Math.SQRT1_2], [r`-\frac{\sqrt3}{2}`, -Math.sqrt(3) / 2], ["0", 0], ["-1", -1]];
+          const [tex, value] = rng.pick(options);
+          const sols = solve(fn, value);
+          return {
+            prompt,
+            tex: `\\${fn} x = ${tex}`,
+            answer: answerOf(fn, value),
+            inputHint: "e.g. 120, 240",
+            hints: ["Find the reference angle from the value without its sign.", value === 0 || Math.abs(value) === 1 ? "Picture the unit circle: these values sit on the axes." : quadrantHint(fn, value)],
+            solution: [step("Every solution in one turn.", sols.map((d) => `${d}^\\circ`).join(", "))],
+          };
+        }
+        const [equation, fn, value, isolated] = rng.pick([
+          [r`2\sin x - 1 = 0`, "sin", 0.5, r`\sin x = \frac12`],
+          [r`2\sin x + \sqrt3 = 0`, "sin", -Math.sqrt(3) / 2, r`\sin x = -\frac{\sqrt3}{2}`],
+          [r`2\sin x + \sqrt2 = 0`, "sin", -Math.SQRT1_2, r`\sin x = -\frac{\sqrt2}{2}`],
+          [r`\sqrt2\cos x - 1 = 0`, "cos", Math.SQRT1_2, r`\cos x = \frac{\sqrt2}{2}`],
+          [r`2\cos x + 1 = 0`, "cos", -0.5, r`\cos x = -\frac12`],
+          [r`2\cos x - \sqrt3 = 0`, "cos", Math.sqrt(3) / 2, r`\cos x = \frac{\sqrt3}{2}`],
+          [r`\tan x + 1 = 0`, "tan", -1, r`\tan x = -1`],
+          [r`\sqrt3\tan x - 1 = 0`, "tan", Math.sqrt(3) / 3, r`\tan x = \frac{\sqrt3}{3}`],
+          [r`4\sin^2 x = 3`, "sin2", Math.sqrt(3) / 2, r`\sin x = \pm\frac{\sqrt3}{2}`],
+        ] as [string, Fn | "sin2", number, string][]);
+        const sols = fn === "sin2" ? [...solve("sin", value), ...solve("sin", -value)].sort((a, b) => a - b) : solve(fn, value);
+        return {
+          prompt,
+          tex: equation,
+          answer: { kind: "set", values: sols },
+          inputHint: "e.g. 30, 150",
+          hints: ["Isolate the trig function first.", fn === "sin2" ? "Taking a square root gives both a positive and a negative value." : quadrantHint(fn, value)],
+          solution: [step("Isolate it.", isolated), step("Every solution in one turn.", sols.map((d) => `${d}^\\circ`).join(", "))],
         };
       },
     },
