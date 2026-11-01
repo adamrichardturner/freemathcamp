@@ -94,6 +94,8 @@ The progress page fills in once practice begins: an activity heatmap, first-try 
 
 Accounts support email and password, with email verification, and optional Google sign-in. Settings cover profile, course mode (Path or Audit), daily goal, light, dark and system appearance, notifications, password, active sessions, a data export, resetting progress, and deleting the account. The email address is shown with its verification status; it cannot yet be changed from Settings.
 
+An admin panel at `/admin` shows sign-ups, active learners, practice volume and accuracy, sign-in methods, course progress and per-lesson statistics, and manages accounts: search, details, setting or resetting a password, resetting progress and deleting an account. Only the confirmed `hello@adamrichardturner.dev` account can use it; every `/api/admin` route checks this on the server, and the web app only hides the link for everyone else.
+
 A notification centre (behind the avatar) collects account notices, milestones and practice reminders. Notifications can be kept or dismissed. The API delivers them itself, by Web Push, APNs for the coming iOS app, and email for security notices and re-engagement reminders, with no Firebase. See [docs/notifications.md](docs/notifications.md).
 
 ## Stack

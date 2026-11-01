@@ -314,10 +314,10 @@ function SoundCard() {
 
 /* ---------------- Security ---------------- */
 
-const passwordProblem = (p: string) =>
+export const passwordProblem = (p: string) =>
   p.length === 0 ? null : p.length < 10 ? "At least 10 characters." : !/[a-zA-Z]/.test(p) || !/[^a-zA-Z]/.test(p) ? "Mix letters with numbers or symbols." : null;
 
-function PasswordInput({ id, value, onChange, autoComplete }: { id: string; value: string; onChange: (v: string) => void; autoComplete: string }) {
+export function PasswordInput({ id, value, onChange, autoComplete }: { id: string; value: string; onChange: (v: string) => void; autoComplete: string }) {
   const [show, setShow] = useState(false);
   return (
     <div className="relative max-w-sm">
@@ -436,7 +436,7 @@ function ExportCard() {
   );
 }
 
-function ConfirmDialog({
+export function ConfirmDialog({
   trigger,
   title,
   description,

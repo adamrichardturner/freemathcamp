@@ -1,6 +1,7 @@
 import { Effect, Exit } from "effect";
 import type { CookieOptions, Request, RequestHandler, Response } from "express";
 import { authenticate } from "../../application/auth";
+import { isAdmin } from "../../domain/admin";
 import type { User } from "../../infrastructure/db/schema";
 import type { AppRuntime } from "../runtime";
 
@@ -55,6 +56,13 @@ export const requireUser: RequestHandler = (req, res, next) => {
 export const requireVerified: RequestHandler = (req, res, next) => {
   if (!req.user?.email_verified_at)
     return res.status(403).json({ error: { code: "EmailNotVerified", message: "Confirm your email to start practising." } });
+  next();
+};
+
+/** The admin panel: signed in as the one admin account, or refused. Enforced here, never only in the web app. */
+export const requireAdmin: RequestHandler = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: { code: "Unauthorized", message: "Please sign in to continue." } });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: { code: "Forbidden", message: "You don't have access to this page." } });
   next();
 };
 

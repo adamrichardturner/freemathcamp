@@ -100,6 +100,9 @@ export const resetCourseProgress = (user: User, courseId: string) =>
     return { ok: true };
   });
 
+/** Removes an account and everything it owns. Shared by self-service deletion and the admin panel. */
+export const purgeAccount = (userId: string) => Effect.flatMap(UserRepository, (u) => u.delete(userId));
+
 export const exportAccountData = (user: User) => Effect.flatMap(AccountRepository, (a) => a.exportData(user.id));
 
 /** Permanently deletes the account. Requires the email typed out, plus the password when one exists. */
@@ -111,6 +114,6 @@ export const deleteAccount = (user: User, input: { confirmEmail: string; passwor
       const ok = input.password ? yield* Effect.flatMap(PasswordHasher, (h) => h.verify(user.password_hash!, input.password!)) : false;
       if (!ok) return yield* Effect.fail(new Unauthorized({ message: "Your password is incorrect." }));
     }
-    yield* Effect.flatMap(UserRepository, (u) => u.delete(user.id));
+    yield* purgeAccount(user.id);
     return { deleted: true };
   });

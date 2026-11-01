@@ -93,3 +93,16 @@ export const PushSubscribeBody = Schema.Union(
 export const PushUnsubscribeBody = Schema.Union(Schema.Struct({ endpoint: WebEndpoint }), Schema.Struct({ token: ApnsToken }));
 
 export const UnsubscribeQuery = Schema.Struct({ token: Schema.UUID });
+
+/* ---- Admin ---- */
+
+export const AdminUsersQuery = Schema.Struct({
+  q: Schema.optionalWith(Schema.String.pipe(Schema.maxLength(100)), { default: () => "" }),
+  page: Schema.optionalWith(Schema.NumberFromString.pipe(Schema.int(), Schema.between(1, 10_000)), { default: () => 1 }),
+  pageSize: Schema.optionalWith(Schema.NumberFromString.pipe(Schema.int(), Schema.between(1, 100)), { default: () => 25 }),
+});
+export const AdminUserParams = Schema.Struct({ id: Schema.UUID });
+export const AdminUserCourseParams = Schema.Struct({ id: Schema.UUID, courseId: Slug });
+/** Without a password, a temporary one is generated. */
+export const AdminPasswordBody = Schema.Struct({ password: Schema.optional(Password) });
+export const AdminDeleteBody = Schema.Struct({ confirmEmail: Schema.String.pipe(Schema.maxLength(254)) });

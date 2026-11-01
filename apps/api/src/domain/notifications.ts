@@ -19,6 +19,7 @@ const KINDS = {
   google_linked: "account",
   password_changed: "account",
   password_set: "account",
+  password_reset: "account",
   sessions_revoked: "account",
   progress_reset: "account",
   // Course progress.
@@ -51,6 +52,7 @@ const EMAIL: Partial<Record<NotificationKind, "always" | "reminder">> = {
   google_linked: "always",
   password_changed: "always",
   password_set: "always",
+  password_reset: "always",
   sessions_revoked: "always",
   progress_reset: "always",
   reminder_inactive: "reminder",
@@ -102,6 +104,12 @@ export const notices = {
     kind: hadPassword ? "password_changed" : "password_set",
     title: hadPassword ? "Password changed" : "Password added",
     body: `${hadPassword ? "Your password was changed." : "You can now sign in with your email and password."}${signedOut ? ` We signed out ${plural(signedOut, "other device")}.` : ""} If this wasn't you, reset it straight away.`,
+    href: "/settings#security",
+  }),
+  passwordReset: (): NotificationDraft => ({
+    kind: "password_reset",
+    title: "Password reset by FreeMathCamp support",
+    body: "Your password was reset and every device was signed out. Sign in with the new password you were given, then change it in Settings.",
     href: "/settings#security",
   }),
   sessionsRevoked: (count: number): NotificationDraft => ({

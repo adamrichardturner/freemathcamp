@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect";
 import { sql, type SelectQueryBuilder } from "kysely";
 import {
   AccountRepository,
+  AdminRepository,
   AnalyticsRepository,
   EmailTokenRepository,
   JobLeaseRepository,
@@ -18,6 +19,7 @@ import {
 import { Conflict, DatabaseError } from "../../domain/errors";
 import { Database } from "../db/database";
 import type { DB } from "../db/schema";
+import type { AdminUserRow } from "../../application/ports";
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -711,7 +713,150 @@ export const ReminderRepositoryLive = repo(ReminderRepository, (run) => ({
     }),
 }));
 
+
+/** Columns for the admin's account list; per-row counts are correlated subqueries on indexed user_id. */
+const adminUserSelect = (db: import("kysely").Kysely<DB>, masteredAt: number) =>
+  db
+    .selectFrom("users as u")
+    .select((eb) => [
+      "u.id",
+      "u.email",
+      "u.display_name as displayName",
+      "u.avatar_url as avatarUrl",
+      sql<boolean>`u.email_verified_at is not null`.as("emailVerified"),
+      sql<boolean>`u.password_hash is not null`.as("hasPassword"),
+      sql<boolean>`exists (select 1 from oauth_accounts o where o.user_id = u.id and o.provider = 'google')`.as("google"),
+      "u.learning_mode as learningMode",
+      "u.created_at as createdAt",
+      "u.last_active_at as lastActiveAt",
+      eb.selectFrom("item_results as r").select(sql<number>`count(*)::int`.as("n")).whereRef("r.user_id", "=", "u.id").as("problems"),
+      eb
+        .selectFrom("exercise_progress as p")
+        .select(sql<number>`count(*)::int`.as("n"))
+        .whereRef("p.user_id", "=", "u.id")
+        .where("p.mastery", ">=", masteredAt)
+        .where("p.sessions_completed", ">", 0)
+        .as("mastered"),
+    ]);
+
+const toAdminUser = (r: Omit<AdminUserRow, "problems" | "mastered" | "lastActiveAt"> & { problems: number | null; mastered: number | null; lastActiveAt: Date | null }): AdminUserRow => ({
+  ...r,
+  problems: r.problems ?? 0,
+  mastered: r.mastered ?? 0,
+});
+
+export const AdminRepositoryLive = repo(AdminRepository, (run) => ({
+  overview: (courseId, days, masteredAt) =>
+    run(async (db) => {
+      const since = sql<Date>`now() - make_interval(days => ${days})`;
+      const [totals, practice, daily, signIn, modes, levels, lessons, masteredCounts] = await Promise.all([
+        db
+          .selectFrom("users")
+          .select([
+            sql<number>`count(*)::int`.as("users"),
+            sql<number>`count(*) filter (where email_verified_at is not null)::int`.as("verified"),
+            sql<number>`count(*) filter (where onboarded_at is not null)::int`.as("onboarded"),
+            sql<number>`count(*) filter (where created_at >= now() - interval '7 days')::int`.as("signups7"),
+            sql<number>`count(*) filter (where created_at >= now() - interval '30 days')::int`.as("signups30"),
+          ])
+          .executeTakeFirstOrThrow(),
+        db
+          .selectFrom("item_results")
+          .select([
+            sql<number>`count(*)::int`.as("problems"),
+            sql<number>`count(*) filter (where clean_solve)::int`.as("cleanSolves"),
+            sql<string>`coalesce(sum(time_ms), 0)::bigint`.as("timeMs"),
+            sql<number>`count(distinct user_id) filter (where resolved_at >= now() - interval '7 days')::int`.as("active7"),
+            sql<number>`count(distinct user_id) filter (where resolved_at >= now() - interval '30 days')::int`.as("active30"),
+            (eb) => eb.selectFrom("practice_sessions").select(sql<number>`count(*)::int`.as("n")).where("status", "=", "completed").as("sessionsCompleted"),
+          ])
+          .where("course_id", "=", courseId)
+          .executeTakeFirstOrThrow(),
+        sql<{ day: string; signups: number; activeUsers: number; problems: number; cleanSolves: number }>`
+          with practice as (
+            select date_trunc('day', resolved_at) as d, count(distinct user_id)::int as active_users, count(*)::int as problems, count(*) filter (where clean_solve)::int as clean_solves
+            from item_results where resolved_at >= ${since} and course_id = ${courseId} group by 1
+          ), signups as (
+            select date_trunc('day', created_at) as d, count(*)::int as signups from users where created_at >= ${since} group by 1
+          )
+          select to_char(coalesce(p.d, s.d), 'YYYY-MM-DD') as day, coalesce(s.signups, 0) as signups, coalesce(p.active_users, 0) as "activeUsers",
+                 coalesce(p.problems, 0) as problems, coalesce(p.clean_solves, 0) as "cleanSolves"
+          from practice p full join signups s on s.d = p.d order by 1
+        `.execute(db),
+        db
+          .selectFrom("users as u")
+          .select([
+            sql<number>`count(*) filter (where u.password_hash is not null and o.user_id is null)::int`.as("password"),
+            sql<number>`count(*) filter (where u.password_hash is null and o.user_id is not null)::int`.as("google"),
+            sql<number>`count(*) filter (where u.password_hash is not null and o.user_id is not null)::int`.as("both"),
+          ])
+          .leftJoin((eb) => eb.selectFrom("oauth_accounts").select("user_id").distinct().as("o"), (j) => j.onRef("o.user_id", "=", "u.id"))
+          .executeTakeFirstOrThrow(),
+        db
+          .selectFrom("users")
+          .select([sql<number>`count(*) filter (where learning_mode = 'path')::int`.as("path"), sql<number>`count(*) filter (where learning_mode = 'audit')::int`.as("audit")])
+          .executeTakeFirstOrThrow(),
+        db
+          .selectFrom("item_results")
+          .select(["level", sql<number>`count(*)::int`.as("problems"), sql<number>`count(*) filter (where clean_solve)::int`.as("cleanSolves")])
+          .where("course_id", "=", courseId)
+          .groupBy("level")
+          .orderBy("level")
+          .execute(),
+        db
+          .selectFrom("exercise_progress")
+          .select([
+            "exercise_id as exerciseId",
+            sql<number>`count(*) filter (where items_seen > 0)::int`.as("learners"),
+            sql<number>`coalesce(sum(items_seen), 0)::int`.as("problems"),
+            sql<number>`coalesce(sum(clean_solves), 0)::int`.as("cleanSolves"),
+            sql<number>`count(*) filter (where mastery >= ${masteredAt} and sessions_completed > 0)::int`.as("mastered"),
+          ])
+          .where("course_id", "=", courseId)
+          .groupBy("exercise_id")
+          .execute(),
+        sql<{ mastered: number; users: number }>`
+          select coalesce(m.n, 0)::int as mastered, count(*)::int as users
+          from users u
+          left join (
+            select user_id, count(*) as n from exercise_progress
+            where course_id = ${courseId} and mastery >= ${masteredAt} and sessions_completed > 0 group by user_id
+          ) m on m.user_id = u.id
+          group by 1 order by 1
+        `.execute(db),
+      ]);
+      return {
+        totals: { ...totals, active7: practice.active7, active30: practice.active30, problems: practice.problems, cleanSolves: practice.cleanSolves, timeMs: Number(practice.timeMs), sessionsCompleted: practice.sessionsCompleted ?? 0 },
+        daily: daily.rows,
+        signIn,
+        modes,
+        levels,
+        lessons,
+        masteredCounts: masteredCounts.rows,
+      };
+    }),
+  listUsers: ({ query, limit, offset, masteredAt }) =>
+    run(async (db) => {
+      const q = query.trim();
+      // Escape LIKE wildcards so a search for "_" or "%" is literal.
+      const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+      let rows = adminUserSelect(db, masteredAt);
+      let count = db.selectFrom("users as u").select(sql<number>`count(*)::int`.as("n"));
+      if (q) {
+        rows = rows.where((eb) => eb.or([eb("u.email", "ilike", pattern), eb("u.display_name", "ilike", pattern)]));
+        count = count.where((eb) => eb.or([eb("u.email", "ilike", pattern), eb("u.display_name", "ilike", pattern)]));
+      }
+      const [users, total] = await Promise.all([rows.orderBy("u.created_at", "desc").orderBy("u.id").limit(limit).offset(offset).execute(), count.executeTakeFirstOrThrow()]);
+      return { users: users.map(toAdminUser), total: total.n };
+    }),
+  findUser: (id, masteredAt) =>
+    run((db) => adminUserSelect(db, masteredAt).where("u.id", "=", id).executeTakeFirst()).pipe(Effect.map((r) => r && toAdminUser(r))),
+  deleteSessions: (userId) =>
+    run((db) => db.deleteFrom("sessions").where("user_id", "=", userId).executeTakeFirst()).pipe(Effect.map((r) => Number(r.numDeletedRows))),
+}));
+
 export const RepositoriesLive = Layer.mergeAll(
+  AdminRepositoryLive,
   UserRepositoryLive,
   AccountRepositoryLive,
   EmailTokenRepositoryLive,

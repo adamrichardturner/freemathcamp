@@ -167,6 +167,57 @@ export interface AnalyticsRepositoryShape {
 }
 export class AnalyticsRepository extends Context.Tag("AnalyticsRepository")<AnalyticsRepository, AnalyticsRepositoryShape>() {}
 
+/* ---- Admin ---- */
+
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+  emailVerified: boolean;
+  hasPassword: boolean;
+  google: boolean;
+  learningMode: LearningMode;
+  createdAt: Date;
+  lastActiveAt: Date | null;
+  problems: number;
+  mastered: number;
+}
+
+export interface AdminOverviewRows {
+  totals: {
+    users: number;
+    verified: number;
+    onboarded: number;
+    signups7: number;
+    signups30: number;
+    active7: number;
+    active30: number;
+    problems: number;
+    cleanSolves: number;
+    timeMs: number;
+    sessionsCompleted: number;
+  };
+  /** Last `days` days, only days with something in them. */
+  daily: { day: string; signups: number; activeUsers: number; problems: number; cleanSolves: number }[];
+  signIn: { password: number; google: number; both: number };
+  modes: { path: number; audit: number };
+  levels: { level: number; problems: number; cleanSolves: number }[];
+  lessons: { exerciseId: string; learners: number; problems: number; cleanSolves: number; mastered: number }[];
+  /** How many learners have mastered n lessons. */
+  masteredCounts: { mastered: number; users: number }[];
+}
+
+export interface AdminRepositoryShape {
+  overview(courseId: string, days: number, masteredAt: number): Db<AdminOverviewRows>;
+  /** Newest first. Matches email or display name, case-insensitively. */
+  listUsers(opts: { query: string; limit: number; offset: number; masteredAt: number }): Db<{ users: AdminUserRow[]; total: number }>;
+  findUser(id: string, masteredAt: number): Db<AdminUserRow | undefined>;
+  /** Signs a user out everywhere. Returns how many sessions ended. */
+  deleteSessions(userId: string): Db<number>;
+}
+export class AdminRepository extends Context.Tag("AdminRepository")<AdminRepository, AdminRepositoryShape>() {}
+
 /* ---- Notifications ---- */
 
 export type NotificationFilter = "all" | "unread" | "kept";

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, BookMarked, BookOpen, ChartLine, CircleHelp, Compass, Cpu, House, LayoutDashboard, Loader2, Lock, LogOut, Map as MapIcon, Menu, Moon, Settings, Sparkles, Sun, X } from "lucide-react";
+import { Bell, BookMarked, BookOpen, ChartLine, CircleHelp, Compass, Cpu, House, LayoutDashboard, Loader2, Lock, LogOut, Map as MapIcon, Menu, Moon, Settings, ShieldCheck, Sparkles, Sun, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -55,6 +55,8 @@ const accountLinks: MenuLink[] = [
   { href: "/notifications", label: "Notifications", detail: "Milestones, reminders and notices", icon: Bell },
   { href: "/settings", label: "Settings", detail: "Profile, goals, sounds and more", icon: Settings },
 ];
+
+const adminLink: MenuLink = { href: "/admin", label: "Admin", detail: "Analytics and accounts", icon: ShieldCheck };
 
 const isCurrent = (href: string, pathname: string) => pathname === href || (href !== "/" && href !== COURSE_PATH && pathname.startsWith(`${href}/`));
 
@@ -280,7 +282,7 @@ export function MobileMenu() {
   const onCourse = pathname === COURSE_PATH;
   const lessonId = pathname.startsWith(`${COURSE_PATH}/`) ? pathname.slice(COURSE_PATH.length + 1) : null;
   const section = onHome ? { id: "mobile-menu-page", label: "On this page", links: pageLinks } : onCourse ? { id: "mobile-menu-units", label: "Units", links: unitLinks } : null;
-  const explore = signedIn ? accountLinks : onHome ? [courseLink, articlesLink] : [homeLink, courseLink, articlesLink];
+  const explore = signedIn ? (user?.isAdmin ? [...accountLinks, adminLink] : accountLinks) : onHome ? [courseLink, articlesLink] : [homeLink, courseLink, articlesLink];
 
   return (
     <Sheet

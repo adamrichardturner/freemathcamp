@@ -1,6 +1,7 @@
 import type { LearningMode } from "@fmc/curriculum";
 import { Effect } from "effect";
 import { AppConfig } from "../config/config";
+import { isAdmin } from "../domain/admin";
 import { Unauthorized } from "../domain/errors";
 import { PasswordHasher } from "../infrastructure/security/password";
 import { hashToken, newSessionToken } from "../infrastructure/security/tokens";
@@ -24,6 +25,8 @@ export interface PublicUser {
   onboarded: boolean;
   timezone: string;
   notifications: { reminders: boolean; progress: boolean; emailReminders: boolean };
+  /** Only shows the admin link; every admin route checks for itself. */
+  isAdmin: boolean;
   createdAt: string;
 }
 
@@ -39,6 +42,7 @@ export const toPublicUser = (u: User): PublicUser => ({
   onboarded: u.onboarded_at !== null,
   timezone: u.timezone,
   notifications: { reminders: u.notify_reminders, progress: u.notify_progress, emailReminders: u.notify_email_reminders },
+  isAdmin: isAdmin(u),
   createdAt: u.created_at.toISOString(),
 });
 

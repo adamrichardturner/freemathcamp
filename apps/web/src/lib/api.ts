@@ -50,6 +50,7 @@ export interface User {
   onboarded: boolean;
   timezone: string;
   notifications: { reminders: boolean; progress: boolean; emailReminders: boolean };
+  isAdmin: boolean;
   createdAt: string;
 }
 
@@ -235,4 +236,65 @@ export interface PushConfig {
   webPublicKey: string | null;
   web: boolean;
   ios: boolean;
+}
+
+/* ---- Admin ---- */
+
+export interface AdminOverview {
+  totals: {
+    users: number;
+    verified: number;
+    onboarded: number;
+    signups7: number;
+    signups30: number;
+    active7: number;
+    active30: number;
+    problems: number;
+    cleanSolves: number;
+    accuracy: number;
+    timeMs: number;
+    sessionsCompleted: number;
+  };
+  daily: { day: string; signups: number; activeUsers: number; problems: number; accuracy: number | null }[];
+  signIn: { password: number; google: number; both: number };
+  modes: { path: number; audit: number };
+  levels: { level: number; problems: number; accuracy: number | null }[];
+  lessons: { exerciseId: string; title: string; unit: string; learners: number; problems: number; accuracy: number | null; mastered: number }[];
+  progress: { label: string; users: number }[];
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl: string | null;
+  emailVerified: boolean;
+  signIn: "password" | "google" | "both";
+  learningMode: LearningMode;
+  createdAt: string;
+  lastActiveAt: string | null;
+  problems: number;
+  mastered: number;
+  isAdmin: boolean;
+}
+
+export interface AdminUserPage {
+  users: AdminUser[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface AdminUserDetail {
+  user: AdminUser & { timezone: string; dailyGoal: number; onboarded: boolean; lastLoginIp: string | null };
+  stats: {
+    streak: Streak;
+    started: number;
+    mastered: number;
+    totalLessons: number;
+    last30: { problems: number; accuracy: number | null; timeMs: number };
+    progressResets: number;
+  };
+  daily: { day: string; problems: number }[];
+  sessions: { id: string; exerciseId: string; title: string; mode: string; completedAt: string | null; masteryBefore: number; masteryAfter: number | null }[];
 }
