@@ -91,6 +91,7 @@ export const deliverPendingEmail = Effect.gen(function* () {
         unsubscribe,
         oneClickUnsubscribe: reminder ? `${webOrigin}/api/email/unsubscribe?token=${user.email_unsubscribe_token}` : undefined,
         settings: `${webOrigin}/settings#notifications`,
+        origin: webOrigin,
       });
       yield* sender.send({ to: user.email, ...email }).pipe(
         Effect.flatMap(() => repo.finishEmail(n.id, "sent")),
