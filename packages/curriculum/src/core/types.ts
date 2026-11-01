@@ -17,7 +17,8 @@ export type Visual =
       step?: number;
       points?: { value: number; label?: string; tone?: Tone }[];
       jumps?: { from: number; to: number; label?: string; tone?: Tone }[];
-      highlight?: { from: number; to: number; tone?: Tone; openStart?: boolean; openEnd?: boolean };
+      /** A shaded range, or several (a union). A range running to `min` or `max` has no dot at that end: it carries on. */
+      highlight?: NumberRange | NumberRange[];
     }
   | { type: "fractionBars"; fractions: [number, number][]; labels?: boolean }
   | { type: "fractionCircle"; numerator: number; denominator: number }
@@ -52,12 +53,28 @@ export type Visual =
   | { type: "angleExplorer"; angle?: number }
   | { type: "sequenceBars"; terms: number[] }
   | { type: "triangleAngles"; angles: [number, number, number]; hidden?: 0 | 1 | 2 }
-  | { type: "systemExplorer"; lines: [{ m: number; b: number }, { m: number; b: number }] };
+  | { type: "systemExplorer"; lines: [{ m: number; b: number }, { m: number; b: number }] }
+  /** An animated derivation: each step replaces the last, playing on its own once it scrolls into view. */
+  | { type: "stepThrough"; steps: { tex: string; note?: Md }[] }
+  /** Pascal's triangle, built row by row; `highlightRow` picks out one row's coefficients. */
+  | { type: "pascalTriangle"; rows: number; highlightRow?: number }
+  /** A secant from `x` to `x + h` with a slider for `h`, closing in on the tangent. */
+  | { type: "secantExplorer"; fn: (x: number) => number; x: number; h?: number; label?: string; viewBox?: { x: [number, number]; y: [number, number] } };
+
+export interface NumberRange {
+  from: number;
+  to: number;
+  tone?: Tone;
+  openStart?: boolean;
+  openEnd?: boolean;
+}
 
 export type Tone = "primary" | "accent" | "success" | "warning" | "danger" | "muted";
 
 export type Block =
   | { kind: "text"; md: Md }
+  /** A section heading. Articles use these; lessons are short enough not to need them. */
+  | { kind: "heading"; text: string }
   | { kind: "math"; tex: string; caption?: Md }
   | { kind: "callout"; tone: "info" | "tip" | "warning" | "key"; title?: string; md: Md }
   | { kind: "example"; title?: string; problem: Md; steps: { md: Md; tex?: string }[] }

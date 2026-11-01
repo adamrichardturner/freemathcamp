@@ -1,4 +1,6 @@
-import { getGraph, type Block } from "@fmc/curriculum";
+import { getGraph, stripConceptLinks, type Block } from "@fmc/curriculum";
+import { articleSections, categoryPath } from "@fmc/curriculum/articles";
+import { blockPlainText } from "./articles";
 import { FAQS } from "./faq";
 import { absoluteUrl, allCourses, lessonPath, plainText, SITE } from "./site";
 
@@ -29,9 +31,15 @@ export const llmsTxt = () => {
       lines.push("");
     });
   }
+  lines.push("## Articles", "", `Free explainers of each idea in the course, one question per article, grouped by topic. Index: ${absoluteUrl("/articles")}`, "");
+  for (const { category, articles } of articleSections()) {
+    lines.push(`### ${category.title}`, "", `${category.description} (${absoluteUrl(categoryPath(category))})`, "");
+    for (const a of articles) lines.push(`- [${a.title}](${absoluteUrl(`/articles/${a.slug}`)}): ${plainText(stripConceptLinks(a.definition))}`);
+    lines.push("");
+  }
   lines.push("## FAQ", "");
   for (const f of FAQS) lines.push(`- **${f.q}** ${f.a}`);
-  lines.push("", "## Optional", "", `- [Full lesson text](${absoluteUrl("/llms-full.txt")}): every lesson's explanation, key ideas and prerequisites`, `- [Sitemap](${absoluteUrl("/sitemap.xml")})`, "");
+  lines.push("", "## Optional", "", `- [Full lesson and article text](${absoluteUrl("/llms-full.txt")}): every lesson's explanation, key ideas and prerequisites, and every article in full`, `- [Sitemap](${absoluteUrl("/sitemap.xml")})`, "");
   return lines.join("\n");
 };
 
@@ -39,6 +47,8 @@ const blockText = (b: Block): string[] => {
   switch (b.kind) {
     case "text":
       return [plainText(b.md)];
+    case "heading":
+      return [`#### ${b.text}`];
     case "math":
       return [`  ${plainText(`$${b.tex}$`)}${b.caption ? ` — ${plainText(b.caption)}` : ""}`];
     case "rule":
@@ -62,6 +72,14 @@ export const llmsFullTxt = () => {
       lines.push(`### ${e.title} (${ref.unit.title})`, "", `URL: ${absoluteUrl(lessonPath(ref))}`, `Summary: ${plainText(e.summary)}`);
       if (e.prerequisites.length) lines.push(`Builds on: ${e.prerequisites.map((p) => graph.byId.get(p)?.exercise.title ?? p).join(", ")}`);
       lines.push(`Key ideas: ${e.keyIdeas.map(plainText).join(" ")}`, "", ...e.lesson.flatMap(blockText), "");
+    }
+  }
+  lines.push("## Articles", "");
+  for (const { category, articles } of articleSections()) {
+    for (const a of articles) {
+      lines.push(`### ${a.title} (${category.title})`, "", `URL: ${absoluteUrl(`/articles/${a.slug}`)}`, `In short: ${plainText(stripConceptLinks(a.definition))}`, "");
+      lines.push(...a.body.map(blockPlainText).filter(Boolean), "");
+      if (a.faqs.length) lines.push("Questions:", ...a.faqs.map((f) => `- ${f.q} ${plainText(stripConceptLinks(f.a))}`), "");
     }
   }
   return lines.join("\n");

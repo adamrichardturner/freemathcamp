@@ -3,6 +3,7 @@
 import type { Visual as VisualSpec } from "@fmc/curriculum";
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
+import * as A from "./animated-visuals";
 import * as S from "./static-visuals";
 
 // Mafs measures the DOM, so interactive graphs render on the client only.
@@ -16,6 +17,7 @@ const I = {
   ExponentialExplorer: dynamic(() => import("./interactive-visuals").then((m) => m.ExponentialExplorer), { ssr: false, loading }),
   UnitCircle: dynamic(() => import("./interactive-visuals").then((m) => m.UnitCircle), { ssr: false, loading }),
   SystemExplorer: dynamic(() => import("./interactive-visuals").then((m) => m.SystemExplorer), { ssr: false, loading }),
+  SecantExplorer: dynamic(() => import("./interactive-visuals").then((m) => m.SecantExplorer), { ssr: false, loading }),
 };
 
 export function Visual({ visual }: { visual: VisualSpec }) {
@@ -68,5 +70,11 @@ export function Visual({ visual }: { visual: VisualSpec }) {
       return <I.UnitCircle {...visual} />;
     case "systemExplorer":
       return <I.SystemExplorer {...visual} />;
+    case "secantExplorer":
+      return <I.SecantExplorer {...visual} />;
+    case "stepThrough":
+      return <A.StepThrough {...visual} />;
+    case "pascalTriangle":
+      return <A.PascalTriangle {...visual} />;
   }
 }

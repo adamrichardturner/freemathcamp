@@ -1,5 +1,5 @@
 import type { Course, ExerciseRef } from "@fmc/curriculum";
-import { absoluteUrl, lessonDescription, lessonPath, plainText, SITE } from "./site";
+import { absoluteUrl, AUTHOR, lessonDescription, lessonPath, plainText, SITE } from "./site";
 
 const ORG_ID = `${SITE.url}/#organization`;
 const SITE_ID = `${SITE.url}/#website`;
@@ -86,3 +86,64 @@ export const faqSchema = (faqs: { q: string; a: string }[]) => ({
 });
 
 export const graph = (...nodes: Record<string, unknown>[]) => ({ "@context": "https://schema.org", "@graph": nodes });
+
+/** The library's publication date; bump `dateModified` when articles are revised. */
+export const ARTICLES_PUBLISHED = "2026-11-01";
+
+type ArticleLike = { slug: string; title: string; name: string; summary: string; definition: string; keywords: string[] };
+
+export const articleSchema = (a: ArticleLike, section: { title: string; path: string }, extra: { words: number; minutes: number; image: string; lessons: { name: string; path: string }[] }) => ({
+  "@type": ["Article", "LearningResource"],
+  "@id": absoluteUrl(`/articles/${a.slug}#article`),
+  headline: a.title,
+  name: a.title,
+  alternativeHeadline: a.name,
+  description: plainText(a.summary),
+  abstract: plainText(a.definition),
+  url: absoluteUrl(`/articles/${a.slug}`),
+  mainEntityOfPage: absoluteUrl(`/articles/${a.slug}`),
+  image: absoluteUrl(extra.image),
+  inLanguage: "en-GB",
+  isAccessibleForFree: true,
+  learningResourceType: "Article",
+  educationalLevel: "Beginner to intermediate",
+  audience: { "@type": "EducationalAudience", educationalRole: "student" },
+  articleSection: section.title,
+  keywords: a.keywords.join(", "),
+  wordCount: extra.words,
+  timeRequired: minutes(extra.minutes),
+  datePublished: ARTICLES_PUBLISHED,
+  dateModified: ARTICLES_PUBLISHED,
+  author: { "@type": "Person", name: AUTHOR.name, url: AUTHOR.portfolioUrl },
+  publisher: { "@id": ORG_ID },
+  isPartOf: { "@id": SITE_ID },
+  about: {
+    "@type": "DefinedTerm",
+    name: a.name,
+    description: plainText(a.definition),
+    inDefinedTermSet: { "@type": "DefinedTermSet", name: `${SITE.name} maths glossary`, url: absoluteUrl("/articles") },
+  },
+  teaches: a.name,
+  ...(extra.lessons.length ? { isBasedOn: extra.lessons.map((l) => ({ "@type": "LearningResource", name: l.name, url: absoluteUrl(l.path) })) } : {}),
+});
+
+export const articleListSchema = (id: string, name: string, items: { title: string; summary: string; slug: string }[]) => ({
+  "@type": "ItemList",
+  "@id": absoluteUrl(id),
+  name,
+  numberOfItems: items.length,
+  itemListOrder: "https://schema.org/ItemListOrderAscending",
+  itemListElement: items.map((a, i) => ({ "@type": "ListItem", position: i + 1, name: a.title, description: plainText(a.summary), url: absoluteUrl(`/articles/${a.slug}`) })),
+});
+
+export const collectionSchema = (path: string, name: string, description: string, listId: string) => ({
+  "@type": "CollectionPage",
+  "@id": absoluteUrl(path),
+  name,
+  description,
+  url: absoluteUrl(path),
+  inLanguage: "en-GB",
+  isPartOf: { "@id": SITE_ID },
+  publisher: { "@id": ORG_ID },
+  mainEntity: { "@id": absoluteUrl(listId) },
+});

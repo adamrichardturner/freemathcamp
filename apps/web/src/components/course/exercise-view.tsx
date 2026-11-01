@@ -1,5 +1,6 @@
 "use client";
 
+import type { ConceptEntry } from "@fmc/curriculum";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, BookOpen, ChevronRight, Clock, Dumbbell, Dices, Lock, LockKeyhole, Repeat, Sparkles, Waypoints } from "lucide-react";
 import { motion } from "motion/react";
@@ -10,6 +11,7 @@ import { ButtonLink } from "@/components/app/button-link";
 import { MasteryRing, StatusBadge, StatusDot, statusMeta } from "@/components/app/status";
 import { UnitIcon } from "@/components/app/unit-icon";
 import { VerifyEmailCard } from "@/components/app/verify-email-card";
+import { SuggestedReading } from "@/components/articles/suggested-reading";
 import { Lesson } from "@/components/course/lesson-blocks";
 import { Md } from "@/components/math/md";
 import { PracticeSession } from "@/components/practice/practice-session";
@@ -24,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { LearningModeSwitch } from "./learning-mode";
 import { LessonLink } from "./lesson-link";
 
-export function ExerciseView({ exerciseId }: { exerciseId: string }) {
+export function ExerciseView({ exerciseId, reading = [] }: { exerciseId: string; reading?: ConceptEntry[] }) {
   const ref = exerciseRef(exerciseId)!;
   const { exercise, unit } = ref;
   const params = useSearchParams();
@@ -186,6 +188,7 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
               </ul>
             </CardContent>
           </Card>
+          <SuggestedReading items={reading} from={exerciseId} />
           {dependents.length > 0 && (
             <Card className="gap-3">
               <CardHeader>

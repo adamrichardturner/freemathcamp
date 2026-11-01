@@ -35,11 +35,11 @@ export function NumberLine({ min, max, step = 1, points = [], jumps = [], highli
           </marker>
         </defs>
         <line x1={8} x2={W - 8} y1={y} y2={y} stroke="currentColor" strokeWidth={1.5} markerStart="url(#nl-arrow)" markerEnd="url(#nl-arrow)" className="text-foreground/70" />
-        {highlight && (
-          <g style={{ color: tone(highlight.tone) }}>
+        {(Array.isArray(highlight) ? highlight : highlight ? [highlight] : []).map((h, i) => (
+          <g key={`h${i}`} style={{ color: tone(h.tone) }}>
             <motion.line
-              x1={x(highlight.from)}
-              x2={x(highlight.to)}
+              x1={x(h.from)}
+              x2={x(h.to)}
               y1={y}
               y2={y}
               stroke="currentColor"
@@ -47,12 +47,12 @@ export function NumberLine({ min, max, step = 1, points = [], jumps = [], highli
               strokeLinecap="round"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: 1 }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: 0.8, delay: i * 0.3 }}
             />
-            <circle cx={x(highlight.from)} cy={y} r={7} fill={highlight.openStart ? "var(--card)" : "currentColor"} stroke="currentColor" strokeWidth={2.5} />
-            {highlight.to < max && <circle cx={x(highlight.to)} cy={y} r={7} fill={highlight.openEnd ? "var(--card)" : "currentColor"} stroke="currentColor" strokeWidth={2.5} />}
+            {h.from > min && <circle cx={x(h.from)} cy={y} r={7} fill={h.openStart ? "var(--card)" : "currentColor"} stroke="currentColor" strokeWidth={2.5} />}
+            {h.to < max && <circle cx={x(h.to)} cy={y} r={7} fill={h.openEnd ? "var(--card)" : "currentColor"} stroke="currentColor" strokeWidth={2.5} />}
           </g>
-        )}
+        ))}
         {ticks.map((t, i) => (
           <g key={i}>
             <line x1={x(t)} x2={x(t)} y1={y - (t === 0 ? 9 : 6)} y2={y + (t === 0 ? 9 : 6)} stroke="currentColor" strokeWidth={t === 0 ? 2 : 1} className="text-foreground/60" />

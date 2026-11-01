@@ -1,7 +1,9 @@
 import { courses, getExercise } from "@fmc/curriculum";
+import { conceptEntries, readingForLesson } from "@fmc/curriculum/articles";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ConceptProvider } from "@/components/articles/concepts";
 import { ExerciseView } from "@/components/course/exercise-view";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ogImagePath, shareImage } from "@/lib/og";
@@ -34,6 +36,8 @@ async function Exercise({ params }: Pick<Props, "params">) {
   const { courseId, exerciseId } = await params;
   const ref = getExercise(courseId, exerciseId);
   if (!ref) notFound();
+  const entries = conceptEntries();
+  const reading = readingForLesson(courseId, exerciseId).flatMap((slug) => entries.filter((e) => e.slug === slug));
   return (
     <>
       <JsonLd
@@ -46,7 +50,9 @@ async function Exercise({ params }: Pick<Props, "params">) {
           ]),
         )}
       />
-      <ExerciseView exerciseId={exerciseId} />
+      <ConceptProvider entries={entries} from={exerciseId}>
+        <ExerciseView exerciseId={exerciseId} reading={reading} />
+      </ConceptProvider>
     </>
   );
 }
