@@ -11,6 +11,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...allCourses.map((c) => ({ url: absoluteUrl(`/courses/${c.id}`), changeFrequency: "weekly" as const, priority: 0.9 })),
     ...lessons,
     { url: absoluteUrl("/register"), changeFrequency: "yearly", priority: 0.4 },
+    { url: absoluteUrl("/privacy"), changeFrequency: "yearly", priority: 0.3 },
+    { url: absoluteUrl("/terms"), changeFrequency: "yearly", priority: 0.3 },
     { url: absoluteUrl("/llms.txt"), changeFrequency: "monthly", priority: 0.3 },
   ];
 }

@@ -4,7 +4,6 @@ import { ArrowRight, BrainCircuit, CalendarClock, Check, ChevronDown, Gauge, Net
 import { motion } from "motion/react";
 import Link from "next/link";
 import { ButtonLink } from "@/components/app/button-link";
-import { Logo } from "@/components/app/logo";
 import { UnitIcon } from "@/components/app/unit-icon";
 import { Tex } from "@/components/math/tex";
 import { Visual } from "@/components/visuals/visual";
@@ -25,12 +24,6 @@ export function Landing() {
       <Engine />
       <Faq />
       <FinalCta cta={cta} />
-      <footer className="border-t">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground sm:flex-row">
-          <Logo />
-          <p>Free maths education, built with care.</p>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -127,7 +120,7 @@ const FEATURES = [
 
 function Features() {
   return (
-    <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+    <section id="features" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6">
       <motion.div {...fadeUp} className="mx-auto max-w-2xl text-center">
         <h2 className="font-display text-4xl sm:text-5xl">Built around how people actually learn</h2>
         <p className="mt-3 text-muted-foreground">Not a video library. A personal tutor that watches how you work and plans what&apos;s next.</p>
@@ -149,7 +142,7 @@ function Features() {
 
 function Curriculum() {
   return (
-    <section className="border-y bg-muted/30">
+    <section id="course" className="scroll-mt-20 border-y bg-muted/30">
       <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
         <motion.div {...fadeUp} className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
@@ -188,7 +181,7 @@ function Engine() {
     { title: "Your plan updates", text: "Due reviews, weak spots and ready-to-learn lessons are interleaved into today's plan.", tex: "\\text{review} \\oplus \\text{repair} \\oplus \\text{new}" },
   ];
   return (
-    <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+    <section id="engine" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-20 sm:px-6">
       <motion.h2 {...fadeUp} className="text-center font-display text-4xl sm:text-5xl">
         The engine behind every session
       </motion.h2>
@@ -210,7 +203,7 @@ function Engine() {
 
 function Faq() {
   return (
-    <section className="mx-auto max-w-3xl px-4 pb-20 sm:px-6" aria-labelledby="faq-heading">
+    <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-20 sm:px-6" aria-labelledby="faq-heading">
       <motion.h2 {...fadeUp} id="faq-heading" className="text-center font-display text-4xl sm:text-5xl">
         Free Math Camp, answered
       </motion.h2>

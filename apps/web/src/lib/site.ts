@@ -1,5 +1,12 @@
 import { courses, type Course, type ExerciseRef } from "@fmc/curriculum";
 
+/** The person who runs the course. FreeMathCamp is the name of the site, not a company. */
+export const AUTHOR = {
+  name: "Adam Richard Turner",
+  portfolioUrl: "https://adamrichardturner.dev",
+  email: "hello@adamrichardturner.dev",
+} as const;
+
 /** Single source of truth for how the site describes itself to search and AI engines. */
 export const SITE = {
   url: "https://freemathcamp.app",

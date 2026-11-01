@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { SiteFooter } from "@/components/app/site-footer";
 import { Providers } from "@/components/providers";
 import { SITE } from "@/lib/site";
 import "./globals.css";
@@ -47,7 +48,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+        <Providers>
+          <div className="flex min-h-dvh flex-1 flex-col">
+            {children}
+            <SiteFooter />
+          </div>
+        </Providers>
       </body>
     </html>
   );
