@@ -23,7 +23,7 @@ export const sendVerificationEmail = (user: User) =>
     const { webOrigin } = yield* AppConfig;
     const token = newSessionToken();
     yield* tokens.create({ id: hashToken(token), userId: user.id, expiresAt: addDays(new Date(), 1) });
-    const email = verificationEmail({ name: user.display_name, link: `${webOrigin}/verify-email?token=${encodeURIComponent(token)}` });
+    const email = verificationEmail({ name: user.display_name, link: `${webOrigin}/verify-email?token=${encodeURIComponent(token)}`, origin: webOrigin });
     yield* Effect.flatMap(EmailSender, (s) => s.send({ to: user.email, ...email }));
     return { sent: true as const, alreadyVerified: false };
   });

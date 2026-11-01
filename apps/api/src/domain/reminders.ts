@@ -105,7 +105,7 @@ export const planReminder = (s: ReminderSnapshot): NotificationDraft | null => {
     return {
       kind: "reminder_start",
       title: `${s.name.split(/\s+/)[0]}, your first lesson is ready`,
-      body: s.nextLesson ? `Start with ${s.nextLesson.title}. It takes about 10 minutes, and practice adapts to you.` : "Pick any lesson and try a few problems. Practice adapts to you.",
+      body: s.nextLesson ? `Start with ${s.nextLesson.title}. It takes about 10 minutes, and the practice adapts to you as you go.` : "Pick any lesson and try a few problems. The practice adapts to you as you go.",
       href: lessonHref(s.nextLesson),
       dedupeKey: `reminder_start:${step}`,
     };
@@ -118,9 +118,9 @@ export const planReminder = (s: ReminderSnapshot): NotificationDraft | null => {
   const copy: Record<(typeof INACTIVE_STEPS)[number], [string, string]> = {
     2: ["Ready for a quick session?", "A few minutes today keeps what you've learned fresh."],
     4: ["We saved your spot", "Pick up where you left off. Your plan has been adjusted for the time away."],
-    7: ["It's been a week", "Maths sticks best with little and often. Ten minutes today makes a real difference."],
-    14: ["Your progress is waiting", "Everything you've mastered is still here. Ease back in with a short review."],
-    30: ["Come back to Foundations", "It's never too late to pick it back up. Today's plan starts gently."],
+    7: ["It's been a week", "Maths sticks best when you practise little and often. Ten minutes today makes a real difference."],
+    14: ["Your progress is waiting", "Everything you've mastered is still here. Ease yourself back in with a short review."],
+    30: ["Come back to Foundations", "It's never too late to pick up where you left off. Today's plan starts gently."],
   };
   const [title, body] = copy[step];
   return {
