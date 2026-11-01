@@ -4,10 +4,11 @@ import { RateLimited, Unauthorized, ValidationError } from "../domain/errors";
 import type { User } from "../infrastructure/db/schema";
 import { PasswordHasher } from "../infrastructure/security/password";
 import { hashToken } from "../infrastructure/security/tokens";
-import { toPublicUser } from "./auth";
+import { checkUsername, toPublicUser } from "./auth";
 import { notices } from "../domain/notifications";
 import { notifySafely } from "./notifications";
 import { isValidTimeZone } from "../domain/reminders";
+import { isReservedUsername } from "../domain/leagues";
 import { AccountRepository, NotificationRepository, SessionRepository, UserRepository, type UserPreferencesPatch } from "./ports";
 
 const DAY = 86_400_000;
@@ -47,6 +48,24 @@ export const changeDisplayName = (user: User, displayName: string) =>
     const updated = yield* Effect.flatMap(UserRepository, (u) => u.updateDisplayName(user.id, name));
     yield* Effect.flatMap(AccountRepository, (a) => a.recordEvent(user.id, "name_changed"));
     return toPublicUser(updated);
+  });
+
+/** Sets or changes the public username. Uniqueness ignores letter case, so "Ada" and "ada" can't both exist. */
+export const changeUsername = (user: User, raw: string) =>
+  Effect.gen(function* () {
+    const username = yield* checkUsername(raw);
+    if (username === user.username) return toPublicUser(user);
+    const updated = yield* Effect.flatMap(UserRepository, (u) => u.setUsername(user.id, username));
+    if (user.username) yield* Effect.flatMap(AccountRepository, (a) => a.recordEvent(user.id, "username_changed"));
+    return toPublicUser(updated);
+  });
+
+export const usernameAvailability = (raw: string, user: User | undefined) =>
+  Effect.gen(function* () {
+    const username = raw.trim();
+    if (isReservedUsername(username)) return { available: false, reason: "That username is reserved." };
+    const taken = yield* Effect.flatMap(UserRepository, (u) => u.usernameTaken(username, user?.id));
+    return taken ? { available: false, reason: "That username is taken." } : { available: true, reason: null };
   });
 
 export const updatePreferences = (user: User, prefs: UserPreferencesPatch) =>

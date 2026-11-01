@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, BookMarked, BookOpen, ChartLine, CircleHelp, Compass, Cpu, House, LayoutDashboard, Loader2, Lock, LogOut, Map as MapIcon, Menu, Moon, Settings, ShieldCheck, Sparkles, Sun, X } from "lucide-react";
+import { Bell, BookMarked, BookOpen, ChartLine, CircleHelp, Compass, Cpu, House, LayoutDashboard, Loader2, Lock, LogOut, Map as MapIcon, Menu, Moon, Settings, ShieldCheck, Sparkles, Sun, Trophy, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -51,6 +51,7 @@ const accountLinks: MenuLink[] = [
   { href: "/learn", label: "Dashboard", detail: "Today's plan and your streak", icon: LayoutDashboard },
   { href: COURSE_PATH, label: "Course", detail: "Every lesson, in order", icon: MapIcon },
   { href: "/progress", label: "Progress", detail: "Mastery, accuracy and weak spots", icon: ChartLine },
+  { href: "/leagues", label: "Leagues", detail: "Weekly tables, XP and tiers", icon: Trophy },
   articlesLink,
   { href: "/notifications", label: "Notifications", detail: "Milestones, reminders and notices", icon: Bell },
   { href: "/settings", label: "Settings", detail: "Profile, goals, sounds and more", icon: Settings },

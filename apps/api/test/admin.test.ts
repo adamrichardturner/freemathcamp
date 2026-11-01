@@ -1,5 +1,6 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { handle } from "./helpers";
 import { ADMIN_EMAIL, isAdmin } from "../src/domain/admin";
 import { createApp } from "../src/http/app";
 import { makeRuntime, type AppRuntime } from "../src/http/runtime";
@@ -56,7 +57,7 @@ describe.skipIf(!enabled)("admin API", () => {
   const signUp = async (verified = true) => {
     const agent = request.agent(app);
     const email = `admin-target+${Date.now()}-${Math.random().toString(36).slice(2, 7)}@example.com`;
-    expect((await agent.post("/api/auth/register").set("Origin", ORIGIN).send({ email, password: PASSWORD, displayName: "Learner" })).status).toBe(201);
+    expect((await agent.post("/api/auth/register").set("Origin", ORIGIN).send({ email, password: PASSWORD, displayName: "Learner", username: handle() })).status).toBe(201);
     if (verified) await db.updateTable("users").set({ email_verified_at: new Date() }).where("email", "=", email).execute();
     const id = (await agent.get("/api/auth/me")).body.user.id as string;
     return { agent, email, id };

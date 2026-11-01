@@ -2,7 +2,8 @@ import type { LearningMode } from "@fmc/curriculum";
 import { Effect } from "effect";
 import { AppConfig } from "../config/config";
 import { isAdmin } from "../domain/admin";
-import { Unauthorized } from "../domain/errors";
+import { Unauthorized, ValidationError } from "../domain/errors";
+import { isReservedUsername } from "../domain/leagues";
 import { PasswordHasher } from "../infrastructure/security/password";
 import { hashToken, newSessionToken } from "../infrastructure/security/tokens";
 import type { User } from "../infrastructure/db/schema";
@@ -17,6 +18,8 @@ export interface PublicUser {
   id: string;
   email: string;
   displayName: string;
+  /** Null for accounts that haven't chosen one yet; the app asks after sign-in. */
+  username: string | null;
   avatarUrl: string | null;
   hasPassword: boolean;
   emailVerified: boolean;
@@ -25,6 +28,7 @@ export interface PublicUser {
   onboarded: boolean;
   timezone: string;
   notifications: { reminders: boolean; progress: boolean; emailReminders: boolean };
+  leagueOptIn: boolean;
   /** Only shows the admin link; every admin route checks for itself. */
   isAdmin: boolean;
   createdAt: string;
@@ -34,6 +38,7 @@ export const toPublicUser = (u: User): PublicUser => ({
   id: u.id,
   email: u.email,
   displayName: u.display_name,
+  username: u.username,
   avatarUrl: u.avatar_url,
   hasPassword: u.password_hash !== null,
   emailVerified: u.email_verified_at !== null,
@@ -42,6 +47,7 @@ export const toPublicUser = (u: User): PublicUser => ({
   onboarded: u.onboarded_at !== null,
   timezone: u.timezone,
   notifications: { reminders: u.notify_reminders, progress: u.notify_progress, emailReminders: u.notify_email_reminders },
+  leagueOptIn: u.league_opt_in,
   isAdmin: isAdmin(u),
   createdAt: u.created_at.toISOString(),
 });
@@ -50,6 +56,12 @@ export interface ClientInfo {
   userAgent: string | null;
   ip: string | null;
 }
+
+/** Rules the schema can't express: reserved names. Format is checked by the request schema and a database constraint. */
+export const checkUsername = (raw: string) => {
+  const username = raw.trim();
+  return isReservedUsername(username) ? Effect.fail(new ValidationError({ message: "That username is reserved. Try another." })) : Effect.succeed(username);
+};
 
 const INVALID = new Unauthorized({ message: "Incorrect email or password." });
 
@@ -64,12 +76,13 @@ const startSession = (user: User, client: ClientInfo) =>
     return { token, expiresAt, user: toPublicUser(user), previousIp };
   });
 
-export const register = (input: { email: string; password: string; displayName: string }, client: ClientInfo) =>
+export const register = (input: { email: string; password: string; displayName: string; username: string }, client: ClientInfo) =>
   Effect.gen(function* () {
     const users = yield* UserRepository;
     const hasher = yield* PasswordHasher;
+    const username = yield* checkUsername(input.username);
     const passwordHash = yield* hasher.hash(input.password);
-    const user = yield* users.create({ email: input.email.trim().toLowerCase(), displayName: input.displayName.trim(), passwordHash });
+    const user = yield* users.create({ email: input.email.trim().toLowerCase(), displayName: input.displayName.trim(), username, passwordHash });
     // A delivery hiccup shouldn't lose the sign-up; the learner can resend from the app.
     yield* sendVerificationEmail(user).pipe(Effect.catchAll((e) => Effect.logWarning("verification email failed", e)));
     yield* notifySafely(user, notices.welcome(user.display_name, false));

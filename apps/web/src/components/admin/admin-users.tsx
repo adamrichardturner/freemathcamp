@@ -61,7 +61,7 @@ export function AdminUsers() {
               setQuery(e.target.value);
               setPage(1);
             }}
-            placeholder="Search name or email"
+            placeholder="Search name, email or username"
             aria-label="Search accounts"
             className="pl-8"
             maxLength={100}
@@ -106,7 +106,10 @@ export function AdminUsers() {
                               </Badge>
                             )}
                           </span>
-                          <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {u.email}
+                            {u.username && ` · @${u.username}`}
+                          </span>
                         </span>
                       </button>
                     </td>
@@ -169,6 +172,7 @@ function UserDetail({ id, onDeleted }: { id: string; onDeleted: () => void }) {
     );
   const { user, stats } = data;
   const facts: [string, string][] = [
+    ["Username", user.username ? `@${user.username}` : "Not chosen yet"],
     ["Joined", date(user.createdAt)],
     ["Last active", user.lastActiveAt ? relative(user.lastActiveAt) : "Never"],
     ["Sign-in", signInLabel[user.signIn]],

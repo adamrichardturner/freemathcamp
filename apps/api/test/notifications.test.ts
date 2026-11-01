@@ -2,6 +2,7 @@ import { generateProblem, getExercise, type Answer } from "@fmc/curriculum";
 import { Effect } from "effect";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { handle } from "./helpers";
 import { deliverPendingEmail, deliverPendingPush } from "../src/application/jobs";
 import type { PushMessage } from "../src/application/ports";
 import { createApp } from "../src/http/app";
@@ -44,7 +45,7 @@ describe.skipIf(!enabled)("notifications", () => {
   afterAll(() => runtime.dispose());
 
   it("welcomes a new learner, unseen until the centre is opened", async () => {
-    expect((await send("post", "/api/auth/register", { email, password: PASSWORD, displayName: "Grace Hopper" })).status).toBe(201);
+    expect((await send("post", "/api/auth/register", { email, password: PASSWORD, displayName: "Grace Hopper", username: handle() })).status).toBe(201);
     const res = await list();
     expect(res.status).toBe(200);
     expect(res.body.items[0]).toMatchObject({ kind: "welcome", category: "account", title: "Welcome to FreeMathCamp, Grace!", seen: false, read: false, kept: false });
@@ -91,7 +92,7 @@ describe.skipIf(!enabled)("notifications", () => {
     expect((await list()).body.items.map((n: { id: string }) => n.id)).toEqual([welcome!.id]);
 
     const stranger = request.agent(app);
-    await stranger.post("/api/auth/register").set("Origin", ORIGIN).send({ email: `x${email}`, password: PASSWORD, displayName: "Eve" });
+    await stranger.post("/api/auth/register").set("Origin", ORIGIN).send({ email: `x${email}`, password: PASSWORD, displayName: "Eve", username: handle() });
     expect((await stranger.delete(`/api/me/notifications/${welcome!.id}`).set("Origin", ORIGIN).send({})).status).toBe(404);
 
     expect((await send("delete", `/api/me/notifications/${welcome!.id}`)).body).toEqual({ dismissed: true });

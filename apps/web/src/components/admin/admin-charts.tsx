@@ -30,6 +30,10 @@ const signInConfig = {
 
 const progressConfig = { users: { label: "Learners", color: "var(--chart-2)" } } satisfies ChartConfig;
 const levelConfig = { accuracy: { label: "First-try %", color: "var(--chart-3)" } } satisfies ChartConfig;
+const leagueConfig = {
+  optedIn: { label: "Competing", color: "var(--chart-4)" },
+  others: { label: "Not joined", color: "var(--chart-5)" },
+} satisfies ChartConfig;
 
 export function AdminCharts({ overview }: { overview: AdminOverview }) {
   const daily = overview.daily.map((d) => ({ ...d, accuracy: d.accuracy === null ? null : Math.round(d.accuracy * 100) }));
@@ -122,7 +126,28 @@ export function AdminCharts({ overview }: { overview: AdminOverview }) {
         </CardContent>
       </Card>
 
-      <Card className="lg:col-span-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Leagues</CardTitle>
+          <CardDescription>
+            Accounts by tier · {overview.leagues.reduce((a, l) => a + l.optedIn, 0).toLocaleString()} competing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={leagueConfig} className="aspect-auto h-44 w-full">
+            <BarChart data={overview.leagues.map((l) => ({ tier: l.tier, optedIn: l.optedIn, others: l.users - l.optedIn }))} margin={{ left: -20 }}>
+              <CartesianGrid vertical={false} />
+              <XAxis dataKey="tier" tickLine={false} axisLine={false} fontSize={11} />
+              <YAxis tickLine={false} axisLine={false} fontSize={11} allowDecimals={false} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar dataKey="optedIn" stackId="a" fill="var(--color-optedIn)" />
+              <Bar dataKey="others" stackId="a" fill="var(--color-others)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader>
           <CardTitle>By difficulty</CardTitle>
           <CardDescription>First-try accuracy at each level, across everyone</CardDescription>

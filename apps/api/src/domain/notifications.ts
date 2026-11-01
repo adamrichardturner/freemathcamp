@@ -30,6 +30,7 @@ const KINDS = {
   streak_milestone: "progress",
   daily_goal: "progress",
   problems_milestone: "progress",
+  league_result: "progress",
   // Engagement reminders.
   reminder_streak: "reminder",
   reminder_reviews: "reminder",
@@ -117,6 +118,16 @@ export const notices = {
     title: "Signed out other devices",
     body: `${plural(count, "other device")} ${count === 1 ? "was" : "were"} signed out. Only this device is signed in now.`,
     href: "/settings#security",
+  }),
+  leagueResult: (weekStart: string, result: "promoted" | "demoted", tier: string, rank: number): NotificationDraft => ({
+    kind: "league_result",
+    title: result === "promoted" ? `Promoted to the ${tier} League` : `Moved to the ${tier} League`,
+    body:
+      result === "promoted"
+        ? `You finished #${rank} in your league last week. A new week has started in ${tier}.`
+        : `You finished #${rank} last week, so this week you're in ${tier}. A strong week takes you straight back up.`,
+    href: "/leagues",
+    dedupeKey: `league:${weekStart}`,
   }),
   progressReset: (course: string): NotificationDraft => ({
     kind: "progress_reset",

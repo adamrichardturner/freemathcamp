@@ -25,7 +25,14 @@ export const Password = Schema.String.pipe(
 
 export const DisplayName = trimmed(60).pipe(Schema.minLength(1, { message: () => "Tell us what to call you." }));
 
-export const RegisterBody = Schema.Struct({ email: Email, password: Password, displayName: DisplayName });
+export const Username = Schema.Trim.pipe(
+  Schema.pattern(/^[A-Za-z][A-Za-z0-9_]{2,19}$/, { message: () => "Usernames are 3–20 letters, numbers or underscores, starting with a letter." }),
+);
+
+export const RegisterBody = Schema.Struct({ email: Email, password: Password, displayName: DisplayName, username: Username });
+export const UsernameBody = Schema.Struct({ username: Username });
+export const UsernameQuery = Schema.Struct({ username: Username });
+export const LeagueOptInBody = Schema.Struct({ optIn: Schema.Boolean });
 export const LoginBody = Schema.Struct({ email: Email, password: Schema.String.pipe(Schema.maxLength(128)) });
 export const ProfileBody = Schema.Struct({ displayName: DisplayName });
 export const PreferencesBody = Schema.Struct({

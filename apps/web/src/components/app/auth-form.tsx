@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { keys, useProviders } from "@/hooks/queries";
+import { UsernameInput, useUsernameCheck } from "./username-field";
 import { api, ApiError, type User } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +39,8 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const qc = useQueryClient();
   const { data: providers } = useProviders();
   const next = safeNext(params.get("next"));
-  const [form, setForm] = useState({ displayName: "", email: "", password: "" });
+  const [form, setForm] = useState({ displayName: "", username: "", email: "", password: "" });
+  const usernameCheck = useUsernameCheck(form.username);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const oauthError = OAUTH_ERRORS[params.get("error") ?? ""];
   const [navigating, startNavigation] = useTransition();
@@ -53,7 +55,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   }, []);
 
   const submit = useMutation({
-    mutationFn: () => api.post<{ user: User }>(mode === "login" ? "/auth/login" : "/auth/register", mode === "login" ? { email: form.email, password: form.password } : form),
+    mutationFn: () => api.post<{ user: User }>(mode === "login" ? "/auth/login" : "/auth/register", mode === "login" ? { email: form.email, password: form.password } : { ...form, username: form.username.trim() }),
     onSuccess: ({ user }) => {
       qc.setQueryData(keys.me, user);
       // The transition stays pending until the next page has rendered.
@@ -134,9 +136,21 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       >
         <fieldset disabled={busy} className="min-w-0 space-y-4">
           {mode === "register" && (
-            <Field id="displayName" label="Your name" error={fieldErrors.displayName}>
-              <Input id="displayName" autoComplete="name" value={form.displayName} onChange={set("displayName")} maxLength={60} required />
-            </Field>
+            <>
+              <Field id="displayName" label="Your name" error={fieldErrors.displayName}>
+                <Input id="displayName" autoComplete="name" value={form.displayName} onChange={set("displayName")} maxLength={60} required />
+              </Field>
+              <div className="space-y-1.5">
+                <Label htmlFor="username">Username</Label>
+                <UsernameInput
+                  id="username"
+                  value={form.username}
+                  onChange={(username) => set("username")({ target: { value: username } } as React.ChangeEvent<HTMLInputElement>)}
+                  check={usernameCheck}
+                  serverError={fieldErrors.username ?? (submit.error instanceof ApiError && submit.error.status === 409 && /username/i.test(submit.error.message) ? submit.error.message : undefined)}
+                />
+              </div>
+            </>
           )}
           <Field id="email" label="Email" error={fieldErrors.email}>
             <Input id="email" type="email" autoComplete="email" value={form.email} onChange={set("email")} required />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { BadgeCheck, Download, Eye, EyeOff, Laptop, Loader2, Monitor, Moon, ShieldCheck, Sun, TriangleAlert, Volume2 } from "lucide-react";
+import { BadgeCheck, Download, Eye, EyeOff, Laptop, Loader2, Monitor, Moon, ShieldCheck, Sun, TriangleAlert, Trophy, Volume2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { keys, useAccountSettings } from "@/hooks/queries";
+import { keys, useAccountSettings, useLeagueOptIn } from "@/hooks/queries";
+import { UsernameInput, useUsernameCheck } from "@/components/app/username-field";
 import { api, ApiError, type AccountSettings, type User } from "@/lib/api";
 import { COURSE_ID } from "@/lib/course";
 import { hardNavigate } from "@/lib/navigation";
@@ -61,11 +62,13 @@ export function SettingsView() {
         <div className="min-w-0 space-y-10">
           <Section id="profile" title="Profile">
             <ProfileCard settings={data} />
+            <UsernameCard user={data.user} />
             <EmailCard user={data.user} />
           </Section>
           <Section id="learning" title="Learning">
             <CourseModeCard user={data.user} />
             <DailyGoalCard user={data.user} />
+            <LeaguesCard user={data.user} />
             <AppearanceCard />
             <SoundCard />
           </Section>
@@ -166,6 +169,38 @@ function ProfileCard({ settings }: { settings: AccountSettings }) {
   );
 }
 
+function UsernameCard({ user }: { user: User }) {
+  const applyUser = useApplyUser();
+  const [value, setValue] = useState(user.username ?? "");
+  const check = useUsernameCheck(value, user.username);
+  const dirty = value.trim() !== (user.username ?? "");
+  const save = useMutation({
+    mutationFn: () => api.patch<{ user: User }>("/me/username", { username: value.trim() }),
+    onSuccess: ({ user: u }) => {
+      applyUser(u);
+      setValue(u.username ?? "");
+      toast.success(`You're now @${u.username}`);
+    },
+    onError: (e) => toast.error(errorMessage(e, "Couldn't change your username.")),
+  });
+  return (
+    <SettingsCard
+      id="username"
+      title="Username"
+      description="Your public handle. Other learners see it in leagues; your name and email stay private."
+      dirty={dirty}
+      valid={check.status === "available"}
+      saving={save.isPending}
+      onSave={() => save.mutate()}
+      onDiscard={() => setValue(user.username ?? "")}
+    >
+      <div className="max-w-sm">
+        <UsernameInput id="settings-username" value={value} onChange={setValue} check={check} />
+      </div>
+    </SettingsCard>
+  );
+}
+
 function EmailCard({ user }: { user: User }) {
   const resend = useMutation({
     mutationFn: () => api.post("/auth/resend-verification"),
@@ -248,6 +283,28 @@ function DailyGoalCard({ user }: { user: User }) {
         ))}
       </ToggleGroup>
       <p className="text-sm text-muted-foreground">{pace}</p>
+    </SettingsCard>
+  );
+}
+
+function LeaguesCard({ user }: { user: User }) {
+  const optIn = useLeagueOptIn();
+  const checked = optIn.isPending ? !!optIn.variables : user.leagueOptIn;
+  return (
+    <SettingsCard id="leagues" title="Leagues" description="Weekly tables of learners at your level, ranked by the XP you earn solving problems.">
+      <SettingRow
+        title={
+          <label htmlFor="settings-league" className="flex items-center gap-2">
+            <Trophy className="size-4 text-muted-foreground" /> Compete in leagues
+          </label>
+        }
+        description={
+          user.username
+            ? `Shown as @${user.username} with your XP. Leaving removes you from this week's table.`
+            : "Choose a username first: it's how other learners see you."
+        }
+        action={<Switch id="settings-league" aria-label="Compete in leagues" checked={checked} disabled={optIn.isPending || !user.username} onCheckedChange={(on) => optIn.mutate(on)} />}
+      />
     </SettingsCard>
   );
 }

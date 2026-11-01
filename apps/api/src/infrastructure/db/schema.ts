@@ -23,9 +23,14 @@ export interface UsersTable {
   last_active_at: Timestamp | null;
   /** IP of the most recent sign-in; a different one raises a new-sign-in notice. */
   last_login_ip: string | null;
+  /** Public handle, unique regardless of case. Null until chosen. */
+  username: string | null;
+  league_opt_in: Generated<boolean>;
+  /** Index into TIERS in domain/leagues.ts. */
+  league_tier: Generated<number>;
 }
 
-export type AccountEventKind = "name_changed" | "password_changed" | "progress_reset" | "sessions_revoked" | "mode_changed";
+export type AccountEventKind = "name_changed" | "username_changed" | "password_changed" | "progress_reset" | "sessions_revoked" | "mode_changed";
 
 export interface AccountEventsTable {
   id: Generated<string>;
@@ -118,6 +123,8 @@ export interface ItemResultsTable {
   struggle: number;
   clean_solve: boolean;
   mastery_after: number;
+  /** League XP earned by this problem (domain/leagues.ts xpFor). */
+  xp: Generated<number>;
   resolved_at: Generated<Date>;
 }
 
@@ -179,6 +186,26 @@ export interface JobLeasesTable {
   holder: string;
 }
 
+export interface LeagueCohortsTable {
+  id: Generated<string>;
+  /** Monday (UTC) the week starts, YYYY-MM-DD. */
+  week_start: ColumnType<string, string, string>;
+  tier: number;
+  created_at: Generated<Date>;
+  finalized_at: Timestamp | null;
+}
+
+export interface LeagueMembersTable {
+  week_start: ColumnType<string, string, string>;
+  user_id: string;
+  cohort_id: string;
+  tier: number;
+  xp: Generated<number>;
+  xp_at: Generated<Date>;
+  result: "promoted" | "stayed" | "demoted" | null;
+  final_rank: number | null;
+}
+
 export interface DB {
   users: UsersTable;
   oauth_accounts: OAuthAccountsTable;
@@ -192,6 +219,8 @@ export interface DB {
   notifications: NotificationsTable;
   push_subscriptions: PushSubscriptionsTable;
   job_leases: JobLeasesTable;
+  league_cohorts: LeagueCohortsTable;
+  league_members: LeagueMembersTable;
 }
 
 export type User = Selectable<UsersTable>;

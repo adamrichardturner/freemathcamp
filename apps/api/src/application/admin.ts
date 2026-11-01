@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import { randomInt } from "node:crypto";
 import { ADMIN_EMAIL, isAdmin } from "../domain/admin";
 import { MASTERED_THRESHOLD } from "../domain/engine";
+import { TIERS } from "../domain/leagues";
 import { NotFound, ValidationError } from "../domain/errors";
 import { notices } from "../domain/notifications";
 import { PasswordHasher } from "../infrastructure/security/password";
@@ -26,6 +27,7 @@ const userView = (u: AdminUserRow) => ({
   id: u.id,
   email: u.email,
   displayName: u.displayName,
+  username: u.username,
   avatarUrl: u.avatarUrl,
   emailVerified: u.emailVerified,
   signIn: u.hasPassword && u.google ? "both" : u.google ? "google" : "password",
@@ -87,6 +89,10 @@ export const adminOverview = (courseId: string) =>
       }),
       lessons,
       progress: buckets,
+      leagues: TIERS.map((name, tier) => {
+        const l = rows.leagues.find((x) => x.tier === tier);
+        return { tier: name, users: l?.users ?? 0, optedIn: l?.optedIn ?? 0 };
+      }),
     };
   });
 

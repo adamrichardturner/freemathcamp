@@ -1,14 +1,15 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowRight, BookOpen, CalendarCheck, Route } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, CalendarCheck, Route, Trophy } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { LearningModeSwitch } from "@/components/course/learning-mode";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { keys, useSession } from "@/hooks/queries";
+import { keys, useLeagueOptIn, useSession } from "@/hooks/queries";
 import { api, type User } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +35,8 @@ const STEPS = [
     icon: CalendarCheck,
     image: "/onboarding/step-3.png",
     title: "Let the plan guide you",
-    text: "Your dashboard builds a plan for each day, mixing reviews that are due, challenges on tricky topics and your next new lesson. Do a little every day and track your mastery on the Progress page.",
+    text: "Your dashboard builds a plan for each day, mixing reviews that are due, challenges on tricky topics and your next new lesson. For a little friendly competition, join the weekly leagues: every problem you solve earns XP, and the top of each league moves up from Bronze towards Obsidian. Others only ever see your username.",
+    joinsLeague: true,
   },
 ] as const;
 
@@ -52,7 +54,8 @@ export function Onboarding() {
   const [step, setStep] = useState(0);
   // While a mode change is saving, the tour holds still so it can't be left half-applied.
   const [savingMode, setSavingMode] = useState(false);
-  const firstVisit = verified && !!user && !user.onboarded && !dismissed;
+  // Waits for a username: the prompt for one comes first.
+  const firstVisit = verified && !!user && !!user.username && !user.onboarded && !dismissed;
   const open = firstVisit || replay;
 
   useEffect(() => {
@@ -122,6 +125,7 @@ export function Onboarding() {
           </div>
 
           {"choosesMode" in current && user && <LearningModeSwitch mode={user.learningMode} variant="cards" confirm={false} onPendingChange={setSavingMode} />}
+          {"joinsLeague" in current && user && <LeagueJoin user={user} />}
 
           <div className="flex items-center justify-between gap-2 pt-1">
             <Button variant="ghost" onClick={close} disabled={savingMode} className="text-muted-foreground">
@@ -141,5 +145,21 @@ export function Onboarding() {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function LeagueJoin({ user }: { user: User }) {
+  const optIn = useLeagueOptIn();
+  return (
+    <label htmlFor="tour-league" className="flex items-center gap-3 rounded-xl border p-3">
+      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-chart-4/15 text-chart-4">
+        <Trophy className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">Join the weekly leagues</span>
+        <span className="block text-xs text-muted-foreground">As @{user.username}. You can leave any time from the dashboard or Settings.</span>
+      </span>
+      <Switch id="tour-league" aria-label="Join the weekly leagues" checked={optIn.isPending ? optIn.variables : user.leagueOptIn} disabled={optIn.isPending} onCheckedChange={(on) => optIn.mutate(on)} />
+    </label>
   );
 }

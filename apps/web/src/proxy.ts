@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const API_URL = process.env.API_URL ?? "http://127.0.0.1:4100";
 const PROXY_SECRET = process.env.PROXY_SECRET;
-const PROTECTED = ["/learn", "/progress", "/settings", "/notifications", "/admin"];
+const PROTECTED = ["/learn", "/progress", "/settings", "/notifications", "/leagues", "/admin"];
 
 /**
  * Two jobs:
@@ -37,5 +37,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/:path*", "/learn/:path*", "/progress/:path*", "/settings/:path*", "/notifications/:path*", "/admin/:path*"],
+  matcher: ["/api/:path*", "/learn/:path*", "/progress/:path*", "/settings/:path*", "/notifications/:path*", "/leagues/:path*", "/admin/:path*"],
 };
