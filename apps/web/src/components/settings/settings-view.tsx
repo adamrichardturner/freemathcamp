@@ -290,13 +290,13 @@ function LeaguesCard({ user }: { user: User }) {
         }
         description={
           user.username
-            ? `Shown as @${user.username} with your XP. Leaving removes you from this week's table.`
-            : "Choose a username first: it's how other learners see you."
+            ? `On by default. Shown as @${user.username} with your XP; switching off removes you from this week's table.`
+            : "Choose a username to be placed in a league: it's how other learners see you."
         }
         action={
           <span className="flex items-center gap-2">
             {optIn.isPending && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
-            <Switch id="settings-league" aria-label="Compete in leagues" checked={checked} disabled={optIn.isPending || !user.username} aria-busy={optIn.isPending} onCheckedChange={(on) => optIn.mutate(on)} />
+            <Switch id="settings-league" aria-label="Compete in leagues" checked={checked} disabled={optIn.isPending || (!checked && !user.username)} aria-busy={optIn.isPending} onCheckedChange={(on) => optIn.mutate(on)} />
           </span>
         }
       />

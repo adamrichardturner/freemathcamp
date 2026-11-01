@@ -35,7 +35,7 @@ const STEPS = [
     icon: CalendarCheck,
     image: "/onboarding/step-3.png",
     title: "Let the plan guide you",
-    text: "Your dashboard builds a plan for each day, mixing reviews that are due, challenges on tricky topics and your next new lesson. For a little friendly competition, join the weekly leagues: every problem you solve earns XP, and the top of each league moves up from Bronze towards Obsidian. Others only ever see your username.",
+    text: "Your dashboard builds a plan for each day, mixing reviews that are due, challenges on tricky topics and your next new lesson. For a little friendly competition, you're in the weekly leagues: every problem you solve earns XP, and the top of each league moves up from Bronze towards Obsidian. Others only ever see your username. Prefer not to compete? Switch it off below.",
     joinsLeague: true,
   },
 ] as const;
@@ -156,11 +156,11 @@ function LeagueJoin({ user }: { user: User }) {
         <Trophy className="size-4" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium">Join the weekly leagues</span>
-        <span className="block text-xs text-muted-foreground">As @{user.username}. You can leave any time from the dashboard or Settings.</span>
+        <span className="block text-sm font-medium">Compete in the weekly leagues</span>
+        <span className="block text-xs text-muted-foreground">As @{user.username}. Switch off to stay out; you can change this any time from the dashboard, the leagues page or Settings.</span>
       </span>
       {optIn.isPending && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
-      <Switch id="tour-league" aria-label="Join the weekly leagues" checked={optIn.isPending ? optIn.variables : user.leagueOptIn} disabled={optIn.isPending} aria-busy={optIn.isPending} onCheckedChange={(on) => optIn.mutate(on)} />
+      <Switch id="tour-league" aria-label="Compete in the weekly leagues" checked={optIn.isPending ? optIn.variables : user.leagueOptIn} disabled={optIn.isPending} aria-busy={optIn.isPending} onCheckedChange={(on) => optIn.mutate(on)} />
     </label>
   );
 }

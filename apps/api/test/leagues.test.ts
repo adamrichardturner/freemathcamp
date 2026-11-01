@@ -90,7 +90,7 @@ describe.skipIf(!enabled)("usernames and leagues", () => {
   it("asks for a unique username at sign-up, ignoring letter case", async () => {
     const first = await signUp(handle("Ada"));
     expect(first.res.status).toBe(201);
-    expect(first.res.body.user).toMatchObject({ username: first.username, leagueOptIn: false });
+    expect(first.res.body.user).toMatchObject({ username: first.username, leagueOptIn: true });
     expect((await signUp(first.username.toUpperCase())).res.status).toBe(409);
     expect((await signUp("admin")).res.status).toBe(400);
     expect((await signUp("9lives")).res.status).toBe(400);
@@ -116,13 +116,15 @@ describe.skipIf(!enabled)("usernames and leagues", () => {
   it("scores practice into a weekly cohort that shows usernames only", async () => {
     const a = await signUp();
     const b = await signUp();
-    expect((await a.agent.get("/api/leagues/me")).body).toMatchObject({ optedIn: false, cohort: null, tier: { index: 0, name: "Bronze" } });
+    // Everyone starts in the leagues, and is placed on their first solved problem.
+    expect((await a.agent.get("/api/leagues/me")).body).toMatchObject({ optedIn: true, cohort: null, tier: { index: 0, name: "Bronze" } });
+    expect((await a.send("put", "/api/me/league", { optIn: false })).body.user.leagueOptIn).toBe(false);
 
-    // XP earned before opting in still counts for the week.
+    // XP earned while out still counts for the week on (re)joining.
     const earned = await practise(a.send);
+    expect((await a.agent.get("/api/leagues/me")).body).toMatchObject({ optedIn: false, cohort: null });
     expect(earned).toBeGreaterThan(0);
     expect((await a.send("put", "/api/me/league", { optIn: true })).body.user.leagueOptIn).toBe(true);
-    await b.send("put", "/api/me/league", { optIn: true });
     await practise(b.send);
     await practise(b.send);
 

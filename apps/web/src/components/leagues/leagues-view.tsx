@@ -77,7 +77,7 @@ function Hero({ league }: { league: League }) {
             ) : (
               <div className="font-display text-3xl leading-tight">Not placed yet</div>
             )}
-            <div className="text-sm text-muted-foreground">@{league.username}</div>
+            {league.username && <div className="text-sm text-muted-foreground">@{league.username}</div>}
           </div>
         </div>
 
@@ -109,14 +109,31 @@ function Hero({ league }: { league: League }) {
           </div>
         </div>
       </CardContent>
-      {!cohort && (
-        <div className="relative border-t px-4 pt-3">
+      <div className="relative flex flex-wrap items-center justify-between gap-2 border-t px-4 pt-3">
+        {cohort ? (
+          <span />
+        ) : league.username ? (
           <ButtonLink href="/learn" size="sm">
             Go to today&apos;s plan
           </ButtonLink>
-        </div>
-      )}
+        ) : (
+          <ButtonLink href="/settings#username" size="sm">
+            Choose a username
+          </ButtonLink>
+        )}
+        <LeaveButton />
+      </div>
     </Card>
+  );
+}
+
+/** Leagues are on by default, so leaving is always one click away. */
+function LeaveButton() {
+  const optIn = useLeagueOptIn();
+  return (
+    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => optIn.mutate(false)} disabled={optIn.isPending}>
+      {optIn.isPending && <Loader2 className="animate-spin" />} Leave the leagues
+    </Button>
   );
 }
 

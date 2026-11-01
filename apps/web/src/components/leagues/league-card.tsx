@@ -30,7 +30,7 @@ export function LeagueCard() {
         <label htmlFor="dashboard-league" className="flex items-center gap-2 text-xs text-muted-foreground">
           {optIn.isPending && <Loader2 className="size-3.5 animate-spin" />}
           {joined ? "Competing" : "Not joined"}
-          <Switch id="dashboard-league" aria-label="Compete in leagues" size="sm" checked={joined} disabled={optIn.isPending || !user.username} aria-busy={optIn.isPending} onCheckedChange={(on) => optIn.mutate(on)} />
+          <Switch id="dashboard-league" aria-label="Compete in leagues" size="sm" checked={joined} disabled={optIn.isPending || (!joined && !user.username)} aria-busy={optIn.isPending} onCheckedChange={(on) => optIn.mutate(on)} />
         </label>
       </CardHeader>
       <CardContent className="space-y-3">

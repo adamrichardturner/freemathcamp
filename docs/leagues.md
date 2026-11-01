@@ -1,7 +1,9 @@
 # Leagues
 
-Leagues add some optional, friendly competition. Learners who opt in are placed
-each week in a table of up to 30 people at the same tier, ranked by the XP they
+Leagues add some optional, friendly competition. Every learner is in by default
+and can leave from the welcome tour, the dashboard, the leagues page or
+Settings (migration `0011` opted in existing accounts that had never been in a
+cohort; anyone who had left stays out). Those who are in are placed each week in a table of up to 30 people at the same tier, ranked by the XP they
 earn by solving problems. When the week ends, the top of each table moves up a
 tier and the bottom moves down.
 

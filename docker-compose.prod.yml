@@ -41,6 +41,7 @@ services:
       PROXY_SECRET: ${PROXY_SECRET:?set in .env (shared with the web app)}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-FreeMathCamp <noreply@freemathcamp.app>}
+      EMAIL_REPLY_TO: ${EMAIL_REPLY_TO:-FreeMathCamp <hello@freemathcamp.app>}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-https://freemathcamp.app}

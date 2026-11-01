@@ -13,6 +13,8 @@ export interface AppConfigShape {
   /** Without a key, emails are logged instead of sent (development and tests). */
   readonly resendApiKey: Option.Option<Redacted.Redacted<string>>;
   readonly emailFrom: string;
+  /** A monitored mailbox, so replies reach someone (mailbox providers distrust unrepliable mail). */
+  readonly emailReplyTo: string;
   /** Web Push (VAPID) keys; without them browser push is off and notifications stay in-app. */
   readonly vapid: Option.Option<{ publicKey: string; privateKey: Redacted.Redacted<string>; subject: string }>;
   /** APNs token auth for the iOS app; without it iOS push is off. */
@@ -44,6 +46,7 @@ const config = Config.all({
   proxySecret: Config.option(Config.redacted("PROXY_SECRET")),
   resendApiKey: Config.option(Config.redacted("RESEND_API_KEY")),
   emailFrom: Config.string("EMAIL_FROM").pipe(Config.withDefault("FreeMathCamp <noreply@freemathcamp.app>")),
+  emailReplyTo: Config.string("EMAIL_REPLY_TO").pipe(Config.withDefault("FreeMathCamp <hello@freemathcamp.app>")),
   vapid: Config.option(
     Config.all({
       publicKey: Config.nonEmptyString("VAPID_PUBLIC_KEY"),

@@ -15,14 +15,14 @@ const consoleSender = {
 };
 
 /** Sends through Resend's HTTP API (free tier: 3,000 emails/month). */
-const resendSender = (apiKey: Redacted.Redacted<string>, from: string) => ({
+const resendSender = (apiKey: Redacted.Redacted<string>, from: string, replyTo: string) => ({
   send: (email: OutgoingEmail) =>
     Effect.tryPromise({
       try: async () => {
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { authorization: `Bearer ${Redacted.value(apiKey)}`, "content-type": "application/json" },
-          body: JSON.stringify({ from, to: [email.to], subject: email.subject, html: email.html, text: email.text, ...(email.headers && { headers: email.headers }) }),
+          body: JSON.stringify({ from, reply_to: replyTo, to: [email.to], subject: email.subject, html: email.html, text: email.text, ...(email.headers && { headers: email.headers }) }),
           signal: AbortSignal.timeout(10_000),
         });
         if (!res.ok) throw new Error(`Resend ${res.status}: ${await res.text()}`);
@@ -36,7 +36,7 @@ export const EmailSenderLive = Layer.effect(
   Effect.map(AppConfig, (c) =>
     Option.match(c.resendApiKey, {
       onNone: () => consoleSender,
-      onSome: (key) => resendSender(key, c.emailFrom),
+      onSome: (key) => resendSender(key, c.emailFrom, c.emailReplyTo),
     }),
   ),
 );
