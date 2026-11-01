@@ -218,7 +218,17 @@ export const completePractice = (user: User, sessionId: string) =>
       mastery: { before: round(session.mastery_before), after: round(progress.mastery) },
       nextReviewAt: dueAt.toISOString(),
       intervalDays: schedule.intervalDays,
-      items: results.map((r) => ({ index: r.item_index, level: r.level, struggle: round(r.struggle), cleanSolve: r.clean_solve, revealed: r.revealed, wrongAttempts: r.wrong_attempts, timeMs: r.time_ms })),
+      items: results.map((r) => ({
+        index: r.item_index,
+        seed: itemsOf(session)[r.item_index]?.seed ?? 0,
+        level: r.level,
+        struggle: round(r.struggle),
+        cleanSolve: r.clean_solve,
+        revealed: r.revealed,
+        wrongAttempts: r.wrong_attempts,
+        hintsUsed: r.hints_used,
+        timeMs: r.time_ms,
+      })),
       brushUp: struggledOn ? (queues.challenge.find((c) => c.exerciseId === session.exercise_id)?.brushUp ?? []) : [],
       upNext: queues.plan.filter((p) => p.exerciseId !== session.exercise_id).slice(0, 3),
     };

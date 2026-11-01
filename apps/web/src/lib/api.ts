@@ -195,7 +195,7 @@ export interface SessionSummary {
   mastery: { before: number; after: number };
   nextReviewAt: string;
   intervalDays: number;
-  items: { index: number; level: number; struggle: number; cleanSolve: boolean; revealed: boolean; wrongAttempts: number; timeMs: number }[];
+  items: { index: number; seed: number; level: 1 | 2 | 3; struggle: number; cleanSolve: boolean; revealed: boolean; wrongAttempts: number; hintsUsed: number; timeMs: number }[];
   brushUp: string[];
   upNext: Recommendation[];
 }

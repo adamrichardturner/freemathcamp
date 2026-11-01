@@ -178,12 +178,30 @@ function ProblemCard({
   const shake = useAnimationControls();
   const inputRef = useRef<HTMLInputElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const resolved = state.phase === "resolved";
   const isChoice = problem.answer.kind === "choice";
 
   useEffect(() => {
-    if (!resolved) inputRef.current?.focus();
-    else nextRef.current?.focus();
+    if (!resolved) return inputRef.current?.focus();
+    nextRef.current?.focus({ preventScroll: true });
+    // Resolving swaps the question for the solution, which changes the card's height. Once the
+    // new layout has settled, bring the solution and the Next button to the bottom of the
+    // viewport (the card's scroll margin keeps a small gap, and clears the mobile tab bar).
+    // The solution keeps settling for a moment (typeset maths, visuals), so re-align as it grows.
+    const card = cardRef.current;
+    if (!card) return;
+    const behavior: ScrollBehavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    const align = () => card.scrollIntoView({ block: "end", behavior });
+    const frame = requestAnimationFrame(align);
+    const observer = new ResizeObserver(align);
+    observer.observe(card);
+    const settle = setTimeout(() => observer.disconnect(), 800);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(settle);
+      observer.disconnect();
+    };
   }, [resolved]);
 
   const elapsed = () => Date.now() - startedAt;
@@ -229,7 +247,7 @@ function ProblemCard({
   const preview = !isChoice && answer.trim() ? evaluate(answer.replace(/%\s*$/, "")) : null;
 
   return (
-    <motion.div animate={shake} className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+    <motion.div ref={cardRef} animate={shake} className="scroll-mb-[calc(5rem+env(safe-area-inset-bottom))] overflow-hidden rounded-2xl border bg-card shadow-sm md:scroll-mb-6">
       <div className="space-y-5 p-5 sm:p-7">
         <Md md={problem.prompt} className="text-lg font-medium" />
         {problem.tex && (
