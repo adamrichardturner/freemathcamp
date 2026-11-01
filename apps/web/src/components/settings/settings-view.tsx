@@ -3,7 +3,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { BadgeCheck, Download, Eye, EyeOff, Laptop, Loader2, Monitor, Moon, ShieldCheck, Sun, TriangleAlert } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/app/user-menu";
@@ -16,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { keys, useAccountSettings } from "@/hooks/queries";
 import { api, ApiError, type AccountSettings, type User } from "@/lib/api";
 import { COURSE_ID } from "@/lib/course";
+import { hardNavigate } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { Field, SettingRow, SettingsCard } from "./settings-ui";
 
@@ -149,7 +149,7 @@ function ProfileCard({ settings }: { settings: AccountSettings }) {
           maxLength={60}
           disabled={locked}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && dirty && !error && !locked && save.mutate()}
+          onKeyDown={(e) => e.key === "Enter" && dirty && !error && !locked && !save.isPending && save.mutate()}
           autoComplete="name"
           className="max-w-sm"
         />
@@ -422,18 +422,22 @@ function ConfirmDialog({
   canConfirm?: boolean;
   confirmLabel: string;
   pending: boolean;
-  onConfirm: () => void;
+  /** Resolves when the action succeeded, which closes the dialog. */
+  onConfirm: () => Promise<unknown>;
   onOpenChange?: (open: boolean) => void;
 }) {
+  const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const matches = typed.trim().toLowerCase() === phrase.toLowerCase();
+  const change = (next: boolean) => {
+    // A request in flight can't be abandoned by closing the dialog.
+    if (pending && !next) return;
+    setOpen(next);
+    if (!next) setTyped("");
+    onOpenChange?.(next);
+  };
   return (
-    <Dialog
-      onOpenChange={(open) => {
-        if (!open) setTyped("");
-        onOpenChange?.(open);
-      }}
-    >
+    <Dialog open={open} onOpenChange={change}>
       <DialogTrigger render={<Button variant="destructive" />}>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -446,19 +450,21 @@ function ConfirmDialog({
           className="space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (matches && canConfirm) onConfirm();
+            if (matches && canConfirm && !pending) onConfirm().then(() => change(false), () => {});
           }}
         >
-          <div className="space-y-1.5">
-            <label htmlFor="confirmPhrase" className="block text-sm">
-              {phraseLabel}
-            </label>
-            <Input id="confirmPhrase" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" spellCheck={false} />
-          </div>
-          {extra}
+          <fieldset disabled={pending} className="min-w-0 space-y-4">
+            <div className="space-y-1.5">
+              <label htmlFor="confirmPhrase" className="block text-sm">
+                {phraseLabel}
+              </label>
+              <Input id="confirmPhrase" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" spellCheck={false} />
+            </div>
+            {extra}
+          </fieldset>
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="ghost" />}>Cancel</DialogClose>
-            <Button type="submit" variant="destructive" disabled={!matches || !canConfirm || pending}>
+            <DialogClose render={<Button type="button" variant="ghost" disabled={pending} />}>Cancel</DialogClose>
+            <Button type="submit" variant="destructive" disabled={!matches || !canConfirm || pending} aria-busy={pending}>
               {pending && <Loader2 className="animate-spin" />} {confirmLabel}
             </Button>
           </DialogFooter>
@@ -492,24 +498,18 @@ function ResetProgressCard() {
         }
         confirmLabel="Reset progress"
         pending={reset.isPending}
-        onConfirm={() => reset.mutate()}
+        onConfirm={() => reset.mutateAsync()}
       />
     </SettingsCard>
   );
 }
 
 function DeleteAccountCard({ user }: { user: User }) {
-  const qc = useQueryClient();
-  const router = useRouter();
   const [password, setPassword] = useState("");
   const del = useMutation({
     mutationFn: () => api.delete<{ deleted: boolean }>("/me", { confirmEmail: user.email, ...(user.hasPassword ? { password } : {}) }),
-    onSuccess: () => {
-      qc.clear();
-      toast.success("Your account and all of its data have been deleted.");
-      router.replace("/");
-      router.refresh();
-    },
+    // A full reload leaves nothing of the deleted account in memory; the toast shows on the next page.
+    onSuccess: () => hardNavigate("/", "Your account and all of its data have been deleted."),
     onError: (e) => toast.error(errorMessage(e, "Couldn't delete your account.")),
   });
   return (
@@ -533,8 +533,9 @@ function DeleteAccountCard({ user }: { user: User }) {
         }
         canConfirm={!user.hasPassword || password.length > 0}
         confirmLabel="Delete forever"
-        pending={del.isPending}
-        onConfirm={() => del.mutate()}
+        // Success reloads the page, so the dialog stays open and busy until the browser leaves.
+        pending={del.isPending || del.isSuccess}
+        onConfirm={() => del.mutateAsync().then(() => new Promise<never>(() => {}))}
         onOpenChange={(open) => !open && setPassword("")}
       />
     </SettingsCard>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CalendarClock, Clock, RotateCcw, Target, Trophy } from "lucide-react";
+import { ArrowRight, CalendarClock, Clock, Loader2, RotateCcw, Target, Trophy } from "lucide-react";
 import { motion } from "motion/react";
 import { ButtonLink } from "@/components/app/button-link";
 import { MasteryRing, queueMeta } from "@/components/app/status";
@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 const headline = (s: SessionSummary) =>
   s.accuracy === 1 ? "Flawless session!" : s.accuracy >= 0.8 ? "Great work!" : s.accuracy >= 0.5 ? "Solid progress" : "Tough one — that's how learning feels";
 
-export function SessionSummaryView({ summary, onAgain, onExit }: { summary: SessionSummary; onAgain: () => void; onExit: () => void }) {
+export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { summary: SessionSummary; onAgain: () => void; restarting: boolean; onExit: () => void }) {
   const gained = summary.mastery.after - summary.mastery.before;
   return (
     <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="overflow-hidden rounded-2xl border bg-card shadow-sm">
@@ -100,8 +100,8 @@ export function SessionSummaryView({ summary, onAgain, onExit }: { summary: Sess
         )}
 
         <div className="flex flex-wrap gap-2 pt-1">
-          <Button variant="outline" onClick={onAgain}>
-            <RotateCcw /> Practice again
+          <Button variant="outline" onClick={onAgain} disabled={restarting} aria-busy={restarting}>
+            {restarting ? <Loader2 className="animate-spin" /> : <RotateCcw />} {restarting ? "Starting…" : "Practice again"}
           </Button>
           <Button variant="ghost" onClick={onExit}>
             Back to lesson

@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, ChartLine, Compass, Flame, GraduationCap, LayoutDashboard, LogOut, Settings, Target } from "lucide-react";
+import { BadgeCheck, ChartLine, Compass, Flame, GraduationCap, LayoutDashboard, Loader2, LogOut, Settings, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -83,8 +83,9 @@ export function UserMenu({ user }: { user: User }) {
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="my-0" />
         <DropdownMenuGroup className="p-1">
-          <DropdownMenuItem variant="destructive" onClick={() => logout.mutate()} disabled={logout.isPending}>
-            <LogOut /> Sign out
+          {/* Stays open while signing out so the progress is visible until the page reloads. */}
+          <DropdownMenuItem variant="destructive" closeOnClick={false} onClick={() => logout.mutate()} disabled={logout.busy}>
+            {logout.busy ? <Loader2 className="animate-spin" /> : <LogOut />} {logout.busy ? "Signing out…" : "Sign out"}
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

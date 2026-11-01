@@ -89,7 +89,7 @@ export function PracticeSession({ exerciseId, mode, onExit }: { exerciseId: stri
     setState({ phase: "answering" });
   };
 
-  if (summary) return <SessionSummaryView summary={summary} onAgain={() => start.mutate()} onExit={onExit} />;
+  if (summary) return <SessionSummaryView summary={summary} onAgain={() => !start.isPending && start.mutate()} restarting={start.isPending} onExit={onExit} />;
 
   if (!session || !item || !problem)
     return (
@@ -205,23 +205,26 @@ function ProblemCard({
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn't reveal the answer."),
   });
 
+  // One request per problem at a time: checking and revealing lock each other and the answer.
+  const busy = attempt.isPending || reveal.isPending;
+
   const submit = useCallback(() => {
-    if (resolved || attempt.isPending) return;
+    if (resolved || busy) return;
     const value = isChoice ? (choice === null ? "" : `${choice}`) : answer.trim();
     if (!value) return;
     setFeedback(null);
     attempt.mutate(value);
-  }, [resolved, attempt, isChoice, choice, answer]);
+  }, [resolved, busy, attempt, isChoice, choice, answer]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!isChoice || resolved || !problem.choices) return;
+      if (!isChoice || resolved || busy || !problem.choices) return;
       const n = Number(e.key);
       if (n >= 1 && n <= problem.choices.length) setChoice(n - 1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isChoice, resolved, problem.choices]);
+  }, [isChoice, resolved, busy, problem.choices]);
 
   const preview = !isChoice && answer.trim() ? evaluate(answer.replace(/%\s*$/, "")) : null;
 
@@ -246,11 +249,12 @@ function ProblemCard({
                 <button
                   key={i}
                   type="button"
-                  disabled={resolved}
+                  disabled={resolved || busy}
                   onClick={() => setChoice(i)}
                   onDoubleClick={submit}
                   className={cn(
                     "group flex items-center gap-3 rounded-xl border-2 bg-background px-4 py-3 text-left transition-all hover:border-primary/50 hover:bg-primary/[0.03] disabled:cursor-default",
+                    busy && !resolved && "disabled:cursor-wait disabled:opacity-70",
                     choice === i && !resolved && "border-primary bg-primary/[0.06] shadow-sm shadow-primary/20",
                     showCorrect && "border-success bg-success/10",
                     showWrong && "border-danger/60 bg-danger/5",
@@ -270,9 +274,10 @@ function ProblemCard({
               <Input
                 ref={inputRef}
                 value={answer}
+                readOnly={busy}
                 disabled={resolved}
                 onChange={(e) => setAnswer(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && (resolved ? onNext() : submit())}
+                onKeyDown={(e) => e.key === "Enter" && (resolved ? !finishing && onNext() : submit())}
                 placeholder={problem.inputHint ?? "Your answer"}
                 inputMode="text"
                 autoComplete="off"
@@ -315,19 +320,19 @@ function ProblemCard({
         {!resolved ? (
           <>
             {hints < problem.hints.length && (
-              <Button variant="ghost" size="sm" onClick={() => setHints((h) => h + 1)}>
+              <Button variant="ghost" size="sm" onClick={() => setHints((h) => h + 1)} disabled={busy}>
                 <Lightbulb /> Hint {problem.hints.length > 1 ? `(${hints + 1}/${problem.hints.length})` : ""}
               </Button>
             )}
-            <Button variant={wrong >= 2 ? "secondary" : "ghost"} size="sm" onClick={() => reveal.mutate()} disabled={reveal.isPending}>
-              <Eye /> Show solution
+            <Button variant={wrong >= 2 ? "secondary" : "ghost"} size="sm" onClick={() => !busy && reveal.mutate()} disabled={busy}>
+              {reveal.isPending ? <Loader2 className="animate-spin" /> : <Eye />} Show solution
             </Button>
-            <Button className="ml-auto h-10 px-5" onClick={submit} disabled={attempt.isPending || (isChoice ? choice === null : !answer.trim())}>
+            <Button className="ml-auto h-10 px-5" onClick={submit} disabled={busy || (isChoice ? choice === null : !answer.trim())} aria-busy={attempt.isPending}>
               {attempt.isPending ? <Loader2 className="animate-spin" /> : <Check />} Check
             </Button>
           </>
         ) : (
-          <Button ref={nextRef} className="ml-auto h-10 px-5" onClick={onNext} disabled={finishing}>
+          <Button ref={nextRef} className="ml-auto h-10 px-5" onClick={onNext} disabled={finishing} aria-busy={finishing}>
             {finishing ? <Loader2 className="animate-spin" /> : null}
             {state.resolution.done ? "See results" : "Next problem"} <ArrowRight />
           </Button>

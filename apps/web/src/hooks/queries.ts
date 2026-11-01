@@ -1,11 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { unlockedBy, unlockedLessons } from "@fmc/curriculum";
 import { useMemo, useSyncExternalStore } from "react";
 import { api, type AccountSettings, type Analytics, type CourseProgress, type Dashboard, type ExerciseDetail, type User } from "@/lib/api";
 import { COURSE_ID, graph } from "@/lib/course";
+import { hardNavigate } from "@/lib/navigation";
 
 export const keys = {
   me: ["me"] as const,
@@ -89,15 +89,14 @@ export const useInvalidateLearner = () => {
     ]);
 };
 
+/**
+ * Signs out with a full page load so no cached learner data lingers.
+ * `busy` stays true from the click until the browser leaves the page.
+ */
 export const useLogout = () => {
-  const qc = useQueryClient();
-  const router = useRouter();
-  return useMutation({
+  const logout = useMutation({
     mutationFn: () => api.post("/auth/logout"),
-    onSuccess: () => {
-      qc.clear();
-      router.push("/");
-      router.refresh();
-    },
+    onSuccess: () => hardNavigate("/"),
   });
+  return { ...logout, busy: logout.isPending || logout.isSuccess };
 };

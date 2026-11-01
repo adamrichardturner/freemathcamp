@@ -108,51 +108,51 @@ export function ExerciseView({ exerciseId }: { exerciseId: string }) {
       {locked ? (
         <LockedLesson exerciseId={exerciseId} />
       ) : (
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as string)} className="min-w-0">
-          <TabsList className="mb-4">
-            <TabsTrigger value="lesson" className="gap-1.5">
-              <BookOpen className="size-4" /> Lesson
-            </TabsTrigger>
-            <TabsTrigger value="practice" className="gap-1.5">
-              <Dumbbell className="size-4" /> Practice
-            </TabsTrigger>
-          </TabsList>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as string)} className="min-w-0">
+            <TabsList className="mb-4">
+              <TabsTrigger value="lesson" className="gap-1.5">
+                <BookOpen className="size-4" /> Lesson
+              </TabsTrigger>
+              <TabsTrigger value="practice" className="gap-1.5">
+                <Dumbbell className="size-4" /> Practice
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="lesson" className="space-y-8">
-            {exercise.prerequisites.length > 0 && weakPrereqs.length > 0 && <PrereqNudge ids={weakPrereqs.map((p) => p.exerciseId)} />}
-            <Lesson blocks={exercise.lesson} />
-            <div className="flex flex-col items-center gap-3 rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-chart-2/10 p-6 text-center">
-              <Sparkles className="size-6 text-primary" />
-              <div>
-                <div className="text-lg font-semibold">Ready to try it?</div>
-                <p className="text-sm text-muted-foreground">Problems adapt to you as you go — no two sessions are the same.</p>
+            <TabsContent value="lesson" className="space-y-8">
+              {exercise.prerequisites.length > 0 && weakPrereqs.length > 0 && <PrereqNudge ids={weakPrereqs.map((p) => p.exerciseId)} />}
+              <Lesson blocks={exercise.lesson} />
+              <div className="flex flex-col items-center gap-3 rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-chart-2/10 p-6 text-center">
+                <Sparkles className="size-6 text-primary" />
+                <div>
+                  <div className="text-lg font-semibold">Ready to try it?</div>
+                  <p className="text-sm text-muted-foreground">Problems adapt to you as you go — no two sessions are the same.</p>
+                </div>
+                <Button size="lg" className="h-11 px-6" onClick={() => startPractice(progress?.status === "struggling" ? "challenge" : "learn")}>
+                  Start practising <ArrowRight />
+                </Button>
               </div>
-              <Button size="lg" className="h-11 px-6" onClick={() => startPractice(progress?.status === "struggling" ? "challenge" : "learn")}>
-                Start practising <ArrowRight />
-              </Button>
-            </div>
-          </TabsContent>
+            </TabsContent>
 
-          <TabsContent value="practice">
-            {!ready ? (
-              <div className="h-64 animate-pulse rounded-2xl border bg-card" />
-            ) : !user ? (
-              <SignInToPractice exerciseId={exerciseId} />
-            ) : !verified ? (
-              <VerifyEmailCard user={user} compact />
-            ) : practising ? (
-              <PracticeSession
-                key={practising}
-                exerciseId={exerciseId}
-                mode={practising}
-                onExit={() => {
-                  setPractising(null);
-                  router.replace(lessonHref(exerciseId), { scroll: false });
-                }}
-              />
-            ) : (
-              <ModePicker status={progress?.status ?? "new"} sessions={progress?.sessionsCompleted ?? 0} recommended={requestedMode} onStart={startPractice} />
+            <TabsContent value="practice">
+              {!ready ? (
+                <div className="h-64 animate-pulse rounded-2xl border bg-card" />
+              ) : !user ? (
+                <SignInToPractice exerciseId={exerciseId} />
+              ) : !verified ? (
+                <VerifyEmailCard user={user} compact />
+              ) : practising ? (
+                <PracticeSession
+                  key={practising}
+                  exerciseId={exerciseId}
+                  mode={practising}
+                  onExit={() => {
+                    setPractising(null);
+                    router.replace(lessonHref(exerciseId), { scroll: false });
+                  }}
+                />
+              ) : (
+                <ModePicker status={progress?.status ?? "new"} sessions={progress?.sessionsCompleted ?? 0} recommended={requestedMode} onStart={startPractice} />
             )}
           </TabsContent>
         </Tabs>

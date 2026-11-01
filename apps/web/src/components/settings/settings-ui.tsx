@@ -40,7 +40,12 @@ export function SettingsCard({
         <CardTitle className={cn(tone === "danger" && "text-danger")}>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent className="space-y-4">{children}</CardContent>
+      <CardContent>
+        {/* Fields can't be edited while their changes are being saved. */}
+        <fieldset disabled={saving} className="min-w-0 space-y-4">
+          {children}
+        </fieldset>
+      </CardContent>
       {onSave && (
         <CardFooter className="flex flex-wrap items-center justify-between gap-3 border-t bg-muted/30 py-3">
           <span className="text-xs text-muted-foreground">{footerNote ?? (dirty ? "You have unsaved changes." : " ")}</span>
@@ -50,7 +55,7 @@ export function SettingsCard({
                 Discard
               </Button>
             )}
-            <Button type="submit" onClick={onSave} disabled={!dirty || !valid || saving}>
+            <Button type="submit" onClick={onSave} disabled={!dirty || !valid || saving} aria-busy={saving}>
               {saving && <Loader2 className="animate-spin" />} {saveLabel}
             </Button>
           </div>

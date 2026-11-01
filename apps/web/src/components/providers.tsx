@@ -2,10 +2,12 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ApiError } from "@/lib/api";
+import { takeFlash } from "@/lib/navigation";
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
@@ -26,8 +28,18 @@ export function Providers({ children }: { children: ReactNode }) {
         <TooltipProvider>
           {children}
           <Toaster richColors position="top-center" />
+          <FlashToast />
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );
+}
+
+/** Shows a message left for this page by a full-page redirect (see `hardNavigate`). */
+function FlashToast() {
+  useEffect(() => {
+    const message = takeFlash();
+    if (message) toast.success(message);
+  }, []);
+  return null;
 }

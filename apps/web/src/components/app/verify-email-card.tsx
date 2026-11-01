@@ -45,17 +45,22 @@ export function VerifyEmailCard({ user, compact = false }: { user: User; compact
         </p>
       </div>
       <div className="flex flex-wrap justify-center gap-2">
-        <Button onClick={() => refresh.mutate()} disabled={refresh.isPending}>
+        <Button onClick={() => refresh.mutate()} disabled={refresh.isPending || logout.busy}>
           {refresh.isPending ? <Loader2 className="animate-spin" /> : <RefreshCw />} I&apos;ve confirmed
         </Button>
-        <Button variant="outline" onClick={() => resend.mutate()} disabled={resend.isPending}>
+        <Button variant="outline" onClick={() => resend.mutate()} disabled={resend.isPending || logout.busy}>
           {resend.isPending && <Loader2 className="animate-spin" />} Resend email
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
         Can&apos;t find it? Check spam, or{" "}
-        <button type="button" className="font-medium text-primary hover:underline" onClick={() => logout.mutate()}>
-          sign up with a different email
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 font-medium text-primary hover:underline disabled:no-underline disabled:opacity-60"
+          onClick={() => logout.mutate()}
+          disabled={logout.busy}
+        >
+          {logout.busy && <Loader2 className="size-3 animate-spin" />} sign up with a different email
         </button>
         .
       </p>

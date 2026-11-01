@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Logo } from "@/components/app/logo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { keys, useProviders } from "@/hooks/queries";
 import { api, ApiError, type User } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 const OAUTH_ERRORS: Record<string, string> = {
   google_unavailable: "Google sign-in isn't set up on this server yet.",
@@ -40,18 +41,45 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [form, setForm] = useState({ displayName: "", email: "", password: "" });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const oauthError = OAUTH_ERRORS[params.get("error") ?? ""];
+  const [navigating, startNavigation] = useTransition();
+  const [toGoogle, setToGoogle] = useState(false);
+
+  // Coming back to this page with the browser's back button restores it from
+  // the back/forward cache, mid-redirect; make it usable again.
+  useEffect(() => {
+    const onShow = (e: PageTransitionEvent) => e.persisted && setToGoogle(false);
+    window.addEventListener("pageshow", onShow);
+    return () => window.removeEventListener("pageshow", onShow);
+  }, []);
 
   const submit = useMutation({
     mutationFn: () => api.post<{ user: User }>(mode === "login" ? "/auth/login" : "/auth/register", mode === "login" ? { email: form.email, password: form.password } : form),
     onSuccess: ({ user }) => {
       qc.setQueryData(keys.me, user);
-      router.push(next);
-      router.refresh();
+      // The transition stays pending until the next page has rendered.
+      startNavigation(() => {
+        router.push(next);
+        router.refresh();
+      });
     },
     onError: (e) => {
       if (e instanceof ApiError && e.issues) setFieldErrors(Object.fromEntries(e.issues.map((i) => [i.path, i.message])));
     },
   });
+
+  // Success always redirects, so stay busy from the click until this page is gone.
+  const signingIn = submit.isPending || submit.isSuccess || navigating;
+  const busy = signingIn || toGoogle;
+  // Next keeps visited pages alive but hidden. Hiding this one runs the cleanup,
+  // so returning with Back shows a fresh form instead of a stuck "Signing in…".
+  const { reset } = submit;
+  useEffect(
+    () => () => {
+      reset();
+      setToGoogle(false);
+    },
+    [reset],
+  );
 
   const error = submit.error instanceof ApiError && !submit.error.issues ? submit.error.message : submit.error && !(submit.error instanceof ApiError) ? "Something went wrong." : null;
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,8 +107,16 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
       {providers?.google && (
         <>
-          <Button variant="outline" className="h-11 w-full" render={<a href={`/api/auth/google?returnTo=${encodeURIComponent(next)}`} />} nativeButton={false}>
-            <GoogleIcon /> Continue with Google
+          <Button
+            variant="outline"
+            className={cn("h-11 w-full", busy && "pointer-events-none opacity-50")}
+            render={<a href={`/api/auth/google?returnTo=${encodeURIComponent(next)}`} />}
+            nativeButton={false}
+            aria-disabled={busy}
+            tabIndex={busy ? -1 : undefined}
+            onClick={(e) => (busy ? e.preventDefault() : setToGoogle(true))}
+          >
+            {toGoogle ? <Loader2 className="animate-spin" /> : <GoogleIcon />} {toGoogle ? "Redirecting to Google…" : "Continue with Google"}
           </Button>
           <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
             <div className="h-px flex-1 bg-border" /> or with email <div className="h-px flex-1 bg-border" />
@@ -92,25 +128,27 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          submit.mutate();
+          if (!busy) submit.mutate();
         }}
         noValidate
       >
-        {mode === "register" && (
-          <Field id="displayName" label="Your name" error={fieldErrors.displayName}>
-            <Input id="displayName" autoComplete="name" value={form.displayName} onChange={set("displayName")} maxLength={60} required />
+        <fieldset disabled={busy} className="min-w-0 space-y-4">
+          {mode === "register" && (
+            <Field id="displayName" label="Your name" error={fieldErrors.displayName}>
+              <Input id="displayName" autoComplete="name" value={form.displayName} onChange={set("displayName")} maxLength={60} required />
+            </Field>
+          )}
+          <Field id="email" label="Email" error={fieldErrors.email}>
+            <Input id="email" type="email" autoComplete="email" value={form.email} onChange={set("email")} required />
           </Field>
-        )}
-        <Field id="email" label="Email" error={fieldErrors.email}>
-          <Input id="email" type="email" autoComplete="email" value={form.email} onChange={set("email")} required />
-        </Field>
-        <Field id="password" label="Password" error={fieldErrors.password} hint={mode === "register" ? "At least 10 characters, with letters and a number or symbol." : undefined}>
-          <Input id="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={form.password} onChange={set("password")} maxLength={128} required />
-        </Field>
-        <Button type="submit" className="h-11 w-full" disabled={submit.isPending}>
-          {submit.isPending && <Loader2 className="animate-spin" />}
-          {mode === "login" ? "Sign in" : "Create account"}
-        </Button>
+          <Field id="password" label="Password" error={fieldErrors.password} hint={mode === "register" ? "At least 10 characters, with letters and a number or symbol." : undefined}>
+            <Input id="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={form.password} onChange={set("password")} maxLength={128} required />
+          </Field>
+          <Button type="submit" className="h-11 w-full" disabled={busy} aria-busy={signingIn}>
+            {signingIn && <Loader2 className="animate-spin" />}
+            {mode === "login" ? (signingIn ? "Signing in…" : "Sign in") : signingIn ? "Creating account…" : "Create account"}
+          </Button>
+        </fieldset>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
