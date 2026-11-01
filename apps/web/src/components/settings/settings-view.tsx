@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { BadgeCheck, Download, Eye, EyeOff, Laptop, Loader2, Monitor, Moon, ShieldCheck, Sun, TriangleAlert } from "lucide-react";
+import { BadgeCheck, Download, Eye, EyeOff, Laptop, Loader2, Monitor, Moon, ShieldCheck, Sun, TriangleAlert, Volume2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
@@ -12,11 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { keys, useAccountSettings } from "@/hooks/queries";
 import { api, ApiError, type AccountSettings, type User } from "@/lib/api";
 import { COURSE_ID } from "@/lib/course";
 import { hardNavigate } from "@/lib/navigation";
+import { playSound, setSoundEffectsEnabled, useSoundEffects } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 import { Field, SettingRow, SettingsCard } from "./settings-ui";
 
@@ -65,6 +67,7 @@ export function SettingsView() {
             <CourseModeCard user={data.user} />
             <DailyGoalCard user={data.user} />
             <AppearanceCard />
+            <SoundCard />
           </Section>
           <Section id="notifications" title="Notifications">
             <NotificationSettings user={data.user} />
@@ -277,6 +280,34 @@ function AppearanceCard() {
           </button>
         ))}
       </div>
+    </SettingsCard>
+  );
+}
+
+function SoundCard() {
+  const enabled = useSoundEffects();
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  return (
+    <SettingsCard title="Sound effects" description="Remembered on this device.">
+      <SettingRow
+        title={
+          <label htmlFor="sound-effects" className="flex items-center gap-2">
+            <Volume2 className="size-4 text-muted-foreground" /> Answer sounds
+          </label>
+        }
+        description="A short sound when an answer is right or wrong."
+        action={
+          <Switch
+            id="sound-effects"
+            checked={mounted && enabled}
+            onCheckedChange={(on) => {
+              setSoundEffectsEnabled(on);
+              // Play a sample, which also starts audio in this tab.
+              if (on) void playSound("correct");
+            }}
+          />
+        }
+      />
     </SettingsCard>
   );
 }

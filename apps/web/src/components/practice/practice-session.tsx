@@ -14,6 +14,7 @@ import { Visual } from "@/components/visuals/visual";
 import { useInvalidateLearner } from "@/hooks/queries";
 import { api, ApiError, type AttemptResponse, type PracticeItem, type PracticeMode, type Resolution, type RevealResponse, type SessionSummary, type StartPracticeResponse } from "@/lib/api";
 import { COURSE_ID, exerciseRef } from "@/lib/course";
+import { playSound, preloadSounds } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 import { SessionSummaryView } from "./session-summary";
 
@@ -70,6 +71,8 @@ export function PracticeSession({ exerciseId, mode, onExit }: { exerciseId: stri
     started.current = true;
     startMutate();
   }, [startMutate]);
+
+  useEffect(preloadSounds, []);
 
   const problem = useMemo(() => (item ? generateProblem(ref, item.seed, item.level) : null), [item, ref]);
 
@@ -209,6 +212,7 @@ function ProblemCard({
   const attempt = useMutation({
     mutationFn: (value: string) => api.post<AttemptResponse>(`/practice/${sessionId}/attempts`, { index: item.index, answer: value, timeMs: elapsed(), hintsUsed: hints }),
     onSuccess: (r) => {
+      void playSound(r.correct ? "correct" : "wrong");
       if (r.correct) return onResolved(true, r);
       setWrong(r.wrongAttempts);
       setFeedback(r.feedback ?? (r.wrongAttempts >= 2 ? "Not quite. Try a hint, or reveal the solution." : "Not quite — have another go."));
