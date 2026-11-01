@@ -22,6 +22,17 @@ export const usernameProblem = (u: string) =>
             : null;
 
 /**
+ * A valid starting point built from the email's local part plus a short random
+ * suffix, e.g. "jane.doe+maths@x.com" → "janedoe_k3x9". The suffix keeps it
+ * clear of reserved names and makes a clash unlikely.
+ */
+export const suggestUsername = (email: string) => {
+  const base = (email.split("@")[0] ?? "").split("+")[0]!.replace(/[^A-Za-z0-9_]/g, "").replace(/^[^A-Za-z]+/, "").toLowerCase().slice(0, 15);
+  const suffix = Array.from({ length: 4 }, () => "abcdefghijkmnpqrstuvwxyz23456789"[Math.floor(Math.random() * 32)]).join("");
+  return `${base.length >= 2 ? base : "learner"}_${suffix}`;
+};
+
+/**
  * Live availability while typing. `current` is the learner's own username, which
  * is always "available" to them. Uniqueness ignores letter case.
  */
