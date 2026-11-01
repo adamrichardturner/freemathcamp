@@ -16,7 +16,9 @@ import {
   ProgressRepository,
   SessionRepository,
   UserRepository,
+  VisitRepository,
   type DailyActivity,
+  type TimeUnit,
 } from "../../application/ports";
 import { Conflict, DatabaseError } from "../../domain/errors";
 import { Database } from "../db/database";
@@ -229,7 +231,7 @@ export const AccountRepositoryLive = repo(AccountRepository, (run) => ({
     ),
   exportData: (userId) =>
     run(async (db) => {
-      const [account, linkedAccounts, progress, sessions, results, attempts, events, notifications, pushDevices] = await Promise.all([
+      const [account, linkedAccounts, progress, sessions, results, attempts, events, notifications, pushDevices, visits] = await Promise.all([
         db.selectFrom("users").select(["id", "email", "display_name", "avatar_url", "email_verified_at", "daily_goal", "learning_mode", "onboarded_at", "timezone", "notify_reminders", "notify_progress", "notify_email_reminders", "created_at", "last_active_at"]).where("id", "=", userId).executeTakeFirst(),
         db.selectFrom("oauth_accounts").select(["provider", "email", "created_at"]).where("user_id", "=", userId).execute(),
         db.selectFrom("exercise_progress").selectAll().where("user_id", "=", userId).execute(),
@@ -244,6 +246,7 @@ export const AccountRepositoryLive = repo(AccountRepository, (run) => ({
           .orderBy("created_at")
           .execute(),
         db.selectFrom("push_subscriptions").select(["platform", "user_agent", "created_at", "last_success_at"]).where("user_id", "=", userId).execute(),
+        db.selectFrom("site_visits").select(["started_at", "last_seen_at", "active_ms"]).where("user_id", "=", userId).orderBy("started_at").execute(),
       ]);
       return {
         exportedAt: new Date().toISOString(),
@@ -256,6 +259,7 @@ export const AccountRepositoryLive = repo(AccountRepository, (run) => ({
         accountEvents: events,
         notifications,
         pushDevices,
+        siteVisits: visits,
       };
     }),
 }));
@@ -885,12 +889,16 @@ const adminUserSelect = (db: import("kysely").Kysely<DB>, masteredAt: number) =>
         .where("p.mastery", ">=", masteredAt)
         .where("p.sessions_completed", ">", 0)
         .as("mastered"),
+      eb.selectFrom("site_visits as v").select(sql<string>`coalesce(sum(v.active_ms), 0)::bigint`.as("n")).whereRef("v.user_id", "=", "u.id").as("timeMs"),
     ]);
 
-const toAdminUser = (r: Omit<AdminUserRow, "problems" | "mastered" | "lastActiveAt"> & { problems: number | null; mastered: number | null; lastActiveAt: Date | null }): AdminUserRow => ({
+const toAdminUser = (
+  r: Omit<AdminUserRow, "problems" | "mastered" | "lastActiveAt" | "timeMs"> & { problems: number | null; mastered: number | null; lastActiveAt: Date | null; timeMs: string | null },
+): AdminUserRow => ({
   ...r,
   problems: r.problems ?? 0,
   mastered: r.mastered ?? 0,
+  timeMs: Number(r.timeMs ?? 0),
 });
 
 export const AdminRepositoryLive = repo(AdminRepository, (run) => ({
@@ -1010,7 +1018,77 @@ export const AdminRepositoryLive = repo(AdminRepository, (run) => ({
     run((db) => db.deleteFrom("sessions").where("user_id", "=", userId).executeTakeFirst()).pipe(Effect.map((r) => Number(r.numDeletedRows))),
 }));
 
+// Units are interpolated as SQL, so only these literals ever reach the query.
+const UNITS: Record<TimeUnit, string> = { day: "day", week: "week", month: "month" };
+
+export const VisitRepositoryLive = repo(VisitRepository, (run) => ({
+  record: (userId, visitId, activeMs) =>
+    run((db) =>
+      db
+        .insertInto("site_visits")
+        .values({ id: visitId, user_id: userId, active_ms: activeMs, started_at: sql<Date>`now() - make_interval(secs => ${activeMs / 1000})` })
+        .onConflict((oc) =>
+          oc
+            .column("id")
+            .doUpdateSet({
+              // Never more than the wall-clock time since the last heartbeat, plus a little slack for timer jitter.
+              active_ms: sql<number>`site_visits.active_ms + least(${activeMs}::int, (extract(epoch from now() - site_visits.last_seen_at) * 1000)::int + 5000)`,
+              last_seen_at: sql<Date>`now()`,
+            })
+            .where("site_visits.user_id", "=", userId),
+        )
+        .execute(),
+    ).pipe(Effect.asVoid),
+  buckets: (userId, unit, periods) =>
+    run(async (db) => {
+      const u = sql.raw(`'${UNITS[unit]}'`);
+      const period = sql<string>`to_char(date_trunc(${u}, started_at at time zone 'UTC'), 'YYYY-MM-DD')`;
+      let q = db
+        .selectFrom("site_visits")
+        .select([
+          period.as("period"),
+          sql<string>`sum(active_ms)::bigint`.as("activeMs"),
+          sql<number>`count(*)::int`.as("visits"),
+          sql<number>`count(distinct user_id)::int`.as("users"),
+        ])
+        .where(sql<boolean>`started_at at time zone 'UTC' >= date_trunc(${u}, now() at time zone 'UTC') - make_interval(${sql.raw(`${UNITS[unit]}s`)} => ${periods - 1})`)
+        .where("active_ms", ">", 0);
+      if (userId) q = q.where("user_id", "=", userId);
+      const rows = await q.groupBy(sql`1`).orderBy(sql`1`).execute();
+      return rows.map((r) => ({ ...r, activeMs: Number(r.activeMs) }));
+    }),
+  totals: (userId) =>
+    run(async (db) => {
+      let q = db
+        .selectFrom("site_visits")
+        .select([
+          sql<string>`coalesce(sum(active_ms), 0)::bigint`.as("activeMs"),
+          sql<number>`count(*) filter (where active_ms > 0)::int`.as("visits"),
+          sql<number>`count(distinct user_id)::int`.as("users"),
+          sql<string>`coalesce(sum(active_ms) filter (where started_at >= date_trunc('day', now() at time zone 'UTC') at time zone 'UTC'), 0)::bigint`.as("todayMs"),
+          sql<string>`coalesce(sum(active_ms) filter (where started_at >= now() - interval '7 days'), 0)::bigint`.as("last7Ms"),
+          sql<string>`coalesce(sum(active_ms) filter (where started_at >= now() - interval '30 days'), 0)::bigint`.as("last30Ms"),
+          sql<number>`count(distinct user_id) filter (where started_at >= now() - interval '30 days' and active_ms > 0)::int`.as("users30"),
+        ]);
+      if (userId) q = q.where("user_id", "=", userId);
+      const r = await q.executeTakeFirstOrThrow();
+      return { ...r, activeMs: Number(r.activeMs), todayMs: Number(r.todayMs), last7Ms: Number(r.last7Ms), last30Ms: Number(r.last30Ms) };
+    }),
+  recent: (userId, limit) =>
+    run((db) =>
+      db
+        .selectFrom("site_visits")
+        .select(["id", "started_at as startedAt", "last_seen_at as lastSeenAt", "active_ms as activeMs"])
+        .where("user_id", "=", userId)
+        .where("active_ms", ">", 0)
+        .orderBy("started_at", "desc")
+        .limit(limit)
+        .execute(),
+    ),
+}));
+
 export const RepositoriesLive = Layer.mergeAll(
+  VisitRepositoryLive,
   AdminRepositoryLive,
   LeagueRepositoryLive,
   UserRepositoryLive,

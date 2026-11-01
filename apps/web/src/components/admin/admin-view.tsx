@@ -10,7 +10,7 @@ import { useSession } from "@/hooks/queries";
 import { api, ApiError, type AdminOverview } from "@/lib/api";
 import { COURSE_ID } from "@/lib/course";
 import { duration, pct } from "@/lib/format";
-import { AdminCharts, LessonTable } from "./admin-charts";
+import { AdminCharts, AdminTime, LessonTable } from "./admin-charts";
 import { AdminUsers } from "./admin-users";
 
 export const adminKeys = {
@@ -53,6 +53,7 @@ export function AdminView() {
         <Kpi icon={TrendingUp} label="First-try accuracy" value={pct(t.accuracy)} sub={`${t.cleanSolves.toLocaleString()} clean solves`} />
       </section>
 
+      <AdminTime time={overview.data.time} />
       <AdminCharts overview={overview.data} />
       <LessonTable lessons={overview.data.lessons} />
       <AdminUsers />

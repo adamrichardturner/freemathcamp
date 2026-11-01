@@ -70,6 +70,9 @@ export const StartPracticeBody = Schema.Struct({
 export const AttemptBody = Schema.Struct({ index: Index, answer: Schema.String.pipe(Schema.maxLength(200)), timeMs: TimeMs, hintsUsed: Hints });
 export const RevealBody = Schema.Struct({ index: Index, timeMs: TimeMs, hintsUsed: Hints });
 
+/** A heartbeat carries at most one flush interval of active time (the client sends every 30s). */
+export const ActivityBody = Schema.Struct({ visitId: Schema.UUID, activeMs: Schema.Int.pipe(Schema.between(1, 60_000)) });
+
 /* ---- Notifications ---- */
 
 export const NotificationListQuery = Schema.Struct({

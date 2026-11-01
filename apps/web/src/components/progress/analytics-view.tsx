@@ -1,11 +1,12 @@
 "use client";
 
-import { Activity, Brain, Clock, Eye, Flame, Lightbulb, Target, TrendingUp } from "lucide-react";
+import { Activity, Brain, Clock, Eye, Flame, Hourglass, Lightbulb, Target, TrendingUp } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ComposedChart, Line, PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, XAxis, YAxis, Area } from "recharts";
 import { ButtonLink } from "@/components/app/button-link";
 import { MasteryRing, statusMeta } from "@/components/app/status";
+import { TimeChart, UNIT_WINDOW, UnitToggle, useTimeUnit } from "@/components/app/time-chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +14,7 @@ import { VerifyEmailCard } from "@/components/app/verify-email-card";
 import { LessonLink } from "@/components/course/lesson-link";
 import { useAnalytics, useSession } from "@/hooks/queries";
 import type { Analytics } from "@/lib/api";
-import { duration, pct, relative } from "@/lib/format";
+import { duration, minutes, pct, relative } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const DAY = 86_400_000;
@@ -28,13 +29,16 @@ export function AnalyticsView() {
 
   if (t.problems === 0)
     return (
-      <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-20 text-center">
-        <span className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
-          <Activity className="size-7" />
-        </span>
-        <h1 className="font-display text-4xl">Your progress lives here</h1>
-        <p className="text-muted-foreground">Solve your first problems and this page fills with insights: accuracy trends, struggle areas, mastery by unit and your daily streak.</p>
-        <ButtonLink href="/learn">Go to today&apos;s plan</ButtonLink>
+      <div className="space-y-6">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-20 text-center">
+          <span className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+            <Activity className="size-7" />
+          </span>
+          <h1 className="font-display text-4xl">Your progress lives here</h1>
+          <p className="text-muted-foreground">Solve your first problems and this page fills with insights: accuracy trends, struggle areas, mastery by unit and your daily streak.</p>
+          <ButtonLink href="/learn">Go to today&apos;s plan</ButtonLink>
+        </div>
+        {data.time.totals.visits > 0 && <TimeOnSite time={data.time} />}
       </div>
     );
 
@@ -48,9 +52,11 @@ export function AnalyticsView() {
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi icon={Target} label="Problems solved" value={t.problems.toLocaleString()} sub={`${t.sessions} sessions`} />
         <Kpi icon={TrendingUp} label="First-try accuracy" value={pct(t.accuracy)} sub={`${t.cleanSolves} clean solves`} />
-        <Kpi icon={Clock} label="Time learning" value={duration(t.timeMs)} sub={`${t.hintsUsed} hints · ${t.reveals} reveals`} />
+        <Kpi icon={Clock} label="Time solving" value={duration(t.timeMs)} sub={`${t.hintsUsed} hints · ${t.reveals} reveals`} />
         <Kpi icon={Flame} label="Streak" value={`${t.streak.current} day${t.streak.current === 1 ? "" : "s"}`} sub={`Longest ${t.streak.longest}`} />
       </section>
+
+      <TimeOnSite time={data.time} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <Card>
@@ -135,6 +141,67 @@ export function AnalyticsView() {
               );
             })}
           </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/** How long the learner spends actively on FreeMathCamp, per day, week or month. */
+function TimeOnSite({ time }: { time: Analytics["time"] }) {
+  const [unit, setUnit] = useTimeUnit("day");
+  const t = time.totals;
+  const facts: [string, string][] = [
+    ["Today", minutes(t.todayMinutes)],
+    ["Last 7 days", minutes(t.last7Minutes)],
+    ["Last 30 days", minutes(t.last30Minutes)],
+    ["Average visit", minutes(t.avgVisitMinutes)],
+  ];
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <Card>
+        <CardHeader className="sm:grid-cols-[1fr_auto]">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Hourglass className="size-4 text-chart-2" /> Time on site
+            </CardTitle>
+            <CardDescription>Minutes actively learning, {UNIT_WINDOW[unit]}</CardDescription>
+          </div>
+          <UnitToggle unit={unit} onChange={setUnit} />
+        </CardHeader>
+        <CardContent>
+          <TimeChart series={time} unit={unit} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{minutes(t.minutes)}</CardTitle>
+          <CardDescription>
+            in total over {t.visits.toLocaleString()} {t.visits === 1 ? "visit" : "visits"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <dl className="grid grid-cols-2 gap-2">
+            {facts.map(([k, v]) => (
+              <div key={k} className="rounded-lg bg-muted/60 px-3 py-2">
+                <dd className="text-sm font-semibold tabular-nums">{v}</dd>
+                <dt className="text-[11px] text-muted-foreground">{k}</dt>
+              </div>
+            ))}
+          </dl>
+          {time.recentVisits.length > 0 && (
+            <div>
+              <h3 className="mb-1 text-xs font-medium text-muted-foreground">Recent visits</h3>
+              <ul className="divide-y text-sm">
+                {time.recentVisits.slice(0, 5).map((v) => (
+                  <li key={v.id} className="flex justify-between py-1.5">
+                    <span className="text-muted-foreground">{relative(v.startedAt)}</span>
+                    <span className="font-medium tabular-nums">{minutes(v.minutes)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

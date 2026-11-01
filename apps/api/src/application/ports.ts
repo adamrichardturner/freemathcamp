@@ -172,6 +172,51 @@ export interface AnalyticsRepositoryShape {
 }
 export class AnalyticsRepository extends Context.Tag("AnalyticsRepository")<AnalyticsRepository, AnalyticsRepositoryShape>() {}
 
+/* ---- Time on site ---- */
+
+export type TimeUnit = "day" | "week" | "month";
+
+export interface TimeBucket {
+  /** Start of the period, YYYY-MM-DD (UTC; weeks start on Monday). */
+  period: string;
+  activeMs: number;
+  visits: number;
+  users: number;
+}
+
+export interface VisitTotals {
+  activeMs: number;
+  visits: number;
+  users: number;
+  todayMs: number;
+  last7Ms: number;
+  last30Ms: number;
+  /** Learners with any time in the last 30 days. */
+  users30: number;
+}
+
+export interface VisitRow {
+  id: string;
+  startedAt: Date;
+  lastSeenAt: Date;
+  activeMs: number;
+}
+
+export interface VisitRepositoryShape {
+  /**
+   * Adds active time to a visit, creating it on the first heartbeat. The time
+   * added is capped by how long it's been since the last heartbeat, so replayed
+   * or inflated heartbeats can't add more time than really passed. A visit id
+   * owned by another user is left alone.
+   */
+  record(userId: string, visitId: string, activeMs: number): Db<void>;
+  /** The last `periods` periods (including the current one), only those with time in them. Everyone when userId is null. */
+  buckets(userId: string | null, unit: TimeUnit, periods: number): Db<TimeBucket[]>;
+  totals(userId: string | null): Db<VisitTotals>;
+  recent(userId: string, limit: number): Db<VisitRow[]>;
+}
+export class VisitRepository extends Context.Tag("VisitRepository")<VisitRepository, VisitRepositoryShape>() {}
+
 /* ---- Leagues ---- */
 
 export interface LeagueMembership {
@@ -234,6 +279,8 @@ export interface AdminUserRow {
   lastActiveAt: Date | null;
   problems: number;
   mastered: number;
+  /** Active time on the site, all time. */
+  timeMs: number;
 }
 
 export interface AdminOverviewRows {

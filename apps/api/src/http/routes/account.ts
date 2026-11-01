@@ -14,9 +14,10 @@ import {
   updatePreferences,
 } from "../../application/account";
 import { setLeagueOptIn } from "../../application/leagues";
+import { recordVisit } from "../../application/visits";
 import { clearSessionCookie, currentUser, requireUser } from "../middleware/auth";
 import { handle, type AppRuntime } from "../runtime";
-import { ChangePasswordBody, DeleteAccountBody, decode, LeagueOptInBody, PreferencesBody, ProfileBody, ResetProgressBody, UsernameBody } from "../validation";
+import { ActivityBody, ChangePasswordBody, DeleteAccountBody, decode, LeagueOptInBody, PreferencesBody, ProfileBody, ResetProgressBody, UsernameBody } from "../validation";
 
 /** /api/me — the signed-in learner's own account. Works before email verification so people can fix or delete it. */
 export const accountRoutes = (runtime: AppRuntime, opts: { secure: boolean }) => {
@@ -73,6 +74,18 @@ export const accountRoutes = (runtime: AppRuntime, opts: { secure: boolean }) =>
       Effect.gen(function* () {
         const prefs = yield* decode(PreferencesBody, req.body);
         return { user: yield* updatePreferences(yield* currentUser(req), prefs) };
+      }),
+    ),
+  );
+
+  /** Heartbeat from the web app with the time spent actively on the site since the last one. */
+  router.post(
+    "/activity",
+    h((req) =>
+      Effect.gen(function* () {
+        const { visitId, activeMs } = yield* decode(ActivityBody, req.body);
+        yield* recordVisit((yield* currentUser(req)).id, visitId, activeMs);
+        return { ok: true };
       }),
     ),
   );

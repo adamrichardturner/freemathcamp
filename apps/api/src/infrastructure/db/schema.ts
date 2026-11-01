@@ -206,6 +206,15 @@ export interface LeagueMembersTable {
   final_rank: number | null;
 }
 
+/** One stretch of use of the site; active_ms only counts time the page was visible and in use. */
+export interface SiteVisitsTable {
+  id: string;
+  user_id: string;
+  started_at: Generated<Date>;
+  last_seen_at: Generated<Date>;
+  active_ms: Generated<number>;
+}
+
 export interface DB {
   users: UsersTable;
   oauth_accounts: OAuthAccountsTable;
@@ -221,6 +230,7 @@ export interface DB {
   job_leases: JobLeasesTable;
   league_cohorts: LeagueCohortsTable;
   league_members: LeagueMembersTable;
+  site_visits: SiteVisitsTable;
 }
 
 export type User = Selectable<UsersTable>;

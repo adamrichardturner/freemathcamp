@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CalendarCheck, Flame, GraduationCap, Sparkles, Target } from "lucide-react";
+import { ArrowRight, CalendarCheck, Flame, GraduationCap, Hourglass, Sparkles, Target } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useState } from "react";
@@ -15,7 +15,7 @@ import { LeagueCard } from "@/components/leagues/league-card";
 import { useCourseProgress, useDashboard, useSession } from "@/hooks/queries";
 import type { QueueKind, Recommendation } from "@/lib/api";
 import { course, exerciseRef } from "@/lib/course";
-import { greeting } from "@/lib/format";
+import { greeting, minutes, shortMinutes } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function DashboardView() {
@@ -105,7 +105,32 @@ export function DashboardView() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <WeekBars week={stats.week} />
+              <WeekBars days={stats.week.map((d) => ({ day: d.day, value: d.problems }))} />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Hourglass className="size-4 text-chart-2" /> Time on site
+                </span>
+                <Link href="/progress" className="text-xs font-medium text-primary hover:underline">
+                  See trends
+                </Link>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-6">
+                <div>
+                  <div className="text-2xl font-semibold tabular-nums">{minutes(stats.time.todayMinutes)}</div>
+                  <div className="text-xs text-muted-foreground">today</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-semibold tabular-nums">{minutes(stats.time.weekMinutes)}</div>
+                  <div className="text-xs text-muted-foreground">last 7 days</div>
+                </div>
+              </div>
+              <WeekBars days={stats.time.week.map((d) => ({ day: d.day, value: d.minutes }))} format={shortMinutes} barClassName="from-chart-2 to-chart-1" min={10} />
             </CardContent>
           </Card>
           <Card>
@@ -264,23 +289,24 @@ function QueueList({ items, kind }: { items: Recommendation[]; kind: QueueKind }
   );
 }
 
-function WeekBars({ week }: { week: { day: string; problems: number }[] }) {
+/** The last 7 days as small bars, today last. `min` keeps a quiet week from looking full. */
+function WeekBars({ days: values, format = String, barClassName = "from-primary to-chart-5", min = 5 }: { days: { day: string; value: number }[]; format?: (v: number) => string; barClassName?: string; min?: number }) {
   const [now] = useState(() => Date.now());
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now - (6 - i) * 86_400_000);
     const key = d.toISOString().slice(0, 10);
-    return { key, label: d.toLocaleDateString("en", { weekday: "narrow" }), problems: week.find((w) => w.day === key)?.problems ?? 0 };
+    return { key, label: d.toLocaleDateString("en", { weekday: "narrow" }), value: values.find((w) => w.day === key)?.value ?? 0 };
   });
-  const max = Math.max(5, ...days.map((d) => d.problems));
+  const max = Math.max(min, ...days.map((d) => d.value));
   return (
     <div className="flex h-32 items-end gap-2">
       {days.map((d, i) => (
         <div key={d.key} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-          <span className="text-[10px] text-muted-foreground tabular-nums">{d.problems || ""}</span>
+          <span className="text-[10px] whitespace-nowrap text-muted-foreground tabular-nums">{d.value ? format(d.value) : ""}</span>
           <motion.div
-            className={cn("w-full rounded-md", d.problems ? "bg-gradient-to-t from-primary to-chart-5" : "bg-muted")}
+            className={cn("w-full rounded-md", d.value ? cn("bg-gradient-to-t", barClassName) : "bg-muted")}
             initial={{ height: 4 }}
-            animate={{ height: `${Math.max(4, (d.problems / max) * 80)}%` }}
+            animate={{ height: `${Math.max(4, (d.value / max) * 80)}%` }}
             transition={{ delay: i * 0.05 }}
           />
           <span className={cn("text-[11px] text-muted-foreground", i === 6 && "font-semibold text-foreground")}>{d.label}</span>
