@@ -18,7 +18,6 @@ import { useNotificationCounts } from "@/hooks/notifications";
 import { useLessonAccess, useLogout, useSession } from "@/hooks/queries";
 import type { User } from "@/lib/api";
 import { course, exerciseRef, lessonHref } from "@/lib/course";
-import { SITE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 interface MenuLink {
@@ -313,12 +312,14 @@ export function MobileMenu() {
         )}
       >
         <SheetHeader className="gap-3 border-b px-5 pt-5 pb-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
               <LogoMark />
-              <SheetTitle className="font-display text-2xl leading-tight font-normal tracking-tight text-balance text-foreground">{SITE.alternateName}</SheetTitle>
+              <SheetTitle className="text-[1.05rem] font-semibold tracking-tight">
+                FreeMath<span className="text-primary">Camp</span>
+              </SheetTitle>
             </div>
-            <SheetClose aria-label="Close menu" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "-mt-1 -mr-1 shrink-0")}>
+            <SheetClose aria-label="Close menu" className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "-mr-1 shrink-0")}>
               <X />
             </SheetClose>
           </div>
