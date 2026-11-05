@@ -10,6 +10,12 @@ import { api, type SignedIn } from "./api";
  * Each returns null when the learner cancels.
  */
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+/**
+ * The web app's OAuth client (the API's GOOGLE_CLIENT_ID). Naming it as the
+ * server client makes Google issue the ID token to it, so the API verifies
+ * app sign-ins with the client it already has.
+ */
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 export const googleConfigured = !!GOOGLE_IOS_CLIENT_ID;
 
 let googleReady = false;
@@ -17,7 +23,7 @@ let googleReady = false;
 export async function signInWithGoogle(): Promise<SignedIn | null> {
   if (!GOOGLE_IOS_CLIENT_ID) throw new Error("Google sign-in isn't set up in this build.");
   if (!googleReady) {
-    GoogleSignin.configure({ iosClientId: GOOGLE_IOS_CLIENT_ID, scopes: ["email", "profile"] });
+    GoogleSignin.configure({ iosClientId: GOOGLE_IOS_CLIENT_ID, ...(GOOGLE_WEB_CLIENT_ID ? { webClientId: GOOGLE_WEB_CLIENT_ID } : {}), scopes: ["email", "profile"] });
     googleReady = true;
   }
   try {

@@ -73,18 +73,19 @@ In [Certificates, Identifiers & Profiles](https://developer.apple.com/account/re
 
 ### 2. Google sign-in
 
-In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), in the same project as the web client:
+The app reuses the web app's OAuth client for the server side: it names that client (`GOOGLE_CLIENT_ID`, already set on the API) as its server client, so Google issues the app's ID tokens to it and the API verifies them with no new setting. Its id is public, and is already in `eas.json` as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
 
-1. **Create credentials → OAuth client ID → iOS**, bundle id `com.freemathcamp.app`.
-2. Put its client id (`…apps.googleusercontent.com`) in two places:
-   - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` for the app (`apps/mobile/.env`, and as an EAS environment variable for cloud builds: `npx eas-cli@latest env:create --name EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID --value … --environment production --visibility plaintext`).
-   - `GOOGLE_IOS_CLIENT_ID` for the API (`/var/www/freemathcamp/.env` on the VPS), then redeploy the API.
+Google's iOS SDK still needs an **iOS** OAuth client to run the sign-in on the phone; a web client can't stand in for it. In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), in the same project as the web client:
 
-The app config derives Google's callback URL scheme from the client id, so rebuild the app after setting it.
+1. **Create credentials → OAuth client ID → iOS**, bundle id `com.freemathcamp.app` (no secret is issued, or needed).
+2. Put its client id (`…apps.googleusercontent.com`) in `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`: in `apps/mobile/.env` for local builds, and as an EAS environment variable for cloud builds (`npx eas-cli@latest env:create --name EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID --value … --environment production --visibility plaintext`).
+3. Rebuild the app: the config derives Google's callback URL scheme from the iOS client id.
+
+The OAuth consent screen is shared with the web client, so there's nothing else to configure. `GOOGLE_IOS_CLIENT_ID` on the API is optional, for a build that signs in without naming the web client.
 
 ### 3. The API
 
-Deploy this branch's API changes first: bearer sessions for the app, and the Apple and Google ID-token endpoints. `APPLE_BUNDLE_ID` defaults to `com.freemathcamp.app`. Nothing else changes for the web app.
+Deploy this branch's API changes first: bearer sessions for the app, and the Apple and Google ID-token endpoints. `APPLE_BUNDLE_ID` defaults to `com.freemathcamp.app` and Google reuses `GOOGLE_CLIENT_ID`, so no new settings are needed. Nothing else changes for the web app.
 
 ### 4. Expo / EAS
 

@@ -15,7 +15,8 @@
       "distribution": "internal",
       "env": {
         "APS_ENVIRONMENT": "development",
-        "EXPO_PUBLIC_API_URL": "https://api.freemathcamp.app"
+        "EXPO_PUBLIC_API_URL": "https://api.freemathcamp.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "112241041582-qgck0fbhs027ji62eag3g9f47k5ogdu7.apps.googleusercontent.com"
       }
     },
     "simulator": {
@@ -28,14 +29,16 @@
       "extends": "base",
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.freemathcamp.app"
+        "EXPO_PUBLIC_API_URL": "https://api.freemathcamp.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "112241041582-qgck0fbhs027ji62eag3g9f47k5ogdu7.apps.googleusercontent.com"
       }
     },
     "production": {
       "extends": "base",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.freemathcamp.app"
+        "EXPO_PUBLIC_API_URL": "https://api.freemathcamp.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "112241041582-qgck0fbhs027ji62eag3g9f47k5ogdu7.apps.googleusercontent.com"
       }
     }
   },

@@ -8,7 +8,7 @@ export interface AppConfigShape {
   readonly sessionTtlDays: number;
   /** Google sign-in is enabled only when both are set. */
   readonly google: Option.Option<{ clientId: string; clientSecret: Redacted.Redacted<string> }>;
-  /** Google sign-in in the iOS app: the iOS OAuth client its ID tokens are issued to. */
+  /** Google sign-in in the iOS app, for tokens issued to the iOS client itself. The app normally names the web client, so this is optional. */
   readonly googleIosClientId: Option.Option<string>;
   /** Sign in with Apple in the iOS app: Apple's ID tokens name the app's bundle id as their audience. */
   readonly appleBundleId: string;

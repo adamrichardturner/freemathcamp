@@ -22,7 +22,7 @@ export interface ProviderIdentity {
 const GOOGLE_KEYS = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
 const APPLE_KEYS = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
 
-const verify = (token: string, keys: typeof GOOGLE_KEYS, issuer: string[], audience: string, provider: string) =>
+const verify = (token: string, keys: typeof GOOGLE_KEYS, issuer: string[], audience: string | string[], provider: string) =>
   Effect.tryPromise({
     try: () => jwtVerify(token, keys, { issuer, audience, algorithms: ["RS256"] }).then((r) => r.payload),
     catch: () => new Unauthorized({ message: `${provider} sign-in failed. Please try again.` }),
@@ -34,17 +34,28 @@ const isTrue = (v: unknown) => v === true || v === "true";
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 const sameString = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
-export const isGoogleNativeEnabled = Effect.map(AppConfig, (c) => Option.isSome(c.googleIosClientId));
+/**
+ * The OAuth clients a Google ID token from the app may be issued to. The app
+ * names the web client as its server client, so its tokens carry the web
+ * client id (GOOGLE_CLIENT_ID) as their audience; GOOGLE_IOS_CLIENT_ID is
+ * only needed if a build signs in without it.
+ */
+const googleAudiences = Effect.map(AppConfig, (c) => [
+  ...Option.toArray(Option.map(c.google, (g) => g.clientId)),
+  ...Option.toArray(c.googleIosClientId),
+]);
+
+export const isGoogleNativeEnabled = Effect.map(googleAudiences, (a) => a.length > 0);
 
 export const verifyGoogleIdToken = (idToken: string) =>
   Effect.gen(function* () {
-    const { googleIosClientId } = yield* AppConfig;
-    if (Option.isNone(googleIosClientId)) return yield* Effect.fail(new ValidationError({ message: "Google sign-in is not configured." }));
+    const audiences = yield* googleAudiences;
+    if (audiences.length === 0) return yield* Effect.fail(new ValidationError({ message: "Google sign-in is not configured." }));
     const claims: JWTPayload & { email?: string; email_verified?: unknown; name?: string; picture?: string } = yield* verify(
       idToken,
       GOOGLE_KEYS,
       ["https://accounts.google.com", "accounts.google.com"],
-      googleIosClientId.value,
+      audiences,
       "Google",
     );
     if (!claims.sub || !claims.email || !isTrue(claims.email_verified))
