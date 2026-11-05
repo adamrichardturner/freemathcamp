@@ -1,8 +1,18 @@
 import { example, math, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
 import { paren, simplifyRoot, texFrac, texRoot } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { chain, type Step } from "../../../core/working";
 
 const r = String.raw;
+
+/** b^n as repeated multiplication, multiplied out from the left one factor at a time. */
+const powerSteps = (b: number, n: number): Step => {
+  const rows = [Array(n).fill(paren(b)).join(r`\times`)];
+  for (let k = 2; k < n; k++) rows.push([paren(b ** k), ...Array(n - k).fill(paren(b))].join(r`\times`));
+  rows.push(`${b ** n}`);
+  const sign = b < 0 ? ` There ${n === 1 ? "is" : "are"} ${n} negative factor${n > 1 ? "s" : ""}: ${n % 2 ? "an odd number, so the answer is negative" : "pairs of negatives make positives, so the answer is positive"}.` : "";
+  return step(`Multiply from the left, one factor at a time.${sign}`, chain(`${paren(b)}^{${n}}`, ...rows));
+};
 
 export const exponents: Unit = {
   id: "exponents",
@@ -34,7 +44,11 @@ export const exponents: Unit = {
             tex: `-${base}^${2} + (-${base})^2`,
             answer: numberAnswer(0),
             hints: [`$-${base}^2$ means $-(${base}^2)$.`, `$(-${base})^2$ is positive.`],
-            solution: [step("Evaluate each part.", r`-${base * base} + ${base * base} = 0`)],
+            solution: [
+              step(`In $-${base}^2$ the power belongs only to the $${base}$: square it first, then make it negative.`, r`-${base}^2 = -(${base}\times${base}) = -${base * base}`),
+              step(`In $(-${base})^2$ the brackets square the whole negative number, and a negative times a negative is positive.`, r`(-${base})^2 = (-${base})\times(-${base}) = ${base * base}`),
+              step("Add the two parts.", r`-${base * base} + ${base * base} = 0`),
+            ],
           };
         }
         return {
@@ -43,7 +57,7 @@ export const exponents: Unit = {
           solutionVisual: level === 1 && n <= 3 ? { type: "exponentBlocks", base: b, exponent: n } : undefined,
           answer: numberAnswer(b ** n),
           hints: [`Multiply ${b} by itself ${n} times.`, b < 0 ? "An even number of negatives makes a positive." : "Go step by step."],
-          solution: [step("Repeated multiplication.", r`${Array(n).fill(paren(b)).join(r`\times`)} = ${b ** n}`)],
+          solution: [step(`The exponent $${n}$ says how many times to use $${b}$ as a factor: write $${b}$ down $${n}$ times and multiply.`), powerSteps(b, n)],
         };
       },
     },
@@ -65,20 +79,33 @@ export const exponents: Unit = {
       ],
       generate: (rng, level) => {
         const m = rng.int(2, 9), n = rng.int(2, 9), p = rng.int(2, 4);
-        const forms: [string, number, string][] = [
-          [r`x^{${m}} \cdot x^{${n}} = x^{?}`, m + n, "Add exponents when multiplying."],
-          [r`\frac{x^{${m + n}}}{x^{${n}}} = x^{?}`, m, "Subtract exponents when dividing."],
-          [r`(x^{${m}})^{${p}} = x^{?}`, m * p, "Multiply exponents for a power of a power."],
+        const product = (a: number, b: number) =>
+          step(`Multiplying powers of the same base: **add** the exponents (you have $${a}$ $x$'s, then $${b}$ more).`, r`x^{${a}} \cdot x^{${b}} = x^{${a} + ${b}} = x^{${a + b}}`);
+        const quotient = (a: number, b: number) =>
+          step(`Dividing powers of the same base: **subtract** the exponents ($${b}$ of the $x$'s on top cancel with the bottom).`, r`\frac{x^{${a}}}{x^{${b}}} = x^{${a} - ${b}} = x^{${a - b}}`);
+        const power = (a: number, b: number) =>
+          step(`A power of a power: **multiply** the exponents ($${b}$ copies of $x^{${a}}$).`, r`(x^{${a}})^{${b}} = x^{${a}\times${b}} = x^{${a * b}}`);
+        const forms: [string, number, string, Step[]][] = [
+          [r`x^{${m}} \cdot x^{${n}} = x^{?}`, m + n, "Add exponents when multiplying.", [product(m, n)]],
+          [r`\frac{x^{${m + n}}}{x^{${n}}} = x^{?}`, m, "Subtract exponents when dividing.", [quotient(m + n, n)]],
+          [r`(x^{${m}})^{${p}} = x^{?}`, m * p, "Multiply exponents for a power of a power.", [power(m, p)]],
         ];
-        if (level >= 2) forms.push([r`\frac{(x^{${m}})^{${p}} \cdot x^{${n}}}{x^{${m}}} = x^{?}`, m * p + n - m, "Power law, then product, then quotient."]);
-        if (level === 3) forms.push([r`\frac{x^{${m}}\cdot (x^{2})^{${n}}}{(x^{${p}})^{2}} = x^{?}`, m + 2 * n - 2 * p, "Handle the powers of powers first."]);
-        const [tex, ans, hint] = rng.pick(forms);
+        if (level >= 2)
+          forms.push([r`\frac{(x^{${m}})^{${p}} \cdot x^{${n}}}{x^{${m}}} = x^{?}`, m * p + n - m, "Power law, then product, then quotient.", [power(m, p), product(m * p, n), quotient(m * p + n, m)]]);
+        if (level === 3)
+          forms.push([
+            r`\frac{x^{${m}}\cdot (x^{2})^{${n}}}{(x^{${p}})^{2}} = x^{?}`,
+            m + 2 * n - 2 * p,
+            "Handle the powers of powers first.",
+            [power(2, n), power(p, 2), product(m, 2 * n), quotient(m + 2 * n, 2 * p)],
+          ]);
+        const [tex, ans, hint, work] = rng.pick(forms);
         return {
           prompt: "Find the missing exponent.",
           tex,
           answer: numberAnswer(ans),
           hints: [hint],
-          solution: [step(hint, `${ans}`)],
+          solution: [...work, step(`So the missing exponent is $${ans}$.`)],
         };
       },
     },
@@ -100,7 +127,19 @@ export const exponents: Unit = {
       generate: (rng, level) => {
         const b = rng.int(2, level === 1 ? 5 : 10), n = rng.int(1, 3);
         if (level === 1 && rng.chance(0.4))
-          return { prompt: "Evaluate.", tex: `${rng.int(2, 999)}^0`, answer: numberAnswer(1), hints: ["Any non-zero number to the power 0 is 1."], solution: [step("$a^0 = 1$.")] };
+        {
+          const z = rng.int(2, 999);
+          return {
+            prompt: "Evaluate.",
+            tex: `${z}^0`,
+            answer: numberAnswer(1),
+            hints: ["Any non-zero number to the power 0 is 1."],
+            solution: [
+              step(`See why with the division law: dividing $${z}$ by itself subtracts the exponents and leaves the power $0$.`, r`\frac{${z}^1}{${z}^1} = ${z}^{1 - 1} = ${z}^0`),
+              step("But anything (except 0) divided by itself is $1$.", `${z}^0 = 1`),
+            ],
+          };
+        }
         if (level === 3) {
           const p = rng.int(1, 3);
           return {
@@ -108,7 +147,10 @@ export const exponents: Unit = {
             tex: r`\left(\frac{1}{${b}}\right)^{-${p}}`,
             answer: numberAnswer(b ** p),
             hints: ["A negative exponent flips the fraction."],
-            solution: [step("Flip, then raise.", r`${b}^{${p}} = ${b ** p}`)],
+            solution: [
+              step("A negative exponent means take the reciprocal. The reciprocal of a fraction is the fraction flipped.", r`\left(\frac{1}{${b}}\right)^{-${p}} = \left(\frac{${b}}{1}\right)^{${p}} = ${b}^{${p}}`),
+              p === 1 ? step("A power of $1$ leaves the number unchanged.", `${b}^{1} = ${b}`) : powerSteps(b, p),
+            ],
           };
         }
         return {
@@ -117,7 +159,13 @@ export const exponents: Unit = {
           answer: numberAnswer(1 / b ** n),
           inputHint: "e.g. 1/9",
           hints: ["Write it as 1 over the positive power."],
-          solution: [step("Take the reciprocal.", r`\frac{1}{${b}^{${n}}} = ${texFrac(1, b ** n)}`)],
+          solution: [
+            step("A negative exponent means one over the positive power.", r`${b}^{-${n}} = \frac{1}{${b}^{${n}}}`),
+            step(
+              n === 1 ? "The power of $1$ is just the number itself." : `Work out the power: $${b}^{${n}} = ${Array(n).fill(b).join("\\times")} = ${b ** n}$.`,
+              r`\frac{1}{${b}^{${n}}} = ${texFrac(1, b ** n)}`,
+            ),
+          ],
         };
       },
     },
@@ -143,7 +191,11 @@ export const exponents: Unit = {
             prompt: `$\\sqrt{${n}}$ lies between which two consecutive whole numbers? Enter the **smaller** one.`,
             answer: numberAnswer(s),
             hints: ["Find the perfect squares on either side."],
-            solution: [step(`$${s}^2 = ${s * s}$ and $${s + 1}^2 = ${(s + 1) ** 2}$.`, r`${s} < \sqrt{${n}} < ${s + 1}`)],
+            solution: [
+              step(`Find the perfect squares either side of $${n}$.`, r`${s}^2 = ${s * s}, \quad ${s + 1}^2 = ${(s + 1) ** 2}`),
+              step(`$${n}$ is between them, so its square root is between their roots.`, r`${s * s} < ${n} < ${(s + 1) ** 2} \;\Rightarrow\; ${s} < \sqrt{${n}} < ${s + 1}`),
+              step(`The smaller whole number is $${s}$.`),
+            ],
           };
         }
         return {
@@ -151,7 +203,10 @@ export const exponents: Unit = {
           tex: r`\sqrt{${s * s}}`,
           answer: numberAnswer(s),
           hints: [`Which number times itself gives ${s * s}?`],
-          solution: [step(`$${s}\\times${s} = ${s * s}$.`)],
+          solution: [
+            step(`$\\sqrt{${s * s}}$ asks: which non-negative number, times itself, makes $${s * s}$?`),
+            step(`$${s}\\times${s} = ${s * s}$, so the answer is $${s}$.`, r`\sqrt{${s * s}} = ${s}`),
+          ],
         };
       },
     },
@@ -184,7 +239,11 @@ export const exponents: Unit = {
             answer: numberAnswer(total * Math.sqrt(inside), { tolerance: 1e-6 }),
             inputHint: "e.g. 5sqrt(3)",
             hints: ["Simplify each root separately.", "Then add like radicals."],
-            solution: [step("Simplify each.", r`${texRoot(out, inside)} + ${texRoot(o2, inside)} = ${texRoot(total, inside)}`)],
+            solution: [
+              step(`Simplify the first root: $${n} = ${out * out}\\times${inside}$ and $${out * out}$ is a perfect square.`, r`\sqrt{${n}} = \sqrt{${out * out}}\cdot\sqrt{${inside}} = ${texRoot(out, inside)}`),
+              step(`Simplify the second: $${o2 * o2 * inside} = ${o2 * o2}\\times${inside}$.`, r`\sqrt{${o2 * o2 * inside}} = \sqrt{${o2 * o2}}\cdot\sqrt{${inside}} = ${texRoot(o2, inside)}`),
+              step(`Both are now multiples of $\\sqrt{${inside}}$ (like terms), so add the numbers in front.`, r`${texRoot(out, inside)} + ${texRoot(o2, inside)} = ${texRoot(total, inside)}`),
+            ],
           };
         }
         const [wo, wi] = simplifyRoot(out * inside);
@@ -192,7 +251,11 @@ export const exponents: Unit = {
           prompt: `Simplify $\\sqrt{${n}}$.`,
           ...multipleChoice(rng, correct, [`$${texRoot(inside, out * out)}$`, `$${texRoot(out * out, inside)}$`, `$${texRoot(wo, wi * out)}$`, `$${texRoot(out + 1, inside)}$`]),
           hints: [`Look for a perfect square that divides ${n}.`, `$${out * out}$ divides it.`],
-          solution: [step("Split off the perfect square.", r`\sqrt{${out * out}\cdot${inside}} = ${texRoot(out, inside)}`)],
+          solution: [
+            step(`Find the largest perfect square that divides $${n}$. Trying $4, 9, 16, 25, \\dots$ gives $${out * out}$.`, r`${n} = ${out * out}\times${inside}`),
+            step("Split the root into two roots.", r`\sqrt{${n}} = \sqrt{${out * out}}\cdot\sqrt{${inside}}`),
+            step(`$\\sqrt{${out * out}} = ${out}$, and $${inside}$ has no square factor left.`, r`\sqrt{${n}} = ${texRoot(out, inside)}`),
+          ],
         };
       },
     },
@@ -215,6 +278,7 @@ export const exponents: Unit = {
         if (level === 3) {
           const b = rng.int(11, 49) / 10, m = rng.int(-5, 6);
           let prod = Math.round(a * b * 1000) / 1000, e = n + m;
+          const raw = prod;
           if (prod >= 10) {
             prod = Math.round(prod * 100) / 1000;
             e++;
@@ -223,7 +287,13 @@ export const exponents: Unit = {
             prompt: `Compute $(${a}\\times10^{${n}})(${b}\\times10^{${m}})$ in scientific notation. What is the **exponent** of 10?`,
             answer: numberAnswer(e),
             hints: ["Add the exponents.", "If the number part is 10 or more, shift it and add 1 to the exponent."],
-            solution: [step("Multiply and normalise.", r`${prod}\times10^{${e}}`)],
+            solution: [
+              step("Multiply the number parts and the powers of 10 separately. Multiplying powers adds the exponents.", r`(${a}\times${b})\times10^{${n} + ${paren(m)}} = ${raw}\times10^{${n + m}}`),
+              ...(raw >= 10
+                ? [step(`$${raw}$ isn't between $1$ and $10$. Write it as $${prod}\\times10$, which adds $1$ to the exponent.`, r`${raw}\times10^{${n + m}} = ${prod}\times10^{${e}}`)]
+                : [step(`$${raw}$ is already between $1$ and $10$, so this is in scientific notation.`, r`${prod}\times10^{${e}}`)]),
+              step(`The exponent of 10 is $${e}$.`),
+            ],
           };
         }
         const value = a * 10 ** n;
@@ -232,7 +302,18 @@ export const exponents: Unit = {
           prompt: `Write $${display}$ in scientific notation $a \\times 10^n$. What is $n$?`,
           answer: numberAnswer(n),
           hints: ["Move the decimal point until you have a number between 1 and 10.", "Count the moves: left → positive n, right → negative n."],
-          solution: [step("Count the decimal shifts.", r`${display} = ${a}\times10^{${n}}`)],
+          solution: [
+            step(
+              `${n > 0 ? `In a whole number the decimal point sits at the end: $${display}.$ ` : ""}Move the point so there's exactly one non-zero digit in front of it. That gives $${a}$, a number between $1$ and $10$.`,
+            ),
+            step(
+              n > 0
+                ? `The point moved $${n}$ place${n > 1 ? "s" : ""} to the **left**, so multiply by $10$ that many times: $10^{${n}}$.`
+                : `The point moved $${-n}$ place${n < -1 ? "s" : ""} to the **right**, so the power of 10 is negative: $10^{${n}}$.`,
+              r`${display} = ${a}\times10^{${n}}`,
+            ),
+            step(`So $n = ${n}$.`),
+          ],
         };
       },
     },
@@ -263,7 +344,15 @@ export const exponents: Unit = {
           answer: numberAnswer(result),
           inputHint: neg ? "e.g. 1/4" : undefined,
           hints: [`The denominator ${root} means take the ${root === 2 ? "square" : root === 3 ? "cube" : "fourth"} root.`, m > 1 ? `Then raise to the power ${m}.` : "That's it!"],
-          solution: [step("Root first.", r`\sqrt[${root}]{${base ** root}} = ${base}`), step("Then power.", r`${base}^{${neg ? "-" : ""}${m}} = ${neg ? texFrac(1, base ** m) : base ** m}`)],
+          solution: [
+            step(
+              `The denominator of the exponent, $${root}$, means take the ${root === 2 ? "square" : root === 3 ? "cube" : "fourth"} root. $${Array(root).fill(base).join("\\times")} = ${base ** root}$, so:`,
+              r`\sqrt[${root}]{${base ** root}} = ${base}`,
+            ),
+            ...(m > 1 ? [step(`The numerator, $${m}$, means raise that to the power $${m}$.`, r`${base}^{${m}} = ${base ** m}`)] : []),
+            ...(neg ? [step("The minus sign in the exponent means take the reciprocal.", r`${base ** m} \to \frac{1}{${base ** m}}`)] : []),
+            step("Putting it together:", r`${base ** root}^{${neg ? "-" : ""}${m === 1 ? `1/${root}` : `${m}/${root}`}} = ${neg ? texFrac(1, base ** m) : base ** m}`),
+          ],
         };
       },
     },

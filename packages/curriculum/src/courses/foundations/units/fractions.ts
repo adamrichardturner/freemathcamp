@@ -2,6 +2,7 @@ import { example, key, math, multipleChoice, numberAnswer, rule, step, text, tip
 import { gcd, lcm, reduce, texFrac } from "../../../core/math";
 import type { Rng } from "../../../core/rng";
 import type { Level, Unit } from "../../../core/types";
+import { fracTex, simplifyStep } from "../../../core/working";
 
 const r = String.raw;
 
@@ -11,6 +12,9 @@ const properFraction = (rng: Rng, level: Level): [number, number] => {
 };
 
 const fracHint = "Type a fraction like 3/4";
+
+/** "half", "third", … the name of one part when a whole is split into d. */
+const ordinalPart = (d: number) => ({ 2: "half", 3: "third", 4: "quarter" })[d] ?? (d === 5 ? "fifth" : d === 8 ? "eighth" : d === 9 ? "ninth" : d === 12 ? "twelfth" : `${d}th`);
 
 export const fractions: Unit = {
   id: "fractions",
@@ -41,7 +45,11 @@ export const fractions: Unit = {
             answer: numberAnswer(n / d),
             inputHint: fracHint,
             hints: ["Count the total number of equal slices — that's the denominator.", "Count the shaded slices — that's the numerator."],
-            solution: [step(`${n} of ${d} slices are shaded.`, r`\frac{${n}}{${d}}`)],
+            solution: [
+              step(`Count all the equal slices: there are $${d}$. That's the **denominator** (the bottom).`),
+              step(`Count the shaded slices: there are $${n}$. That's the **numerator** (the top).`),
+              step(`So $${n}$ out of $${d}$ slices are shaded${gcd(n, d) > 1 ? `, which simplifies to $${texFrac(n, d)}$` : ""}.`, gcd(n, d) > 1 ? r`\frac{${n}}{${d}} = ${texFrac(n, d)}` : r`\frac{${n}}{${d}}`),
+            ],
           };
         return {
           prompt: `Which point on the number line shows $\\frac{${n}}{${d}}$? Enter its decimal value (to 2 d.p.).`,
@@ -49,7 +57,11 @@ export const fractions: Unit = {
           answer: numberAnswer(n / d, { tolerance: 0.006 }),
           inputHint: "e.g. 0.38 or 3/8",
           hints: [`The interval 0–1 is cut into ${d} equal parts.`, `Divide: ${n} ÷ ${d}.`],
-          solution: [step("Divide numerator by denominator.", r`\frac{${n}}{${d}} = ${n} \div ${d} \approx ${(n / d).toFixed(2)}`)],
+          solution: [
+            step(`The line from $0$ to $1$ is cut into $${d}$ equal steps, each worth $\\frac{1}{${d}}$. The point $\\frac{${n}}{${d}}$ is $${n}$ step${n === 1 ? "" : "s"} along from $0$.`),
+            step("To find its decimal value, divide the numerator by the denominator.", r`\frac{${n}}{${d}} = ${n} \div ${d} = ${Number.isInteger(((n / d) * 1e4)) ? n / d : r`${(n / d).toFixed(4)}\dots`}`),
+            step(`Round to 2 decimal places.`, r`\frac{${n}}{${d}} \approx ${(n / d).toFixed(2)}`),
+          ],
         };
       },
     },
@@ -79,13 +91,24 @@ export const fractions: Unit = {
             answer: numberAnswer(n / d, { requireSimplest: true }),
             inputHint: fracHint,
             hints: [`Find the GCF of ${n * k} and ${d * k}.`, `Both are divisible by ${k}.`],
-            solution: [step(`$\\gcd(${n * k}, ${d * k}) = ${gcd(n * k, d * k)}$.`), step("Divide top and bottom by it.", r`\frac{${n * k}}{${d * k}} = ${texFrac(n, d)}`)],
+            solution: [
+              step(
+                `Find the greatest common factor (GCF) of $${n * k}$ and $${d * k}$: the biggest number that divides both exactly.`,
+                r`${n * k} = ${gcd(n * k, d * k)}\times${n}, \quad ${d * k} = ${gcd(n * k, d * k)}\times${d}`,
+              ),
+              simplifyStep(n * k, d * k),
+              step(`$${n}$ and $${d}$ have no common factor left, so $${texFrac(n, d)}$ is the simplest form.`),
+            ],
           };
         return {
           prompt: `Find the missing numerator: $\\frac{${n}}{${d}} = \\frac{?}{${d * k}}$`,
           answer: numberAnswer(n * k),
           hints: [`What was ${d} multiplied by to get ${d * k}?`, `Multiply ${n} by the same number.`],
-          solution: [step(`${d} × ${k} = ${d * k}, so multiply the numerator by ${k}.`, r`\frac{${n}\times${k}}{${d}\times${k}} = \frac{${n * k}}{${d * k}}`)],
+          solution: [
+            step(`Compare the denominators: $${d}$ became $${d * k}$.`, r`${d}\times${k} = ${d * k}`),
+            step(`To keep the fraction the same size, multiply the numerator by the same number, $${k}$.`, r`\frac{${n}\times${k}}{${d}\times${k}} = \frac{${n * k}}{${d * k}}`),
+            step(`The missing numerator is $${n * k}$.`),
+          ],
         };
       },
     },
@@ -108,12 +131,21 @@ export const fractions: Unit = {
         while (a * d === b * c) [c, d] = properFraction(rng, level);
         const bigger = a * d > c * b ? r`\frac{${a}}{${b}}` : r`\frac{${c}}{${d}}`;
         const smaller = a * d > c * b ? r`\frac{${c}}{${d}}` : r`\frac{${a}}{${b}}`;
+        const L = lcm(b, d);
         return {
           prompt: `Which fraction is **larger**?`,
           ...multipleChoice(rng, `$${bigger}$`, [`$${smaller}$`]),
           solutionVisual: level === 1 ? { type: "fractionBars", fractions: [[a, b], [c, d]] } : undefined,
-          hints: [`Use common denominator ${lcm(b, d)}.`, `Or cross-multiply: ${a}×${d} vs ${c}×${b}.`],
-          solution: [step(`Cross-multiply: ${a}×${d} = ${a * d} and ${c}×${b} = ${c * b}.`), step(`The larger product belongs to $${bigger}$.`)],
+          hints: [`Use common denominator ${L}.`, `Or cross-multiply: ${a}×${d} vs ${c}×${b}.`],
+          solution: [
+            step(`Give them a common denominator. The lowest common multiple of $${b}$ and $${d}$ is $${L}$.`),
+            step(
+              "Rewrite each fraction over that denominator.",
+              r`\frac{${a}}{${b}} = \frac{${a}\times${L / b}}{${b}\times${L / b}} = \frac{${a * (L / b)}}{${L}}, \qquad \frac{${c}}{${d}} = \frac{${c}\times${L / d}}{${d}\times${L / d}} = \frac{${c * (L / d)}}{${L}}`,
+            ),
+            step(`Now the pieces are the same size, so compare the numerators: $${Math.max(a * (L / b), c * (L / d))} > ${Math.min(a * (L / b), c * (L / d))}$.`),
+            step(`So $${bigger}$ is larger.`),
+          ],
         };
       },
     },
@@ -143,7 +175,15 @@ export const fractions: Unit = {
           answer: numberAnswer(top / L, { requireSimplest: true }),
           inputHint: fracHint,
           hints: [`The LCM of ${b} and ${d} is ${L}.`, `Rewrite: $\\frac{${a * (L / b)}}{${L}} ${sub ? "-" : "+"} \\frac{${c * (L / d)}}{${L}}$`],
-          solution: [step(`Common denominator ${L}.`, r`\frac{${a * (L / b)}}{${L}} ${sub ? "-" : "+"} \frac{${c * (L / d)}}{${L}} = \frac{${top}}{${L}}`), step("Simplify.", texFrac(top, L))],
+          solution: [
+            step(`You can only ${sub ? "subtract" : "add"} pieces of the same size, so find a common denominator: the lowest common multiple of $${b}$ and $${d}$ is $${L}$.`),
+            step(
+              "Rewrite each fraction over that denominator, multiplying top and bottom by the same number.",
+              r`\frac{${a}}{${b}} = \frac{${a * (L / b)}}{${L}}, \qquad \frac{${c}}{${d}} = \frac{${c * (L / d)}}{${L}}`,
+            ),
+            step(`${sub ? "Subtract" : "Add"} the numerators and keep the denominator.`, r`\frac{${a * (L / b)}}{${L}} ${sub ? "-" : "+"} \frac{${c * (L / d)}}{${L}} = \frac{${a * (L / b)} ${sub ? "-" : "+"} ${c * (L / d)}}{${L}} = ${fracTex(top, L)}`),
+            simplifyStep(top, L),
+          ],
         };
       },
     },
@@ -169,7 +209,10 @@ export const fractions: Unit = {
             prompt: `What is $\\frac{${c}}{${d}}$ of $${w}$?`,
             answer: numberAnswer((c * w) / d),
             hints: ['"Of" means multiply.', `Divide ${w} by ${d}, then multiply by ${c}.`],
-            solution: [step("Multiply.", r`\frac{${c}}{${d}}\times${w} = ${(c * w) / d}`)],
+            solution: [
+              step(`"Of" means multiply. Find one ${ordinalPart(d)} first: split $${w}$ into $${d}$ equal parts.`, r`${w} \div ${d} = ${w / d}`),
+              step(`You want $${c}$ of those parts.`, r`${c} \times ${w / d} = ${(c * w) / d}`),
+            ],
           };
         }
         return {
@@ -178,7 +221,10 @@ export const fractions: Unit = {
           answer: numberAnswer((a * c) / (b * d), { requireSimplest: true }),
           inputHint: fracHint,
           hints: ["Multiply numerators together and denominators together.", "Simplify at the end (or cancel first)."],
-          solution: [step("Multiply across.", r`\frac{${a * c}}{${b * d}} = ${texFrac(a * c, b * d)}`)],
+          solution: [
+            step("Multiply the numerators together and the denominators together.", r`\frac{${a}}{${b}} \times \frac{${c}}{${d}} = \frac{${a}\times${c}}{${b}\times${d}} = \frac{${a * c}}{${b * d}}`),
+            simplifyStep(a * c, b * d),
+          ],
         };
       },
     },
@@ -204,7 +250,11 @@ export const fractions: Unit = {
           answer: numberAnswer((a * d) / (b * c), { requireSimplest: true }),
           inputHint: fracHint,
           hints: [`Flip the second fraction: $\\frac{${d}}{${c}}$.`, "Then multiply across."],
-          solution: [step("Multiply by the reciprocal.", r`\frac{${a}}{${b}}\times\frac{${d}}{${c}} = \frac{${a * d}}{${b * c}} = ${texFrac(a * d, b * c)}`)],
+          solution: [
+            step(`Dividing by a fraction is the same as multiplying by its reciprocal. Keep the first fraction, change $\\div$ to $\\times$, and flip $\\frac{${c}}{${d}}$ to $\\frac{${d}}{${c}}$.`, r`\frac{${a}}{${b}} \div \frac{${c}}{${d}} = \frac{${a}}{${b}} \times \frac{${d}}{${c}}`),
+            step("Multiply the numerators together and the denominators together.", r`\frac{${a}\times${d}}{${b}\times${c}} = \frac{${a * d}}{${b * c}}`),
+            simplifyStep(a * d, b * c),
+          ],
         };
       },
     },
@@ -234,7 +284,15 @@ export const fractions: Unit = {
             answer: numberAnswer(val),
             inputHint: "e.g. 23/6 or 3 5/6",
             hints: ["Convert both to improper fractions first."],
-            solution: [step("Convert.", r`\frac{${w * d + n}}{${d}}\times\frac{${w2 * d2 + n2}}{${d2}}`), step("Multiply and simplify.", texFrac(p, q))],
+            solution: [
+              step(
+                "Turn each mixed number into an improper fraction: whole × denominator + numerator, over the denominator.",
+                r`${w}\tfrac{${n}}{${d}} = \frac{${w}\times${d} + ${n}}{${d}} = \frac{${w * d + n}}{${d}}, \qquad ${w2}\tfrac{${n2}}{${d2}} = \frac{${w2}\times${d2} + ${n2}}{${d2}} = \frac{${w2 * d2 + n2}}{${d2}}`,
+              ),
+              step("Multiply the numerators together and the denominators together.", r`\frac{${w * d + n}}{${d}}\times\frac{${w2 * d2 + n2}}{${d2}} = \frac{${(w * d + n) * (w2 * d2 + n2)}}{${d * d2}}`),
+              simplifyStep((w * d + n) * (w2 * d2 + n2), d * d2),
+              ...(q > 1 && p > q ? [step(`As a mixed number: $${p} \\div ${q} = ${Math.floor(p / q)}$ remainder $${p % q}$.`, r`${texFrac(p, q)} = ${Math.floor(p / q)}\tfrac{${p % q}}{${q}}`)] : []),
+            ],
           };
         }
         return rng.chance(0.5)
@@ -244,7 +302,14 @@ export const fractions: Unit = {
               answer: numberAnswer((w * d + n) / d),
               inputHint: fracHint,
               hints: [`Multiply the whole number by the denominator: ${w} × ${d}.`, `Add the numerator ${n}.`],
-              solution: [step("Whole × denominator + numerator, over the denominator.", r`\frac{${w}\times${d}+${n}}{${d}} = \frac{${w * d + n}}{${d}}`)],
+              solution: [
+                step(`Each whole is $${d}$ ${ordinalPart(d)}s, so $${w}$ whole${w > 1 ? "s are" : " is"} $${w}\\times${d} = ${w * d}$ ${ordinalPart(d)}s.`),
+                step(`Add the $${n}$ extra ${ordinalPart(d)}${n > 1 ? "s" : ""} from the fraction part.`, `${w * d} + ${n} = ${w * d + n}`),
+                step(
+                  `Put the total over the denominator${gcd(w * d + n, d) > 1 ? ", then simplify" : ""}.`,
+                  r`${w}\tfrac{${n}}{${d}} = \frac{${w}\times${d}+${n}}{${d}} = \frac{${w * d + n}}{${d}}${gcd(w * d + n, d) > 1 ? ` = ${texFrac(w * d + n, d)}` : ""}`,
+                ),
+              ],
             }
           : {
               prompt: "Write as a mixed number (e.g. 2 1/3).",
@@ -252,7 +317,14 @@ export const fractions: Unit = {
               answer: numberAnswer((w * d + n) / d),
               inputHint: "e.g. 2 1/3",
               hints: [`How many times does ${d} go into ${w * d + n}?`, "The remainder becomes the numerator."],
-              solution: [step(`${w * d + n} ÷ ${d} = ${w} remainder ${n}.`, r`${w}\tfrac{${n}}{${d}}`)],
+              solution: [
+                step(`Ask how many whole groups of $${d}$ fit into $${w * d + n}$.`, r`${d}\times${w} = ${w * d} \le ${w * d + n}`),
+                step("That's the whole number part. What's left over is the new numerator.", `${w * d + n} - ${w * d} = ${n}`),
+                step(
+                  `Write the whole number, then the remainder over the same denominator${gcd(n, d) > 1 ? ", and simplify the fraction part" : ""}.`,
+                  r`\frac{${w * d + n}}{${d}} = ${w}\tfrac{${n}}{${d}}${gcd(n, d) > 1 ? r` = ${w}\tfrac{${n / gcd(n, d)}}{${d / gcd(n, d)}}` : ""}`,
+                ),
+              ],
             };
       },
     },

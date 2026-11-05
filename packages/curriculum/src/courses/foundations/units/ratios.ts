@@ -34,7 +34,11 @@ export const ratios: Unit = {
             prompt: `Simplify the ratio $${p * k} : ${q * k}$. Enter the **first** number of the simplified ratio.`,
             answer: numberAnswer(p),
             hints: [`Divide both sides by their GCF, ${k * gcd(p, q)}.`],
-            solution: [step("Divide both parts by the GCF.", r`${p * k}:${q * k} = ${p}:${q}`)],
+            solution: [
+              step(`Find the greatest common factor of $${p * k}$ and $${q * k}$: it's $${k}$.`, r`${p * k} = ${k}\times${p}, \quad ${q * k} = ${k}\times${q}`),
+              step(`Divide both parts by $${k}$. The ratio stays the same, just in smaller numbers.`, r`${p * k}:${q * k} = ${p}:${q}`),
+              step(`$${p}$ and $${q}$ share no common factor, so it's fully simplified. The first number is $${p}$.`),
+            ],
           };
         }
         const unit = rng.int(2, 15);
@@ -44,7 +48,12 @@ export const ratios: Unit = {
           answer: numberAnswer(Math.max(p, q) * unit),
           visual: { type: "tapeDiagram", parts: [{ label: `${p} parts`, value: p, tone: "primary" }, { label: `${q} parts`, value: q, tone: "accent" }], totalLabel: `${total}` },
           hints: [`Total parts: ${p} + ${q} = ${p + q}.`, `One part = ${total} ÷ ${p + q}.`],
-          solution: [step("Value of one part.", r`${total}\div${p + q} = ${unit}`), step("Larger share.", r`${Math.max(p, q)}\times${unit} = ${Math.max(p, q) * unit}`)],
+          solution: [
+            step("Add the parts of the ratio to find how many equal parts there are in total.", `${p} + ${q} = ${p + q}`),
+            step(`Share $${total}$ equally between those $${p + q}$ parts to find one part.`, r`${total}\div${p + q} = ${unit}`),
+            step(`The larger share has $${Math.max(p, q)}$ part${Math.max(p, q) > 1 ? "s" : ""}.`, r`${Math.max(p, q)}\times${unit} = ${Math.max(p, q) * unit}`),
+            step(`Check: the other share is $${Math.min(p, q)}\\times${unit} = ${Math.min(p, q) * unit}$, and the shares add back up.`, `${Math.max(p, q) * unit} + ${Math.min(p, q) * unit} = ${total}`),
+          ],
         };
       },
     },
@@ -75,14 +84,20 @@ export const ratios: Unit = {
             prompt: `${ctx.verb} $${rate * t}$ ${ctx.what} in $${t}$ ${ctx.per}s. At the same rate, how many ${ctx.what} in $${t2}$ ${ctx.per}s?`,
             answer: numberAnswer(rate * t2),
             hints: ["Find the unit rate first.", `Then multiply by ${t2}.`],
-            solution: [step("Unit rate.", r`${rate * t}\div${t} = ${rate}`), step("Scale.", r`${rate}\times${t2} = ${rate * t2}`)],
+            solution: [
+              step(`Find the unit rate: how many ${ctx.what} in **one** ${ctx.per}.`, r`${rate * t}\div${t} = ${rate}\text{ ${ctx.what} per ${ctx.per}}`),
+              step(`Multiply by the number of ${ctx.per}s you want.`, r`${rate}\times${t2} = ${rate * t2}\text{ ${ctx.what}}`),
+            ],
           };
         }
         return {
           prompt: `${ctx.verb} $${rate * t}$ ${ctx.what} in $${t}$ ${ctx.per}s. How many ${ctx.what} per ${ctx.per}?`,
           answer: numberAnswer(rate),
           hints: [`Divide ${rate * t} by ${t}.`],
-          solution: [step("Unit rate = total ÷ time.", r`${rate * t}\div${t} = ${rate}`)],
+          solution: [
+            step(`A unit rate is the amount in **one** ${ctx.per}. Share the $${rate * t}$ ${ctx.what} equally over the $${t}$ ${ctx.per}s.`),
+            step("Divide the total by the number of " + ctx.per + "s.", r`${rate * t}\div${t} = ${rate}\text{ ${ctx.what} per ${ctx.per}}`),
+          ],
         };
       },
     },
@@ -107,12 +122,22 @@ export const ratios: Unit = {
         const which = rng.int(0, 3);
         const vals = [a, b, c, d];
         const shown = vals.map((v, i) => (i === which ? "x" : `${v}`));
+        // a/b = c/d  ⇔  a·d = b·c; x sits in one of the four places.
+        const [left, right] = [[shown[0]!, shown[3]!], [shown[1]!, shown[2]!]];
+        const xSide = which === 0 || which === 3 ? left : right, otherSide = xSide === left ? right : left;
+        const divisor = Number(xSide.find((v) => v !== "x")), known = Number(otherSide[0]) * Number(otherSide[1]);
+        const cross = r`${left[0]} \times ${left[1]} = ${right[0]} \times ${right[1]}`;
+        const crossed = xSide === left ? `${divisor}x = ${known}` : `${known} = ${divisor}x`;
         return {
           prompt: "Solve for $x$.",
           tex: r`\frac{${shown[0]}}{${shown[1]}} = \frac{${shown[2]}}{${shown[3]}}`,
           answer: numberAnswer(vals[which]!),
           hints: ["Cross-multiply.", "Divide to isolate x."],
-          solution: [step("Cross-multiply and solve.", r`x = ${vals[which]}`)],
+          solution: [
+            step("Cross-multiply: the top of each fraction times the bottom of the other.", cross),
+            step("Work out the side you know.", crossed),
+            step(`Divide both sides by $${divisor}$ to get $x$ on its own.`, r`x = ${known}\div${divisor} = ${vals[which]}`),
+          ],
         };
       },
     },

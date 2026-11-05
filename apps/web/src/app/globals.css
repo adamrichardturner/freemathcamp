@@ -189,6 +189,15 @@
   overflow-y: hidden;
   padding: 0.25rem 0;
 }
+/* KaTeX centres display maths; worked-solution steps read like written working, so they line up on the left. */
+.text-left > .katex-display > .katex {
+  text-align: left;
+}
+@media (max-width: 480px) {
+  .text-left > .katex-display {
+    font-size: 0.9em;
+  }
+}
 
 @utility bg-dots {
   background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);

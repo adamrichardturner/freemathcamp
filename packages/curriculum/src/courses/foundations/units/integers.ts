@@ -1,8 +1,18 @@
 import { example, key, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
 import { paren } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { addSigned } from "../../../core/working";
 
 const r = String.raw;
+
+/** Same signs give a positive result; different signs give a negative one. */
+const signRule = (x: number, y: number, op: "×" | "÷") =>
+  step(
+    (x < 0) === (y < 0)
+      ? `The signs are the same (both ${x < 0 ? "negative" : "positive"}), so the answer is **positive**.`
+      : `The signs are different (one negative, one positive), so the answer is **negative**.`,
+    op === "×" ? r`${x < 0 ? "-" : "+"} \times ${y < 0 ? "-" : "+"} = ${(x < 0) === (y < 0) ? "+" : "-"}` : r`${x < 0 ? "-" : "+"} \div ${y < 0 ? "-" : "+"} = ${(x < 0) === (y < 0) ? "+" : "-"}`,
+  );
 
 export const integers: Unit = {
   id: "integers",
@@ -36,7 +46,11 @@ export const integers: Unit = {
           ...multipleChoice(rng, `$${target}$`, choices),
           visual: level === 1 ? { type: "numberLine", min: -spread, max: spread, step: spread / 10 } : undefined,
           hints: ["Picture the numbers on a number line.", askMin ? "The smallest is furthest left." : "The largest is furthest right."],
-          solution: [step(`In order: ${[...nums].sort((a, b) => a - b).map((n) => `$${n}$`).join(" < ")}.`)],
+          solution: [
+            step("On a number line, numbers get bigger as you move right. Every negative number sits left of zero, and the bigger its size, the further left it is."),
+            step("Put them in order from left (smallest) to right (largest).", [...nums].sort((a, b) => a - b).join(" < ")),
+            step(`So the ${askMin ? "smallest is the one furthest left" : "largest is the one furthest right"}: $${target}$.`),
+          ],
         };
       },
     },
@@ -67,7 +81,9 @@ export const integers: Unit = {
           answer: numberAnswer(ans),
           visual: level === 1 ? { type: "numberLine", min: -20, max: 20, step: 2 } : undefined,
           hints: sub ? ["Subtracting is the same as adding the opposite.", `Rewrite as $${a} + ${paren(-b)}$.`] : ["Start at the first number and move along the number line."],
-          solution: sub ? [step("Add the opposite.", r`${a} + ${paren(-b)} = ${ans}`)] : [step("Combine.", `${tex} = ${ans}`)],
+          solution: sub
+            ? [step(`Subtracting a number is the same as adding its opposite. The opposite of $${b}$ is $${-b}$.`, r`${tex} = ${a} + ${paren(-b)}`), addSigned(a, -b), step("So", `${tex} = ${ans}`)]
+            : [step(`Start at $${a}$ and move $${Math.abs(b)}$ to the ${b > 0 ? "right" : "left"}. To work it out:`), addSigned(a, b)],
         };
       },
     },
@@ -90,12 +106,17 @@ export const integers: Unit = {
         const a = rng.nonZero(-12, 12), b = rng.nonZero(-12, 12);
         if (level === 3) {
           const c = rng.nonZero(-5, 5);
+          const negs = [a, b, c].filter((x) => x < 0).length;
           return {
             prompt: "Compute.",
             tex: r`${paren(a)} \times ${paren(b)} \times ${paren(c)}`,
             answer: numberAnswer(a * b * c),
             hints: ["Multiply the sizes, then count the negative signs."],
-            solution: [step(`Size: ${Math.abs(a * b * c)}. Negatives: ${[a, b, c].filter((x) => x < 0).length}.`, `${a * b * c}`)],
+            solution: [
+              step("Multiply the sizes, ignoring the signs for now.", r`${Math.abs(a)}\times${Math.abs(b)}\times${Math.abs(c)} = ${Math.abs(a * b)}\times${Math.abs(c)} = ${Math.abs(a * b * c)}`),
+              step(`Count the negative signs: there ${negs === 1 ? "is" : "are"} $${negs}$. Each pair of negatives makes a positive, so ${negs % 2 ? "an odd number leaves the answer **negative**" : "an even number leaves the answer **positive**"}.`),
+              step("Put the sign on the size.", r`${paren(a)} \times ${paren(b)} \times ${paren(c)} = ${a * b * c}`),
+            ],
           };
         }
         const div = rng.chance(0.5);
@@ -105,14 +126,22 @@ export const integers: Unit = {
               tex: r`${paren(a * b)} \div ${paren(b)}`,
               answer: numberAnswer(a),
               hints: ["Divide the sizes, then apply the sign rule."],
-              solution: [step("Same signs → positive, different signs → negative.", r`${paren(a * b)} \div ${paren(b)} = ${a}`)],
+              solution: [
+                step("Divide the sizes, ignoring the signs.", r`${Math.abs(a * b)}\div${Math.abs(b)} = ${Math.abs(a)}`),
+                signRule(a * b, b, "÷"),
+                step("Put the sign on the size.", r`${paren(a * b)} \div ${paren(b)} = ${a}`),
+              ],
             }
           : {
               prompt: "Compute.",
               tex: r`${paren(a)} \times ${paren(b)}`,
               answer: numberAnswer(a * b),
               hints: ["Multiply the sizes, then apply the sign rule."],
-              solution: [step("Same signs → positive, different signs → negative.", r`${paren(a)} \times ${paren(b)} = ${a * b}`)],
+              solution: [
+                step("Multiply the sizes, ignoring the signs.", r`${Math.abs(a)}\times${Math.abs(b)} = ${Math.abs(a * b)}`),
+                signRule(a, b, "×"),
+                step("Put the sign on the size.", r`${paren(a)} \times ${paren(b)} = ${a * b}`),
+              ],
             };
       },
     },
@@ -133,14 +162,28 @@ export const integers: Unit = {
       ],
       generate: (rng, level) => {
         const a = rng.int(-15, 15), b = rng.int(-15, 15);
-        if (level === 1) return { prompt: "Evaluate.", tex: `|${a}|`, answer: numberAnswer(Math.abs(a)), hints: ["How far is it from 0?"], solution: [step(`${a} is ${Math.abs(a)} units from 0.`)] };
+        if (level === 1)
+          return {
+            prompt: "Evaluate.",
+            tex: `|${a}|`,
+            answer: numberAnswer(Math.abs(a)),
+            hints: ["How far is it from 0?"],
+            solution: [
+              step("The absolute value of a number is its distance from $0$ on the number line, and a distance is never negative."),
+              step(`$${a}$ is $${Math.abs(a)}$ step${Math.abs(a) === 1 ? "" : "s"} from $0$${a < 0 ? ", so drop the minus sign" : ""}.`, `|${a}| = ${Math.abs(a)}`),
+            ],
+          };
         if (level === 2)
           return {
             prompt: `What is the distance between $${a}$ and $${b}$ on the number line?`,
             answer: numberAnswer(Math.abs(a - b)),
             visual: { type: "numberLine", min: -16, max: 16, step: 2, points: [{ value: a, label: `${a}` }, { value: b, label: `${b}`, tone: "accent" }] },
             hints: ["Distance = |a − b|."],
-            solution: [step("Subtract and take the absolute value.", r`|${a} - ${paren(b)}| = ${Math.abs(a - b)}`)],
+            solution: [
+              step("The distance between two numbers is the absolute value of their difference.", r`|${a} - ${paren(b)}|`),
+              step("Work out the inside first.", r`${a} - ${paren(b)} = ${a - b}`),
+              step("Take the absolute value: distances are never negative.", r`|${a - b}| = ${Math.abs(a - b)}`),
+            ],
           };
         const c = rng.nonZero(-9, 9);
         return {
@@ -148,7 +191,11 @@ export const integers: Unit = {
           tex: r`|${a} - ${paren(b)}| - |${c}|`,
           answer: numberAnswer(Math.abs(a - b) - Math.abs(c)),
           hints: ["Simplify inside each pair of bars first."],
-          solution: [step("Evaluate each absolute value.", r`${Math.abs(a - b)} - ${Math.abs(c)} = ${Math.abs(a - b) - Math.abs(c)}`)],
+          solution: [
+            step("Work out the inside of the first bars.", r`${a} - ${paren(b)} = ${a - b}`),
+            step("Take each absolute value: the distance from 0.", r`|${a - b}| = ${Math.abs(a - b)}, \quad |${c}| = ${Math.abs(c)}`),
+            step("Subtract.", `${Math.abs(a - b)} - ${Math.abs(c)} = ${Math.abs(a - b) - Math.abs(c)}`),
+          ],
         };
       },
     },

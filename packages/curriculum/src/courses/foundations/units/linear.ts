@@ -1,6 +1,33 @@
 import { example, key, multipleChoice, numberAnswer, rule, step, text, tip, visual } from "../../../core/builders";
-import { linear, paren, texFrac } from "../../../core/math";
+import { gcd, lcm, linear, paren, poly, texFrac } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { fracTex, lines, times, type Step } from "../../../core/working";
+
+/** px + qy, as written in a system. */
+const eqTex = (p: number, q: number) => poly([[p, "x"], [q, "y"]]);
+
+/** Solves ax + by = e, cx + dy = f by eliminating y, then substitutes back. */
+const eliminate = (a: number, b: number, e: number, c: number, d: number, f: number, x: number, y: number): Step[] => {
+  const L = lcm(Math.abs(b), Math.abs(d)), m1 = L / Math.abs(b), m2 = L / Math.abs(d);
+  const same = b * m1 === d * m2;
+  const [A, B, E, C, D, F] = [a * m1, b * m1, e * m1, c * m2, d * m2, f * m2];
+  const scaled = m1 === 1 && m2 === 1 ? [] : [
+    step(
+      `Make the $y$ terms the same size so they can cancel: multiply ${[m1 > 1 ? `the first equation by $${m1}$` : "", m2 > 1 ? `the second by $${m2}$` : ""].filter(Boolean).join(" and ")}.`,
+      lines(r`${eqTex(A, B)} &= ${E}`, r`${eqTex(C, D)} &= ${F}`),
+    ),
+  ];
+  const k = same ? A - C : A + C, rhs = same ? E - F : E + F;
+  return [
+    ...scaled,
+    step(
+      same ? "The $y$ terms match, so **subtract** the second equation from the first: $y$ disappears." : "The $y$ terms are opposites, so **add** the equations: $y$ disappears.",
+      lines(r`${k === 1 ? "" : k === -1 ? "-" : k}x &= ${rhs}`, r`x &= ${x}`),
+    ),
+    step(`Put $x = ${x}$ back into the first equation and solve for $y$.`, lines(r`${times(a, x)} ${b < 0 ? "-" : "+"} ${Math.abs(b) === 1 ? "" : Math.abs(b)}y &= ${e}`, r`${b === 1 ? "" : b === -1 ? "-" : b}y &= ${e} - ${paren(a * x)} = ${e - a * x}`, r`y &= ${y}`)),
+    step(`Check in the second equation: $${times(c, x)} ${d < 0 ? "-" : "+"} ${times(Math.abs(d), y)} = ${f}$ ✓. So the solution is`, `(x, y) = (${x}, ${y})`),
+  ];
+};
 
 const r = String.raw;
 
@@ -33,14 +60,22 @@ export const linearUnit: Unit = {
             answer: { kind: "tuple", values: [x, y] },
             inputHint: "e.g. (3, -2)",
             hints: ["Count across from the origin for x.", "Then count up or down for y."],
-            solution: [step(`The point is ${Math.abs(x)} ${x > 0 ? "right" : "left"} and ${Math.abs(y)} ${y > 0 ? "up" : "down"}.`, `(${x}, ${y})`)],
+            solution: [
+              step(`Start at the origin and read across first. The point is $${Math.abs(x)}$ to the ${x > 0 ? "right, so $x$ is positive" : "left, so $x$ is negative"}: $x = ${x}$.`),
+              step(`Then read up or down. It's $${Math.abs(y)}$ ${y > 0 ? "up, so $y$ is positive" : "down, so $y$ is negative"}: $y = ${y}$.`),
+              step("Write $x$ first, then $y$.", `(${x}, ${y})`),
+            ],
           };
         const q = x > 0 ? (y > 0 ? "I" : "IV") : y > 0 ? "II" : "III";
         return {
           prompt: `In which quadrant is $(${x}, ${y})$?`,
           ...multipleChoice(rng, q, ["I", "II", "III", "IV"]),
           hints: ["Check the signs of x and y.", "Quadrants go anticlockwise from the top-right."],
-          solution: [step(`Signs (${x > 0 ? "+" : "−"}, ${y > 0 ? "+" : "−"}) → quadrant ${q}.`)],
+          solution: [
+            step(`$x = ${x}$ is ${x > 0 ? "positive (right of the $y$-axis)" : "negative (left of the $y$-axis)"}, and $y = ${y}$ is ${y > 0 ? "positive (above the $x$-axis)" : "negative (below the $x$-axis)"}.`),
+            step("The quadrants are numbered anticlockwise from the top right: I is $(+, +)$, II is $(-, +)$, III is $(-, -)$, IV is $(+, -)$."),
+            step(`Signs $(${x > 0 ? "+" : "-"}, ${y > 0 ? "+" : "-"})$ put it in quadrant ${q}.`),
+          ],
         };
       },
     },
@@ -69,7 +104,14 @@ export const linearUnit: Unit = {
           answer: numberAnswer(rise / run),
           inputHint: "e.g. -2 or 3/4",
           hints: ["Subtract the y's, subtract the x's (same order!).", "Divide rise by run."],
-          solution: [step("Apply the slope formula.", r`m = \frac{${y2} - ${paren(y1)}}{${x2} - ${paren(x1)}} = \frac{${rise}}{${run}} = ${texFrac(rise, run)}`)],
+          solution: [
+            step("Slope is rise over run: the change in $y$ divided by the change in $x$, subtracting in the same order.", r`m = \frac{y_2 - y_1}{x_2 - x_1}`),
+            step("Find the rise and the run.", lines(r`\text{rise} &= ${y2} - ${paren(y1)} = ${rise}`, r`\text{run} &= ${x2} - ${paren(x1)} = ${run}`)),
+            step(
+              rise === 0 ? "The rise is $0$: the line is flat, so its slope is $0$." : `Divide${gcd(rise, run) > 1 || run < 0 ? " and simplify" : ""}.`,
+              r`m = \frac{${rise}}{${run}}${texFrac(rise, run) === r`\frac{${rise}}{${run}}` ? "" : ` = ${texFrac(rise, run)}`}`,
+            ),
+          ],
         };
       },
     },
@@ -95,7 +137,11 @@ export const linearUnit: Unit = {
             prompt: `What is the ${askSlope ? "slope" : "$y$-intercept"} of $y = ${linear(m, b)}$?`,
             answer: numberAnswer(askSlope ? m : b),
             hints: ["Compare with $y = mx + b$."],
-            solution: [step(`m = ${m}, b = ${b}.`)],
+            solution: [
+              step("In $y = mx + b$, the number multiplying $x$ is the slope $m$, and the number on its own is the $y$-intercept $b$."),
+              step(`Matching $y = ${linear(m, b)}$ against it:`, r`m = ${m}, \quad b = ${b}`),
+              step(`So the ${askSlope ? "slope" : "$y$-intercept"} is $${askSlope ? m : b}$.`),
+            ],
           };
         }
         if (level === 2) {
@@ -104,7 +150,11 @@ export const linearUnit: Unit = {
             visual: { type: "functionPlot", functions: [{ fn: (x) => m * x + b }], points: [{ x: 0, y: b, label: `(0, ${b})` }], viewBox: { x: [-8, 8], y: [-10, 10] } },
             ...multipleChoice(rng, `$y = ${linear(m, b)}$`, [`$y = ${linear(-m, b)}$`, `$y = ${linear(m, -b || 1)}$`, `$y = ${linear(b || 1, m)}$`]),
             hints: ["Where does the line cross the y-axis?", "From that point, how far up/down for one step right?"],
-            solution: [step(`Intercept ${b}, slope ${m}.`, `y = ${linear(m, b)}`)],
+            solution: [
+              step(`The line crosses the $y$-axis at $(0, ${b})$, so the intercept is $b = ${b}$.`),
+              step(`From there, move $1$ to the right: the line ${m > 0 ? "rises" : "falls"} by $${Math.abs(m)}$ to $(1, ${m + b})$. So the slope is $m = ${m}$.`),
+              step("Put them into $y = mx + b$.", `y = ${linear(m, b)}`),
+            ],
           };
         }
         const A = rng.nonZero(-4, 4), B = rng.pick([2, 3, 4, -2]);
@@ -114,7 +164,11 @@ export const linearUnit: Unit = {
           answer: numberAnswer(-A / B),
           inputHint: "e.g. -3/2",
           hints: ["Solve for y.", "The coefficient of x is the slope."],
-          solution: [step("Rearrange.", r`y = ${texFrac(-A, B)}x + ${texFrac(C, B)}`)],
+          solution: [
+            step(`Get the $y$ term on its own: ${A > 0 ? "subtract" : "add"} $${linear(Math.abs(A), 0)}$ ${A > 0 ? "from" : "to"} both sides.`, `${B}y = ${linear(-A, C)}`),
+            step(`Divide every term by $${B}$ to get $y$ on its own.`, r`y = ${fracTex(-A, B)}x${C === 0 ? "" : fracTex(C, B).startsWith("-") ? ` - ${fracTex(-C, B)}` : ` + ${fracTex(C, B)}`}`),
+            step("Now it's in the form $y = mx + b$. The slope is the coefficient of $x$.", `m = ${texFrac(-A, B)}`),
+          ],
         };
       },
     },
@@ -144,7 +198,14 @@ export const linearUnit: Unit = {
             answer: numberAnswer(bp),
             inputHint: "e.g. 7/2",
             hints: [`The perpendicular slope is $${texFrac(-1, m)}$.`, "Substitute the point into y = mx + b and solve for b."],
-            solution: [step("Perpendicular slope.", `m = ${texFrac(-1, m)}`), step("Solve for b.", r`${py} = ${texFrac(-1, m)}\cdot${paren(px)} + b \Rightarrow b = ${texFrac(py * m + px, m)}`)],
+            solution: [
+              step(`The given line has slope $${m}$. Perpendicular slopes multiply to $-1$, so flip it and change its sign.`, m === 1 || m === -1 || m < 0 ? r`m = -\frac{1}{${paren(m)}} = ${texFrac(-1, m)}` : r`m = -\frac{1}{${m}}`),
+              step(`Put the point $(${px}, ${py})$ into $y = mx + b$.`, r`${py} = ${texFrac(-1, m)}\cdot${paren(px)} + b`),
+              step(
+                "Work out the product, then solve for $b$.",
+                lines(r`${py} &= ${texFrac(-px, m)} + b`, r`b &= ${py} - ${-px / m < 0 ? r`\left(${texFrac(-px, m)}\right)` : texFrac(-px, m)} = ${texFrac(py * m + px, m)}`),
+              ),
+            ],
           };
         }
         return {
@@ -152,7 +213,11 @@ export const linearUnit: Unit = {
           answer: { kind: "tuple", values: [m, b] },
           inputHint: "e.g. 3, -1",
           hints: ["Find the slope first.", "Substitute one point to find b."],
-          solution: [step("Slope.", `m = ${m}`), step("Intercept.", r`${m * x1 + b} = ${m}${paren(x1)} + b \Rightarrow b = ${b}`), step("Equation.", `y = ${linear(m, b)}`)],
+          solution: [
+            step("Find the slope: rise over run between the two points.", r`m = \frac{${m * x2 + b} - ${paren(m * x1 + b)}}{${x2} - ${paren(x1)}} = \frac{${m * (x2 - x1)}}{${x2 - x1}} = ${m}`),
+            step(`Put the first point $(${x1}, ${m * x1 + b})$ into $y = ${m === 1 ? "" : m === -1 ? "-" : m}x + b$ and solve for $b$.`, lines(r`${m * x1 + b} &= ${times(m, x1)} + b`, r`${m * x1 + b} &= ${m * x1} + b`, r`b &= ${m * x1 + b} - ${paren(m * x1)} = ${b}`)),
+            step(`So $m = ${m}$ and $b = ${b}$: the line is $y = ${linear(m, b)}$.`),
+          ],
         };
       },
     },
@@ -184,7 +249,14 @@ export const linearUnit: Unit = {
           answer: { kind: "tuple", values: [x, y] },
           inputHint: "e.g. (7, 3)",
           hints: ["Multiply one equation so a variable has matching coefficients.", "Add or subtract to eliminate it, then back-substitute."],
-          solution: [step("Eliminate one variable and solve.", `x = ${x}`), step("Back-substitute.", `y = ${y}`)],
+          solution:
+            level === 1
+              ? [
+                  step("Add the two equations. The $+y$ and $-y$ cancel, leaving only $x$.", lines(r`2x &= ${x + y} + ${paren(x - y)} = ${2 * x}`, r`x &= ${x}`)),
+                  step(`Put $x = ${x}$ into $x + y = ${x + y}$.`, r`y = ${x + y} - ${paren(x)} = ${y}`),
+                  step(`Check in the second equation: $${x} - ${paren(y)} = ${x - y}$ ✓. So the solution is`, `(x, y) = (${x}, ${y})`),
+                ]
+              : eliminate(a, b, a * x + b * y, c, d, c * x + d * y, x, y),
         };
       },
     },

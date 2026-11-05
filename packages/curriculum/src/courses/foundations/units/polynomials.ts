@@ -1,8 +1,36 @@
 import { example, key, math, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { factor, gcd, linear, poly, quadratic, round, signed, simplifyRoot, texRoot } from "../../../core/math";
+import { factor, gcd, linear, paren, poly, quadratic, round, signed, simplifyRoot, texFrac, texRoot } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { joinSigned, lines, substitute, times } from "../../../core/working";
+
+/** Factor pairs of |n|: 12 → 1 × 12, 2 × 6, 3 × 4. */
+const factorPairs = (n: number) =>
+  Array.from({ length: Math.floor(Math.sqrt(Math.abs(n))) }, (_, i) => i + 1)
+    .filter((f) => Math.abs(n) % f === 0)
+    .map((f) => r`${f}\times${Math.abs(n) / f}`)
+    .join(r`,\ `);
+
+/** The working for x^2 + (p+q)x + pq = (x + p)(x + q): find two numbers, then write the brackets. */
+const productSum = (p: number, q: number) => [
+  step(
+    `Find two numbers that **multiply** to $${p * q}$ (the number on its own) and **add** to $${p + q}$ (the coefficient of $x$). ${p * q > 0 ? "The product is positive, so they have the same sign" : "The product is negative, so one is positive and one negative"}. Factor pairs of $${Math.abs(p * q)}$:`,
+    factorPairs(p * q),
+  ),
+  step(`$${p}$ and $${q}$ work.`, r`${paren(p)}\times${paren(q)} = ${p * q}, \qquad ${p} + ${paren(q)} = ${p + q}`),
+];
 
 const r = String.raw;
+
+/** lim (√(x + c²) − c)/x as x → 0, by rationalising the numerator. */
+export const rationalisedLimit = (c: number) => [
+  step("Putting in $x = 0$ gives $\\frac{0}{0}$, which tells you nothing. Multiply the top and bottom by the conjugate of the top."),
+  step(
+    "The top becomes a difference of two squares, and the numbers cancel.",
+    r`\frac{(\sqrt{x + ${c * c}} - ${c})(\sqrt{x + ${c * c}} + ${c})}{x(\sqrt{x + ${c * c}} + ${c})} = \frac{(x + ${c * c}) - ${c * c}}{x(\sqrt{x + ${c * c}} + ${c})} = \frac{x}{x(\sqrt{x + ${c * c}} + ${c})}`,
+  ),
+  step("Cancel the $x$.", r`\frac{1}{\sqrt{x + ${c * c}} + ${c}}`),
+  step("Now $x = 0$ is safe to substitute.", r`\frac{1}{\sqrt{${c * c}} + ${c}} = \frac{1}{${c} + ${c}} = \frac{1}{${2 * c}}`),
+];
 
 export const polynomials: Unit = {
   id: "polynomials",
@@ -34,7 +62,17 @@ export const polynomials: Unit = {
           tex: r`(${quadratic(p[0]!, p[1]!, p[2]!)}) ${sub ? "-" : "+"} (${quadratic(q[0]!, q[1]!, q[2]!)})`,
           answer: numberAnswer(res[which]!),
           hints: [sub ? "Change the sign of every term in the second bracket." : "Remove the brackets.", "Combine like terms."],
-          solution: [step("Combine.", quadratic(res[0]!, res[1]!, res[2]!))],
+          solution: [
+            step(
+              sub ? "Remove the brackets. The minus sign in front of the second bracket changes the sign of **every** term inside it." : "Remove the brackets: adding doesn't change any signs.",
+              poly([[p[0]!, "x^2"], [p[1]!, "x"], [p[2]!, ""], [sub ? -q[0]! : q[0]!, "x^2"], [sub ? -q[1]! : q[1]!, "x"], [sub ? -q[2]! : q[2]!, ""]]),
+            ),
+            step(
+              "Combine like terms: add the coefficients of each power of $x$.",
+              lines(...[0, 1, 2].map((i) => r`${["x^2", "x", r`\text{numbers}`][i]}\text{: } & ${p[i]} + ${paren(sub ? -q[i]! : q[i]!)} = ${res[i]}`)),
+            ),
+            step(`So the result is $${quadratic(res[0]!, res[1]!, res[2]!)}$, and the coefficient of the ${which === 2 ? "constant term" : `$${names[which]}$ term`} is $${res[which]}$.`),
+          ],
         };
       },
     },
@@ -63,7 +101,20 @@ export const polynomials: Unit = {
           answer: { kind: "tuple", values: [A, B, C] },
           inputHint: "e.g. 1, -2, -15",
           hints: ["Multiply each term in the first bracket by each in the second (4 products).", "Combine the two middle terms."],
-          solution: [step("Four products.", poly([[A, "x^2"], [a * d, "x"], [b * c, "x"], [C, ""]])), step("Combine.", quadratic(A, B, C))],
+          solution: [
+            step(
+              "Multiply each term in the first bracket by each term in the second: First, Outer, Inner, Last.",
+              lines(
+                r`\text{First: } & ${a === 1 ? "" : a}x \cdot ${c === 1 ? "" : c}x = ${poly([[A, "x^2"]])}`,
+                r`\text{Outer: } & ${a === 1 ? "" : a}x \cdot ${paren(d)} = ${poly([[a * d, "x"]])}`,
+                r`\text{Inner: } & ${paren(b)} \cdot ${c === 1 ? "" : c}x = ${poly([[b * c, "x"]])}`,
+                r`\text{Last: } & ${paren(b)} \cdot ${paren(d)} = ${C}`,
+              ),
+            ),
+            step("Add the four products.", poly([[A, "x^2"], [a * d, "x"], [b * c, "x"], [C, ""]])),
+            step(`Combine the two middle terms: $${a * d} + ${paren(b * c)} = ${B}$.`, quadratic(A, B, C)),
+            step(`So $a = ${A}$, $b = ${B}$ and $c = ${C}$.`),
+          ],
         };
       },
     },
@@ -94,7 +145,15 @@ export const polynomials: Unit = {
           tex,
           ...multipleChoice(rng, `$${gcfTex}(${inner})$`, [`$${g}(${poly([[m, power ? `x^{${power + 1}}` : "x"], [n, ""]])})$`, `$${gcfTex}(${mOdd})$`, `$${power ? "x" : "1"}(${poly([[g * m, "x"], [g * n, ""]])})$`]),
           hints: [`What's the largest number dividing ${Math.abs(g * m)} and ${Math.abs(g * n)}?`, power ? "Also take out the lowest power of x." : "Divide each term by it."],
-          solution: [step("Take out the GCF.", `${gcfTex}(${inner})`)],
+          solution: [
+            step(`Find the biggest number that divides both coefficients: $${Math.abs(g * m)} = ${g}\\times${Math.abs(m)}$ and $${Math.abs(g * n)} = ${g}\\times${Math.abs(n)}$, so it's $${g}$.`),
+            ...(power ? [step(`Both terms also contain $x$. The lowest power is $${power === 1 ? "x" : `x^{${power}}`}$, so take that out too.`, r`\text{GCF} = ${gcfTex}`)] : []),
+            step(
+              `Divide each term by $${gcfTex}$.`,
+              lines(r`${poly([[g * m, power ? `x^{${power + 1}}` : "x"]])} \div ${gcfTex} &= ${poly([[m, "x"]])}`, r`${g * n} ${power ? (power === 1 ? "x" : `x^{${power}}`) : ""} \div ${gcfTex} &= ${n}`),
+            ),
+            step("Write the GCF outside a bracket holding what's left.", `${gcfTex}(${inner})`),
+          ],
         };
       },
     },
@@ -122,7 +181,10 @@ export const polynomials: Unit = {
             tex: `x^2 - ${k * k}`,
             ...multipleChoice(rng, `$(x - ${k})(x + ${k})$`, [`$(x - ${k})^2$`, `$(x + ${k})^2$`, `$(x - ${k * k})(x + 1)$`]),
             hints: ["This is a difference of two squares."],
-            solution: [step("Use $a^2 - b^2 = (a-b)(a+b)$.", `(x - ${k})(x + ${k})`)],
+            solution: [
+              step(`Both terms are perfect squares with a minus between them: a **difference of two squares**.`, `x^2 - ${k * k} = x^2 - ${k}^2`),
+              step(`Use $a^2 - b^2 = (a - b)(a + b)$ with $a = x$ and $b = ${k}$.`, `(x - ${k})(x + ${k})`),
+            ],
           };
         }
         const correct = `$${factor(-p)}${factor(-q)}$`;
@@ -131,7 +193,7 @@ export const polynomials: Unit = {
           tex: quadratic(1, p + q, p * q),
           ...multipleChoice(rng, correct, [`$${factor(p)}${factor(q)}$`, `$${factor(-p)}${factor(q)}$`, `$${factor(p)}${factor(-q)}$`, `$${factor(-p * q === 0 ? 1 : -(p * q))}${factor(-1)}$`]),
           hints: [`Find two numbers with product ${p * q} and sum ${p + q}.`],
-          solution: [step(`${p} × ${q} = ${p * q} and ${p} + ${q} = ${p + q}.`, `${factor(-p)}${factor(-q)}`)],
+          solution: [...productSum(p, q), step("Each number goes in a bracket with $x$.", `${quadratic(1, p + q, p * q)} = ${factor(-p)}${factor(-q)}`)],
         };
       },
     },
@@ -160,7 +222,22 @@ export const polynomials: Unit = {
           inputHint: "e.g. -4, 3",
           solutionVisual: level === 1 ? { type: "functionPlot", functions: [{ fn: (x) => (x - p) * (x - q), tone: "muted" }], points: [...new Set([p, q])].map((r) => ({ x: r, y: 0, label: `x = ${r}` })), viewBox: { x: [-11, 11], y: [-25, 15] } } : undefined,
           hints: [lead > 1 ? `Factor out ${lead} first.` : "Factor into two brackets.", "Set each bracket equal to zero."],
-          solution: [step("Factor.", `${lead > 1 ? lead : ""}${factor(p)}${factor(q)} = 0`), step("Solve.", p === q ? `x = ${p}` : `x = ${p} \\text{ or } x = ${q}`)],
+          solution: [
+            ...(lead > 1 ? [step(`Divide both sides by $${lead}$ to make the $x^2$ coefficient $1$.`, `${quadratic(1, -(p + q), p * q)} = 0`)] : []),
+            step(
+              p * q === 0
+                ? `There's no number on its own, so $x$ is a common factor: take it out.`
+                : `Factor: find two numbers that multiply to $${p * q}$ and add to $${-(p + q)}$. $${-p}$ and $${-q}$ work.`,
+              `${p === q ? `${factor(p)}^2` : `${factor(p)}${factor(q)}`} = 0`,
+            ),
+            step(
+              "A product is zero only when one of its factors is zero. Set each factor to zero.",
+              p === q
+                ? r`${factor(p).replace(/[()]/g, "")} = 0 \;\Rightarrow\; x = ${p}`
+                : lines(r`${factor(p).replace(/[()]/g, "")} = 0 &\;\Rightarrow\; x = ${p}`, r`${factor(q).replace(/[()]/g, "")} = 0 &\;\Rightarrow\; x = ${q}`),
+            ),
+            step(p === q ? "Both factors are the same, so there's one repeated solution." : "So the solutions are", p === q ? `x = ${p}` : r`x = ${p} \text{ or } x = ${q}`),
+          ],
         };
       },
     },
@@ -186,7 +263,30 @@ export const polynomials: Unit = {
           answer: { kind: "tuple", values: [h, k] },
           inputHint: "e.g. (3, -4)",
           hints: [a !== 1 ? `Factor ${a} out of the x terms first.` : "Halve the x-coefficient.", "Or use $h = -\\frac{b}{2a}$, then $k = f(h)$."],
-          solution: [step("Complete the square.", `y = ${a === 1 ? "" : a}(x ${h < 0 ? "+" : "-"} ${Math.abs(h)})^2 ${k < 0 ? "-" : "+"} ${Math.abs(k)}`), step("Vertex.", `(${h}, ${k})`)],
+          solution:
+            h === 0
+              ? [
+                  step(`There's no $x$ term, so this is already in vertex form $y = a(x - h)^2 + k$ with $h = 0$.`, `y = ${a === 1 ? "" : a === -1 ? "-" : a}x^2${k === 0 ? "" : signed(k)}`),
+                  step("The vertex is at", `(0, ${k})`),
+                ]
+              : [
+                  ...(a === 1
+                    ? []
+                    : [step(`Factor $${a}$ out of the two $x$ terms.`, `y = ${a === -1 ? "-" : a}(${quadratic(1, -2 * h, 0)})${signed(a * h * h + k)}`.replace(" + 0", ""))]),
+                  step(
+                    `Complete the square: half of $${-2 * h}$ is $${-h}$, and $${factor(h)}^2 = ${quadratic(1, -2 * h, h * h)}$. So $${quadratic(1, -2 * h, 0)}$ is that square minus $${h * h}$.`,
+                    `${quadratic(1, -2 * h, 0)} = ${factor(h)}^2 - ${h * h}`,
+                  ),
+                  step(
+                    a === 1 ? "Substitute it back and combine the numbers." : `Substitute it back, multiply out the $${a}$, and combine the numbers.`,
+                    lines(
+                      a === 1 ? `y &= ${factor(h)}^2 - ${h * h}${signed(h * h + k)}` : `y &= ${a === -1 ? "-" : a}\\left(${factor(h)}^2 - ${h * h}\\right)${signed(a * h * h + k)}`,
+                      ...(a === 1 ? [] : [`&= ${a === -1 ? "-" : a}${factor(h)}^2${signed(-a * h * h)}${signed(a * h * h + k)}`]),
+                      `&= ${a === 1 ? "" : a === -1 ? "-" : a}${factor(h)}^2${k === 0 ? "" : signed(k)}`,
+                    ),
+                  ),
+                  step(`In vertex form $y = a(x - h)^2 + k$ the vertex is $(h, k)$. Careful with the sign: $${factor(h)}$ means $h = ${h}$.`, `(${h}, ${k})`),
+                ],
         };
       },
     },
@@ -214,7 +314,17 @@ export const polynomials: Unit = {
             tex: `${quadratic(a, b, c)} = 0`,
             answer: numberAnswer(disc > 0 ? 2 : disc === 0 ? 1 : 0),
             hints: [`$b^2 - 4ac = ${b * b} - ${4 * a * c}$`.replace("- -", "+ "), "Positive → 2, zero → 1, negative → 0."],
-            solution: [step("Discriminant.", r`\Delta = ${disc}`), step(disc > 0 ? "Positive: two real roots." : disc === 0 ? "Zero: one repeated root." : "Negative: no real roots.")],
+            solution: [
+              step("Read off the coefficients.", r`a = ${a}, \quad b = ${b}, \quad c = ${c}`),
+              step("Substitute into the discriminant.", r`b^2 - 4ac = ${paren(b)}^2 - 4${times(1, a, c)} = ${b * b} - ${paren(4 * a * c)} = ${disc}`),
+              step(
+                disc > 0
+                  ? `It's positive, so $\\pm\\sqrt{${disc}}$ gives two different values: there are $2$ real solutions.`
+                  : disc === 0
+                    ? "It's zero, so $\\pm\\sqrt{0}$ adds nothing: there is $1$ (repeated) real solution."
+                    : "It's negative, and a negative number has no real square root: there are $0$ real solutions.",
+              ),
+            ],
           };
         }
         let A = a, B = b, C = c;
@@ -228,7 +338,28 @@ export const polynomials: Unit = {
           answer: { kind: "set", values: D === 0 ? [roots[0]!] : roots, tolerance: 0.006 },
           inputHint: "e.g. 0.85, -2.35",
           hints: [`a = ${A}, b = ${B}, c = ${C}.`, `The discriminant is ${D}.`],
-          solution: [step("Substitute.", r`x = \frac{${-B} \pm ${texRoot(o, i)}}{${2 * A}}`), step("Evaluate.", roots.join(r`,\ `))],
+          solution: [
+            step("Read off the coefficients and write down the formula.", r`a = ${A},\ b = ${B},\ c = ${C} \qquad x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}`),
+            step("Work out the discriminant first.", r`b^2 - 4ac = ${paren(B)}^2 - 4${times(1, A, C)} = ${B * B} - ${paren(4 * A * C)} = ${D}`),
+            step(`Substitute everything.${i !== D && D !== 0 ? ` (You can simplify $\\sqrt{${D}} = ${texRoot(o, i)}$.)` : ""}`, r`x = \frac{${-B} \pm ${D === 0 ? "0" : texRoot(o, i)}}{${2 * A}}`),
+            D === 0
+              ? step("The square root is $0$, so there's just one solution.", r`x = \frac{${-B}}{${2 * A}} = ${roots[0]}`)
+              : Number.isInteger(Math.sqrt(D))
+                ? step(
+                    `$\\sqrt{${D}} = ${Math.sqrt(D)}$ exactly. Take the $+$ and the $-$ in turn.`,
+                    lines(
+                      r`x &= \frac{${-B} + ${Math.sqrt(D)}}{${2 * A}} = ${texFrac(-B + Math.sqrt(D), 2 * A)}${Number.isInteger((-B + Math.sqrt(D)) / (2 * A)) ? "" : r` \approx ${roots[0]}`}`,
+                      r`x &= \frac{${-B} - ${Math.sqrt(D)}}{${2 * A}} = ${texFrac(-B - Math.sqrt(D), 2 * A)}${Number.isInteger((-B - Math.sqrt(D)) / (2 * A)) ? "" : r` \approx ${roots[1]}`}`,
+                    ),
+                  )
+                : step(
+                    `Use $\\sqrt{${D}} \\approx ${round(Math.sqrt(D), 4)}$ and take the $+$ and the $-$ in turn.`,
+                    lines(
+                      r`x &= \frac{${-B} + ${round(Math.sqrt(D), 4)}}{${2 * A}} \approx ${roots[0]}`,
+                      r`x &= \frac{${-B} - ${round(Math.sqrt(D), 4)}}{${2 * A}} \approx ${roots[1]}`,
+                    ),
+                  ),
+          ],
         };
       },
     },
@@ -262,7 +393,10 @@ export const polynomials: Unit = {
             tex: r`\frac{${k}}{\sqrt{${n}}}`,
             ...multipleChoice(rng, `$${root(m, n)}$`, [`$${root(k, n)}$`, `$\\frac{\\sqrt{${n}}}{${k}}$`, `$${root(m, k)}$`]),
             hints: [`Multiply the top and bottom by √${n}.`, `Then simplify ${k}/${n}.`],
-            solution: [step(`Multiply by $\\frac{\\sqrt{${n}}}{\\sqrt{${n}}}$.`, r`\frac{${k}\sqrt{${n}}}{${n}}`), step("Simplify.", root(m, n))],
+            solution: [
+              step(`Multiply the top and bottom by $\\sqrt{${n}}$. That's multiplying by $1$, so the value doesn't change, and $\\sqrt{${n}}\\times\\sqrt{${n}} = ${n}$ clears the root from the bottom.`, r`\frac{${k}}{\sqrt{${n}}}\cdot\frac{\sqrt{${n}}}{\sqrt{${n}}} = \frac{${k}\sqrt{${n}}}{${n}}`),
+              step(`Simplify the numbers: $${k}\\div${n} = ${m}$.`, r`\frac{${k}\sqrt{${n}}}{${n}} = ${root(m, n)}`),
+            ],
           };
         }
         if (level === 2) {
@@ -272,9 +406,13 @@ export const polynomials: Unit = {
           return {
             prompt: "Rationalise the denominator.",
             tex: r`\frac{1}{${a} ${plus ? "+" : "-"} \sqrt{${n}}}`,
-            ...multipleChoice(rng, `$${over(conj, den)}$`, [`$${over(`${a} ${plus ? "+" : "-"} \\sqrt{${n}}`, den)}$`, `$${over(conj, a * a + n)}$`, `$${over(conj, a - n)}$`]),
+            ...multipleChoice(rng, `$${over(conj, den)}$`, [`$${over(`${a} ${plus ? "+" : "-"} \\sqrt{${n}}`, den)}$`, `$${over(conj, a * a + n)}$`, `$${over(conj, a - n || a)}$`]),
             hints: [`Multiply the top and bottom by the conjugate, ${conj.replace("\\sqrt", "√").replace(/[{}]/g, "")}.`, "The bottom becomes a² − b."],
-            solution: [step("Multiply by the conjugate.", r`\frac{${conj}}{(${a})^2 - ${n}}`), step("Simplify.", over(conj, den))],
+            solution: [
+              step(`Multiply the top and bottom by the **conjugate** $${conj}$: the same two terms with the opposite sign.`, r`\frac{1}{${a} ${plus ? "+" : "-"} \sqrt{${n}}}\cdot\frac{${conj}}{${conj}}`),
+              step("The bottom is a difference of two squares, so the root disappears.", r`(${a} ${plus ? "+" : "-"} \sqrt{${n}})(${conj}) = ${a}^2 - (\sqrt{${n}})^2 = ${a * a} - ${n} = ${den}`),
+              step("Put it together.", over(conj, den)),
+            ],
           };
         }
         const c = rng.int(1, 5);
@@ -285,7 +423,10 @@ export const polynomials: Unit = {
             tex: r`(${a} + \sqrt{${n}})(${a} - \sqrt{${n}})`,
             answer: numberAnswer(a * a - n),
             hints: ["It's a difference of two squares.", "(a + √b)(a − √b) = a² − b"],
-            solution: [step("Difference of two squares.", r`${a}^2 - (\sqrt{${n}})^2 = ${a * a} - ${n} = ${a * a - n}`)],
+            solution: [
+              step("This is $(p + q)(p - q)$, which always equals $p^2 - q^2$: the middle terms cancel.", r`(${a} + \sqrt{${n}})(${a} - \sqrt{${n}}) = ${a}^2 - (\sqrt{${n}})^2`),
+              step(`Squaring a square root undoes it: $(\\sqrt{${n}})^2 = ${n}$.`, r`${a * a} - ${n} = ${a * a - n}`),
+            ],
           };
         }
         return {
@@ -294,10 +435,7 @@ export const polynomials: Unit = {
           answer: numberAnswer(1 / (2 * c)),
           inputHint: "e.g. 1/6",
           hints: [`Multiply the top and bottom by √(x + ${c * c}) + ${c}.`, "The x on top cancels with the x on the bottom."],
-          solution: [
-            step("Multiply by the conjugate.", r`\frac{(x + ${c * c}) - ${c * c}}{x(\sqrt{x + ${c * c}} + ${c})} = \frac{1}{\sqrt{x + ${c * c}} + ${c}}`),
-            step("Now set $x = 0$.", r`\frac{1}{${c} + ${c}} = \frac{1}{${2 * c}}`),
-          ],
+          solution: rationalisedLimit(c),
         };
       },
     },
@@ -335,21 +473,31 @@ export const polynomials: Unit = {
             prompt: `Find the remainder when $p(x) = ${cubic(cs)}$ is divided by $${factor(k)}$.`,
             answer: numberAnswer(value),
             hints: ["You don't need to divide: use the remainder theorem.", `The remainder is p(${k}).`],
-            solution: [step("Remainder theorem: substitute the root of the divisor.", r`p(${k}) = ${cubic(cs).replace(/x/g, `(${k})`)} = ${value}`)],
+            solution: [
+              step(`By the remainder theorem, the remainder on dividing by $${factor(k)}$ is $p(${k})$: the divisor is zero at $x = ${k}$.`),
+              step(`Substitute $x = ${k}$.`, substitute(`p(${k})`, cs.map((c, i) => [c, 3 - i] as [number, number]), k).tex),
+              step(`So the remainder is $${value}$.`),
+            ],
           };
         }
         if (level === 2) {
           const [r1, r2, r3] = rng.shuffle([-5, -4, -3, -2, -1, 1, 2, 3, 4, 5]) as [number, number, number];
           const cs = [1, -(r1 + r2 + r3), r1 * r2 + r1 * r3 + r2 * r3, -r1 * r2 * r3];
+          // Synthetic division by (x - r1): each entry is the next coefficient plus r1 times the last entry.
+          const q = cs.reduce<number[]>((acc, c, i) => [...acc, i === 0 ? c : c + r1 * acc[i - 1]!], []);
           return {
             prompt: `Given that $${factor(r1)}$ is a factor of $p(x) = ${cubic(cs)}$, solve $p(x) = 0$. Enter every solution.`,
             answer: { kind: "set", values: [r1, r2, r3] },
             inputHint: "e.g. -2, 1, 3",
             hints: [`Divide p(x) by ${factor(r1)} to get a quadratic.`, "Factor the quadratic and set each factor equal to zero."],
             solution: [
-              step("Divide out the known factor.", `p(x) = ${factor(r1)}(${quadratic(1, -(r2 + r3), r2 * r3)})`),
-              step("Factor completely.", `p(x) = ${factor(r1)}${factor(r2)}${factor(r3)}`),
-              step("Set each factor to zero.", `x = ${r1}, \\; ${r2}, \\; ${r3}`),
+              step(
+                `Divide by $${factor(r1)}$ with synthetic division: write $${r1}$ and the coefficients, bring down the first, then multiply by $${r1}$ and add, column by column.`,
+                r`\begin{array}{r|rrrr} ${r1} & ${cs.join(" & ")} \\ & & ${q.slice(0, 3).map((v) => v * r1).join(" & ")} \\ \hline & ${q.join(" & ")} \end{array}`,
+              ),
+              step("The last number is the remainder, $0$, as expected. The others are the coefficients of the quotient.", `p(x) = ${factor(r1)}(${quadratic(1, -(r2 + r3), r2 * r3)})`),
+              step(`Factor the quadratic: $${-r2}$ and $${-r3}$ multiply to $${r2 * r3}$ and add to $${-(r2 + r3)}$.`, `p(x) = ${factor(r1)}${factor(r2)}${factor(r3)}`),
+              step("Set each factor to zero.", r`x = ${r1}, \; ${r2}, \; ${r3}`),
             ],
           };
         }
@@ -361,7 +509,11 @@ export const polynomials: Unit = {
           prompt: `Find $k$ so that $${factor(a)}$ is a factor of $p(x) = ${poly([[1, "x^3"], [b, "x^2"]])} + kx${c === 0 ? "" : signed(c)}$.`,
           answer: numberAnswer(k),
           hints: ["Factor theorem: (x − a) is a factor exactly when p(a) = 0.", `Substitute x = ${a} and solve for k.`],
-          solution: [step(`Set $p(${a}) = 0$.`, `${known} ${a < 0 ? "-" : "+"} ${ka} = 0`), step("Solve.", `k = ${k}`)],
+          solution: [
+            step(`By the factor theorem, $${factor(a)}$ is a factor exactly when $p(${a}) = 0$. Substitute $x = ${a}$.`, `p(${a}) = (${a})^3${b === 0 ? "" : ` ${b < 0 ? "-" : "+"} ${Math.abs(b) === 1 ? "" : Math.abs(b)}(${a})^2`} + k(${a})${c === 0 ? "" : signed(c)}`),
+            step("Work out the numbers.", `p(${a}) = ${joinSigned([a ** 3, b * a * a, ...(c === 0 ? [] : [c])])} ${a < 0 ? "-" : "+"} ${ka} = ${known} ${a < 0 ? "-" : "+"} ${ka}`),
+            step("Set it equal to zero and solve for $k$.", lines(`${known} ${a < 0 ? "-" : "+"} ${ka} &= 0`, `${a === 1 ? "" : a === -1 ? "-" : a}k &= ${-known}`, `k &= ${k}`)),
+          ],
         };
       },
     },
@@ -389,7 +541,11 @@ export const polynomials: Unit = {
           tex: r`\frac{${quadratic(1, p + q, p * q)}}{${quadratic(1, p + s, p * s)}}`,
           ...multipleChoice(rng, correct, [`$\\dfrac{${p * q}}{${p * s}}$`, `$\\dfrac{${factor(q).replace(/^\(|\)$/g, "")}}{${factor(s).replace(/^\(|\)$/g, "")}}$`, `$\\dfrac{${factor(-p).replace(/^\(|\)$/g, "")}}{${factor(-s).replace(/^\(|\)$/g, "")}}$`]),
           hints: ["Factor the numerator and denominator.", "Look for a shared bracket."],
-          solution: [step("Factor.", r`\frac{${factor(-p)}${factor(-q)}}{${factor(-p)}${factor(-s)}}`), step("Cancel the common factor.")],
+          solution: [
+            step(`Factor the top: $${p}$ and $${q}$ multiply to $${p * q}$ and add to $${p + q}$.`, `${quadratic(1, p + q, p * q)} = ${factor(-p)}${factor(-q)}`),
+            step(`Factor the bottom: $${p}$ and $${s}$ multiply to $${p * s}$ and add to $${p + s}$.`, `${quadratic(1, p + s, p * s)} = ${factor(-p)}${factor(-s)}`),
+            step(`Both share the factor $${factor(-p)}$, so cancel it (this is valid as long as $x \\ne ${-p}$).`, r`\frac{${factor(-p)}${factor(-q)}}{${factor(-p)}${factor(-s)}} = \frac{${factor(-q).replace(/^\(|\)$/g, "")}}{${factor(-s).replace(/^\(|\)$/g, "")}}`),
+          ],
         };
       },
     },
@@ -423,7 +579,10 @@ export const polynomials: Unit = {
             tex: r`\frac{x^2 - ${p * p}}{${linear(1, q)}}\cdot\frac{${linear(1, q)}}{${linear(1, -p)}}`,
             ...multipleChoice(rng, `$${linear(1, p)}$`, [`$${linear(1, -p)}$`, `$${linear(1, q)}$`, `$\\frac{${linear(1, p)}}{${linear(1, q)}}$`]),
             hints: [`Factor x² − ${p * p} as a difference of two squares.`, "Cancel every factor that appears on both the top and the bottom."],
-            solution: [step("Factor.", r`\frac{(${linear(1, -p)})(${linear(1, p)})}{${linear(1, q)}}\cdot\frac{${linear(1, q)}}{${linear(1, -p)}}`), step("Cancel.", linear(1, p))],
+            solution: [
+              step(`Factor $x^2 - ${p * p}$ as a difference of two squares.`, r`\frac{(${linear(1, -p)})(${linear(1, p)})}{${linear(1, q)}}\cdot\frac{${linear(1, q)}}{${linear(1, -p)}}`),
+              step(`Cancel factors that appear on both the top and the bottom: $(${linear(1, -p)})$ and $(${linear(1, q)})$.`, linear(1, p)),
+            ],
           };
         const a = rng.int(1, 5), b = rng.int(1, 5), c = q;
         const den = `x(${linear(1, c)})`;
@@ -437,7 +596,11 @@ export const polynomials: Unit = {
               `$\\frac{${linear(a + b, b * c)}}{${den}}$`,
             ]),
             hints: [`The common denominator is ${den.replace(/[{}]/g, "")}.`, `Multiply the first fraction by (${linear(1, c)}) on top and bottom, and the second by x.`],
-            solution: [step("Common denominator.", r`\frac{${a}(${linear(1, c)}) + ${b}x}{${den}}`), step("Expand the top.", r`\frac{${linear(a + b, a * c)}}{${den}}`)],
+            solution: [
+              step(`The common denominator is $${den}$. Multiply the first fraction top and bottom by $(${linear(1, c)})$, and the second by $x$.`, r`\frac{${a}(${linear(1, c)})}{${den}} + \frac{${b}x}{${den}}`),
+              step("Add the numerators over the common denominator.", r`\frac{${a}(${linear(1, c)}) + ${b}x}{${den}}`),
+              step("Expand the top and collect like terms.", r`\frac{${poly([[a, "x"], [a * c, ""], [b, "x"]])}}{${den}} = \frac{${linear(a + b, a * c)}}{${den}}`),
+            ],
           };
         if (rng.chance(0.5))
           return {
@@ -445,7 +608,11 @@ export const polynomials: Unit = {
             tex: r`\frac{${a}}{x} - \frac{${a}}{${linear(1, c)}}`,
             ...multipleChoice(rng, `$\\frac{${a * c}}{${den}}$`, [`$\\frac{${-a * c}}{${den}}$`, `$\\frac{${a * c}}{${linear(1, c)}}$`, "$0$"]),
             hints: ["Use the common denominator x(x + c).", "Be careful with the minus sign in front of the second fraction."],
-            solution: [step("Common denominator.", r`\frac{${a}(${linear(1, c)}) - ${a}x}{${den}}`), step("The x terms cancel.", r`\frac{${a * c}}{${den}}`)],
+            solution: [
+              step(`The common denominator is $${den}$. Rewrite both fractions over it.`, r`\frac{${a}(${linear(1, c)})}{${den}} - \frac{${a}x}{${den}}`),
+              step("Subtract the numerators. The minus applies to the whole second numerator.", r`\frac{${a}(${linear(1, c)}) - ${a}x}{${den}} = \frac{${poly([[a, "x"], [a * c, ""], [-a, "x"]])}}{${den}}`),
+              step("The $x$ terms cancel.", r`\frac{${a * c}}{${den}}`),
+            ],
           };
         return {
           prompt: "Simplify.",
@@ -494,7 +661,15 @@ export const polynomials: Unit = {
             tex: r`f(x) = \frac{${a}}{${linear(1, -p)}}${k === 0 ? "" : signed(k)}`,
             answer: numberAnswer(vertical ? p : k),
             hints: vertical ? ["Where is the denominator zero?"] : ["As x gets huge, what does the fraction shrink towards?", "Whatever is added to it stays."],
-            solution: [vertical ? step("The denominator is zero here.", r`${linear(1, -p)} = 0 \;\Rightarrow\; x = ${p}`) : step("The fraction tends to 0, leaving the constant.", `y = ${k}`)],
+            solution: vertical
+              ? [
+                  step("A vertical asymptote is where the denominator is zero but the top isn't: the fraction blows up there."),
+                  step(`Set the denominator to zero (the top, $${a}$, is never zero).`, r`${linear(1, -p)} = 0 \;\Rightarrow\; x = ${p}`),
+                ]
+              : [
+                  step(`As $x$ gets huge (positive or negative), the bottom $${linear(1, -p)}$ gets huge, so $\\frac{${a}}{${linear(1, -p)}}$ shrinks towards $0$.`),
+                  step(`That leaves just the constant${k === 0 ? " (here $0$)" : ""}, so the graph levels off at`, `y = ${k}`),
+                ],
             solutionVisual: {
               type: "functionPlot",
               functions: [{ fn: (x) => (Math.abs(x - p) < 0.04 ? NaN : a / (x - p) + k) }, { fn: () => k, tone: "muted", dashed: true }],
@@ -513,8 +688,14 @@ export const polynomials: Unit = {
             answer: numberAnswer(hole ? r0 : s),
             hints: ["Factor the denominator first.", hole ? "A factor that cancels leaves a hole, not an asymptote." : "A factor that cancels leaves a hole; the one that's left is the asymptote."],
             solution: [
-              step("Factor.", r`\frac{${linear(1, -r0)}}{${factor(r0)}${factor(s)}} = \frac{1}{${linear(1, -s)}}, \quad x \ne ${r0}`),
-              step(hole ? "The cancelled factor gives the hole." : "The remaining factor gives the asymptote.", `x = ${hole ? r0 : s}`),
+              step(`Factor the denominator: $${-r0}$ and $${-s}$ multiply to $${r0 * s}$ and add to $${-(r0 + s)}$.`, `${quadratic(1, -(r0 + s), r0 * s)} = ${factor(r0)}${factor(s)}`),
+              step(`Cancel the factor $${factor(r0)}$ that's also on top.`, r`\frac{${linear(1, -r0)}}{${factor(r0)}${factor(s)}} = \frac{1}{${linear(1, -s)}}, \quad x \ne ${r0}`),
+              step(
+                hole
+                  ? `The cancelled factor $${factor(r0)}$ leaves a gap in the graph (a hole), not an asymptote: $f$ just isn't defined at $x = ${r0}$.`
+                  : `The factor $${factor(s)}$ is still on the bottom, so the graph shoots off to infinity there: that's the asymptote.`,
+                `x = ${hole ? r0 : s}`,
+              ),
             ],
           };
         }
@@ -527,7 +708,12 @@ export const polynomials: Unit = {
           answer: numberAnswer(lower ? 0 : a / d),
           inputHint: "e.g. 3/2",
           hints: ["Compare the degrees of the top and the bottom.", lower ? "The top grows more slowly than the bottom." : "With equal degrees, divide the leading coefficients."],
-          solution: [lower ? step("The top has the lower degree, so the fraction tends to 0.", "y = 0") : step("Equal degrees: divide the leading coefficients.", r`y = \frac{${a}}{${d}}`)],
+          solution: [
+            step(`For huge $x$, only the highest power on the top and on the bottom matters. Here that's $${lower ? linear(a, 0) : poly([[a, "x^2"]])}$ on top and $${poly([[d, "x^2"]])}$ on the bottom.`),
+            lower
+              ? step(`So $f(x)$ behaves like $\\frac{${linear(a, 0)}}{${poly([[d, "x^2"]])}} = \\frac{${a}}{${d === 1 ? "" : d}x}$, which shrinks to $0$ as $x$ grows.`, "y = 0")
+              : step(`So $f(x)$ behaves like $\\frac{${poly([[a, "x^2"]])}}{${poly([[d, "x^2"]])}}$: the $x^2$ cancels, leaving the ratio of the leading coefficients.`, r`y = \frac{${a}}{${d}}${texFrac(a, d) === r`\frac{${a}}{${d}}` ? "" : ` = ${texFrac(a, d)}`}`),
+          ],
         };
       },
     },
