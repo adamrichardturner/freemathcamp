@@ -1,6 +1,7 @@
 import { example, key, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { linear, paren, poly, round, simplifyRoot, texRoot } from "../../../core/math";
+import { gcd, linear, paren, poly, round, simplifyRoot, texRoot } from "../../../core/math";
 import type { Unit, Visual } from "../../../core/types";
+import { lines, type Step } from "../../../core/working";
 
 const r = String.raw;
 
@@ -34,7 +35,10 @@ export const geometry: Unit = {
             answer: numberAnswer(180 - a, { unit: "°" }),
             inputHint: "degrees",
             hints: ["Angles on a straight line add to 180°."],
-            solution: [step("Subtract from 180°.", r`180^\circ - ${a}^\circ = ${180 - a}^\circ`)],
+            solution: [
+              step("Angles on a straight line add up to $180^\\circ$.", r`${a}^\circ + x = 180^\circ`),
+              step(`Subtract the angle you know from $180^\\circ$.`, r`x = 180^\circ - ${a}^\circ = ${180 - a}^\circ`),
+            ],
           };
         const b = rng.int(30, 120), c = rng.int(30, 360 - a - b - 10);
         return {
@@ -42,7 +46,11 @@ export const geometry: Unit = {
           answer: numberAnswer(360 - a - b - c),
           inputHint: "degrees",
           hints: ["Angles around a point add to 360°."],
-          solution: [step("Subtract the known angles from 360°.", r`360 - ${a} - ${b} - ${c} = ${360 - a - b - c}`)],
+          solution: [
+            step("Angles around a point make a full turn: they add up to $360^\\circ$."),
+            step("Add the angles you know.", r`${a}^\circ + ${b}^\circ + ${c}^\circ = ${a + b + c}^\circ`),
+            step("The missing angle is whatever is left of the full turn.", r`x = 360^\circ - ${a + b + c}^\circ = ${360 - a - b - c}^\circ`),
+          ],
         };
       },
     },
@@ -69,7 +77,11 @@ export const geometry: Unit = {
             answer: numberAnswer((180 - apex) / 2),
             inputHint: "degrees",
             hints: ["The two base angles are equal.", "They share 180° minus the apex."],
-            solution: [step("Split the remainder.", r`\frac{180 - ${apex}}{2} = ${(180 - apex) / 2}^\circ`)],
+            solution: [
+              step("The angles in a triangle add up to $180^\\circ$, and in an isosceles triangle the two base angles are equal."),
+              step("Take away the apex to find what the two base angles share.", r`180^\circ - ${apex}^\circ = ${180 - apex}^\circ`),
+              step("Split it equally between the two base angles.", r`${180 - apex}^\circ \div 2 = ${(180 - apex) / 2}^\circ`),
+            ],
           };
         }
         return {
@@ -78,7 +90,11 @@ export const geometry: Unit = {
           answer: numberAnswer(C),
           inputHint: "degrees",
           hints: ["Angles in a triangle add to 180°."],
-          solution: [step("Subtract the known angles.", r`180 - ${A} - ${B} = ${C}^\circ`)],
+          solution: [
+            step("The three angles in any triangle add up to $180^\\circ$."),
+            step("Add the two angles you know.", r`${A}^\circ + ${B}^\circ = ${A + B}^\circ`),
+            step("Subtract from $180^\\circ$ to find the missing one.", r`180^\circ - ${A + B}^\circ = ${C}^\circ`),
+          ],
         };
       },
     },
@@ -107,7 +123,14 @@ export const geometry: Unit = {
             answer: numberAnswer(round(Math.sqrt(x * x + y * y), 2), { tolerance: 0.003 }),
             visual: { type: "rightTriangle", a: x, b: y, labels: { a: `${x}`, b: `${y}`, c: "c" } },
             hints: ["c² = a² + b²", "Take the square root at the end."],
-            solution: [step("Apply Pythagoras.", r`c = \sqrt{${x * x} + ${y * y}} = ${texRoot(o, i)} \approx ${round(Math.sqrt(x * x + y * y), 2)}`)],
+            solution: [
+              step("In a right triangle, the squares of the two legs add up to the square of the hypotenuse.", "c^2 = a^2 + b^2"),
+              step("Square the legs and add.", r`c^2 = ${x}^2 + ${y}^2 = ${x * x} + ${y * y} = ${x * x + y * y}`),
+              step(
+                `Take the square root.${i === 1 ? "" : ` (Exactly, that's $${texRoot(o, i)}$.)`}`,
+                r`c = \sqrt{${x * x + y * y}} ${i === 1 ? "=" : "\\approx"} ${round(Math.sqrt(x * x + y * y), 2)}`,
+              ),
+            ],
           };
         }
         const findHyp = level === 1 || rng.chance(0.5);
@@ -117,14 +140,22 @@ export const geometry: Unit = {
               visual: { type: "rightTriangle", a, b, labels: { a: `${a}`, b: `${b}`, c: "c" } },
               answer: numberAnswer(c),
               hints: ["Square both legs and add them.", "Take the square root."],
-              solution: [step("Pythagoras.", r`c = \sqrt{${a}^2 + ${b}^2} = \sqrt{${a * a + b * b}} = ${c}`)],
+              solution: [
+                step("In a right triangle, the squares of the two legs add up to the square of the hypotenuse.", "c^2 = a^2 + b^2"),
+                step("Square the legs and add.", r`c^2 = ${a}^2 + ${b}^2 = ${a * a} + ${b * b} = ${a * a + b * b}`),
+                step(`Take the square root: $${c}\\times${c} = ${c * c}$.`, r`c = \sqrt{${a * a + b * b}} = ${c}`),
+              ],
             }
           : {
               prompt: "Find the missing leg $a$.",
               visual: { type: "rightTriangle", a, b, labels: { a: "a", b: `${b}`, c: `${c}` } },
               answer: numberAnswer(a),
               hints: ["The hypotenuse is the longest side.", "a² = c² − b²"],
-              solution: [step("Rearrange.", r`a = \sqrt{${c}^2 - ${b}^2} = \sqrt{${c * c - b * b}} = ${a}`)],
+              solution: [
+                step("The hypotenuse is the longest side. Rearrange Pythagoras to find a leg: subtract the other leg's square from the hypotenuse's square.", "a^2 = c^2 - b^2"),
+                step("Substitute and work it out.", r`a^2 = ${c}^2 - ${b}^2 = ${c * c} - ${b * b} = ${c * c - b * b}`),
+                step(`Take the square root: $${a}\\times${a} = ${a * a}$.`, r`a = \sqrt{${c * c - b * b}} = ${a}`),
+              ],
             };
       },
     },
@@ -144,21 +175,36 @@ export const geometry: Unit = {
       ],
       generate: (rng, level) => {
         const b = rng.int(3, 15), h = rng.int(2, 12);
-        const shapes: [string, number, string][] = [
-          [`a rectangle ${b} by ${h}. Find its **area**.`, b * h, r`${b}\times${h}`],
-          [`a rectangle ${b} by ${h}. Find its **perimeter**.`, 2 * (b + h), r`2(${b} + ${h})`],
-          [`a triangle with base ${b} and height ${h}. Find its **area**.`, (b * h) / 2, r`\tfrac12\times${b}\times${h}`],
+        const shapes: [string, number, Step[]][] = [
+          [`a rectangle ${b} by ${h}. Find its **area**.`, b * h, [
+            step("The area of a rectangle is length times width: the number of unit squares that fit inside.", r`A = l\times w`),
+            step("Substitute.", r`A = ${b}\times${h} = ${b * h}`),
+          ]],
+          [`a rectangle ${b} by ${h}. Find its **perimeter**.`, 2 * (b + h), [
+            step("The perimeter is the distance all the way round: two lengths and two widths.", r`P = 2(l + w)`),
+            step("Add one length and one width.", `${b} + ${h} = ${b + h}`),
+            step("Double it for the other two sides.", r`P = 2\times${b + h} = ${2 * (b + h)}`),
+          ]],
+          [`a triangle with base ${b} and height ${h}. Find its **area**.`, (b * h) / 2, [
+            step("A triangle is half of a rectangle with the same base and height.", r`A = \tfrac12\times b\times h`),
+            step("Multiply the base by the height.", r`${b}\times${h} = ${b * h}`),
+            step("Halve it.", r`A = ${b * h}\div2 = ${(b * h) / 2}`),
+          ]],
         ];
         if (level >= 2) {
           const a2 = rng.int(2, 10);
-          shapes.push([`a trapezoid with parallel sides ${a2} and ${b}, height ${h}. Find its **area**.`, ((a2 + b) * h) / 2, r`\tfrac12(${a2} + ${b})\times${h}`]);
+          shapes.push([`a trapezoid with parallel sides ${a2} and ${b}, height ${h}. Find its **area**.`, ((a2 + b) * h) / 2, [
+            step("A trapezoid's area is the average of the parallel sides times the height.", r`A = \tfrac12(a + b)\times h`),
+            step("Add the parallel sides.", `${a2} + ${b} = ${a2 + b}`),
+            step("Multiply by the height, then halve.", r`A = \tfrac12\times${a2 + b}\times${h} = ${(a2 + b) * h}\div2 = ${((a2 + b) * h) / 2}`),
+          ]]);
         }
         const [desc, ans, work] = rng.pick(shapes);
         return {
           prompt: `Consider ${desc}`,
           answer: numberAnswer(ans),
           hints: ["Pick the right formula.", "Check: are you measuring around (perimeter) or inside (area)?"],
-          solution: [step("Apply the formula.", `${work} = ${ans}`)],
+          solution: work,
         };
       },
     },
@@ -186,7 +232,15 @@ export const geometry: Unit = {
           answer: numberAnswer(ans, { tolerance: 0.0006 }),
           inputHint: "e.g. 12.57 or 4pi",
           hints: [useDiam ? `The radius is ${rad}.` : "Use the radius directly.", askArea ? "A = πr²" : "C = 2πr"],
-          solution: [step("Apply the formula.", askArea ? r`\pi\cdot${rad}^2 = ${rad * rad}\pi \approx ${round(ans, 2)}` : r`2\pi\cdot${rad} = ${2 * rad}\pi \approx ${round(ans, 2)}`)],
+          solution: [
+            ...(useDiam ? [step("The radius is half the diameter.", r`r = ${2 * rad}\div2 = ${rad}`)] : []),
+            step(askArea ? "The area of a circle is $\\pi$ times the radius squared." : "The circumference is $2\\pi$ times the radius (or $\\pi$ times the diameter).", askArea ? r`A = \pi r^2` : r`C = 2\pi r`),
+            step(
+              "Substitute. This is the exact answer, in terms of $\\pi$.",
+              askArea ? r`A = \pi\times${rad}^2 = ${rad * rad === 1 ? "" : rad * rad}\pi` : r`C = 2\pi\times${rad} = ${2 * rad}\pi`,
+            ),
+            step("Use $\\pi \\approx 3.14159$ and round to 2 decimal places.", askArea ? r`${rad * rad === 1 ? "" : rad * rad}\pi \approx ${round(ans, 2)}` : r`${2 * rad}\pi \approx ${round(ans, 2)}`),
+          ],
         };
       },
     },
@@ -205,16 +259,38 @@ export const geometry: Unit = {
       ],
       generate: (rng, level) => {
         const l = rng.int(2, 10), w = rng.int(2, 10), h = rng.int(2, 12), rad = rng.int(1, 6);
-        const shapes: [string, number, string][] = [[`a box ${l} × ${w} × ${h}`, l * w * h, r`${l}\cdot${w}\cdot${h}`]];
-        if (level >= 2) shapes.push([`a cylinder with radius ${rad} and height ${h}`, Math.PI * rad * rad * h, r`\pi\cdot${rad}^2\cdot${h} = ${rad * rad * h}\pi`]);
-        if (level === 3) shapes.push([`a cone with radius ${rad} and height ${h}`, (Math.PI * rad * rad * h) / 3, r`\tfrac13\pi\cdot${rad}^2\cdot${h}`], [`a sphere with radius ${rad}`, (4 / 3) * Math.PI * rad ** 3, r`\tfrac43\pi\cdot${rad}^3`]);
+        const piTimes = (n: number, d = 1) => (d === 1 || n % d === 0 ? `${n / d === 1 ? "" : n / d}\\pi` : r`\frac{${n / gcd(n, d)}}{${d / gcd(n, d)}}\pi`);
+        const shapes: [string, number, Step[]][] = [[`a box ${l} × ${w} × ${h}`, l * w * h, [
+          step("The volume of a box is length × width × height: the area of the base times the height.", r`V = l\times w\times h`),
+          step("Find the area of the base.", r`${l}\times${w} = ${l * w}`),
+          step("Multiply by the height.", r`V = ${l * w}\times${h} = ${l * w * h}`),
+        ]]];
+        if (level >= 2)
+          shapes.push([`a cylinder with radius ${rad} and height ${h}`, Math.PI * rad * rad * h, [
+            step("A cylinder is a circle stacked up: base area $\\pi r^2$ times the height.", r`V = \pi r^2 h`),
+            step("Substitute.", r`V = \pi\times${rad}^2\times${h} = \pi\times${rad * rad}\times${h} = ${piTimes(rad * rad * h)}`),
+            step("Use $\\pi \\approx 3.14159$ and round to 2 decimal places.", r`${piTimes(rad * rad * h)} \approx ${round(Math.PI * rad * rad * h, 2)}`),
+          ]]);
+        if (level === 3)
+          shapes.push(
+            [`a cone with radius ${rad} and height ${h}`, (Math.PI * rad * rad * h) / 3, [
+              step("A cone holds exactly a third of the cylinder with the same base and height.", r`V = \tfrac13\pi r^2 h`),
+              step("Substitute.", r`V = \tfrac13\times\pi\times${rad}^2\times${h} = \tfrac13\times${rad * rad * h}\pi = ${piTimes(rad * rad * h, 3)}`),
+              step("Use $\\pi \\approx 3.14159$ and round to 2 decimal places.", r`${piTimes(rad * rad * h, 3)} \approx ${round((Math.PI * rad * rad * h) / 3, 2)}`),
+            ]],
+            [`a sphere with radius ${rad}`, (4 / 3) * Math.PI * rad ** 3, [
+              step("The volume of a sphere is four-thirds of $\\pi$ times the radius cubed.", r`V = \tfrac43\pi r^3`),
+              step("Substitute.", r`V = \tfrac43\times\pi\times${rad}^3 = \tfrac43\times${rad ** 3}\pi = ${piTimes(4 * rad ** 3, 3)}`),
+              step("Use $\\pi \\approx 3.14159$ and round to 2 decimal places.", r`${piTimes(4 * rad ** 3, 3)} \approx ${round((4 / 3) * Math.PI * rad ** 3, 2)}`),
+            ]],
+          );
         const [desc, ans, work] = rng.pick(shapes);
         return {
           prompt: `Find the volume of ${desc} (2 d.p. if needed).`,
           answer: numberAnswer(ans, { tolerance: 0.0006 }),
           inputHint: "e.g. 282.74 or 90pi",
           hints: ["Find the area of the base, then multiply by the height.", "Cones and pyramids: divide by 3."],
-          solution: [step("Apply the formula.", `${work} \\approx ${round(ans, 2)}`)],
+          solution: work,
         };
       },
     },
@@ -243,13 +319,21 @@ export const geometry: Unit = {
             answer: { kind: "tuple", values: [(x1 + x2) / 2, (y1 + y2) / 2] },
             inputHint: "e.g. (1, 2.5)",
             hints: ["Average the x's, then average the y's."],
-            solution: [step("Average.", r`\left(${(x1 + x2) / 2},\ ${(y1 + y2) / 2}\right)`)],
+            solution: [
+              step("The midpoint is halfway along in both directions: average the $x$-coordinates, and average the $y$-coordinates."),
+              step("Add each pair and halve.", lines(r`x &= \frac{${x1} + ${paren(x2)}}{2} = \frac{${x1 + x2}}{2} = ${(x1 + x2) / 2}`, r`y &= \frac{${y1} + ${paren(y2)}}{2} = \frac{${y1 + y2}}{2} = ${(y1 + y2) / 2}`)),
+              step("So the midpoint is", r`\left(${(x1 + x2) / 2},\ ${(y1 + y2) / 2}\right)`),
+            ],
           };
         return {
           prompt: `Find the distance between $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
           answer: numberAnswer(Math.hypot(a, b)),
           hints: [`Horizontal gap: ${a}. Vertical gap: ${b}.`, "Use Pythagoras."],
-          solution: [step("Distance formula.", r`\sqrt{${a}^2 + ${b}^2} = ${Math.hypot(a, b)}`)],
+          solution: [
+            step("Find how far apart the points are across and up: these are the legs of a right triangle.", lines(r`\text{across: } & |${x2} - ${paren(x1)}| = ${a}`, r`\text{up/down: } & |${y2} - ${paren(y1)}| = ${b}`)),
+            step("The distance is the hypotenuse, so use Pythagoras.", r`d^2 = ${a}^2 + ${b}^2 = ${a * a} + ${b * b} = ${a * a + b * b}`),
+            step("Take the square root.", r`d = \sqrt{${a * a + b * b}} = ${Math.hypot(a, b)}`),
+          ],
         };
       },
     },
@@ -299,7 +383,10 @@ export const geometry: Unit = {
                 tex: eq,
                 answer: numberAnswer(rad),
                 hints: ["The right-hand side is r², not r."],
-                solution: [step("Take the square root.", r`r = \sqrt{${rad * rad}} = ${rad}`)],
+                solution: [
+                  step("A circle's equation is $(x - h)^2 + (y - k)^2 = r^2$. The number on the right is the radius **squared**.", `r^2 = ${rad * rad}`),
+                  step("Take the square root.", r`r = \sqrt{${rad * rad}} = ${rad}`),
+                ],
                 solutionVisual,
               }
             : {
@@ -308,7 +395,11 @@ export const geometry: Unit = {
                 answer: { kind: "tuple", values: [h, k] },
                 inputHint: "e.g. (2, -3)",
                 hints: ["Compare with (x − h)² + (y − k)² = r².", "The signs inside the brackets are opposite to the coordinates."],
-                solution: [step("Read h and k with the opposite signs.", `(${h}, ${k})`)],
+                solution: [
+                  step("Compare with $(x - h)^2 + (y - k)^2 = r^2$. Each bracket shows the centre's coordinate with the **opposite** sign, because it's subtracted."),
+                  step("Read off each coordinate.", lines(h === 0 ? r`x^2 = (x - 0)^2 &\Rightarrow h = 0` : r`${sq("x", h)} &\Rightarrow h = ${h}`, k === 0 ? r`y^2 = (y - 0)^2 &\Rightarrow k = 0` : r`${sq("y", k)} &\Rightarrow k = ${k}`)),
+                  step("So the centre is", `(${h}, ${k})`),
+                ],
                 solutionVisual,
               };
         }
@@ -320,7 +411,11 @@ export const geometry: Unit = {
             prompt: `A circle has centre $(${h}, ${k})$ and passes through $(${px}, ${py})$. Its equation is $${sq("x", h)} + ${sq("y", k)} = c$. Find $c$.`,
             answer: numberAnswer(r2),
             hints: ["c is r², the squared distance from the centre to the point.", "Use (x₂ − x₁)² + (y₂ − y₁)²."],
-            solution: [step("Squared distance from the centre to the point.", r`(${px} - ${paren(h)})^2 + (${py} - ${paren(k)})^2 = ${dx * dx} + ${dy * dy} = ${r2}`)],
+            solution: [
+              step("The number on the right is $r^2$, and $r$ is the distance from the centre to any point on the circle."),
+              step("So find the squared distance from the centre to the point.", r`(${px} - ${paren(h)})^2 + (${py} - ${paren(k)})^2 = ${paren(sx * dx)}^2 + ${paren(sy * dy)}^2 = ${dx * dx} + ${dy * dy} = ${r2}`),
+              step(`So $c = r^2 = ${r2}$.`),
+            ],
           };
         }
         const D = -2 * h, E = -2 * k, F = h * h + k * k - rad * rad;
@@ -333,8 +428,19 @@ export const geometry: Unit = {
           inputHint: centre ? "e.g. (2, -3)" : undefined,
           hints: ["Complete the square in x, then in y.", "Add the same amounts to both sides."],
           solution: [
-            step("Complete both squares.", `${sq("x", h)} + ${sq("y", k)} = ${-F} + ${h * h} + ${k * k}`),
-            step("Read off the circle.", r`(${h}, ${k}),\quad r^2 = ${rad * rad},\quad r = ${rad}`),
+            step("Group the $x$ terms and the $y$ terms, and move the plain number to the right.", `(${poly([[1, "x^2"], [D, "x"]])}) + (${poly([[1, "y^2"], [E, "y"]])}) = ${-F}`),
+            step(
+              "Complete the square in each bracket: halve the coefficient, square it, and add that to **both** sides.",
+              lines(
+                ...(h === 0 ? [] : [r`x^2 ${D < 0 ? "-" : "+"} ${Math.abs(D)}x &= (${linear(1, -h)})^2 - ${h * h}`]),
+                ...(k === 0 ? [] : [r`y^2 ${E < 0 ? "-" : "+"} ${Math.abs(E)}y &= (${linear(1, -k, "y")})^2 - ${k * k}`]),
+              ),
+            ),
+            step("Substitute and tidy up.", `${sq("x", h)} + ${sq("y", k)} = ${-F}${h ? ` + ${h * h}` : ""}${k ? ` + ${k * k}` : ""} = ${rad * rad}`),
+            step(
+              centre ? "Read the centre from the brackets, flipping the signs." : `The right side is $r^2$, so take its square root.`,
+              centre ? `(${h}, ${k})` : r`r = \sqrt{${rad * rad}} = ${rad}`,
+            ),
           ],
           solutionVisual,
         };

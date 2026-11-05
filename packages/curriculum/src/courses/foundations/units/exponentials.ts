@@ -1,6 +1,7 @@
 import { decimalAnswer, example, key, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { round } from "../../../core/math";
+import { num, round } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { type Step } from "../../../core/working";
 
 const r = String.raw;
 
@@ -34,7 +35,11 @@ export const exponentials: Unit = {
             prompt: `If $f(x) = ${a / 50}\\cdot${b}^x$, find $f(${t})$.`,
             answer: numberAnswer((a / 50) * b ** t),
             hints: [`Compute ${b}^${t} first.`],
-            solution: [step("Exponent first, then multiply.", r`${a / 50}\cdot${b ** t} = ${(a / 50) * b ** t}`)],
+            solution: [
+              step(`Substitute $x = ${t}$.`, r`f(${t}) = ${a / 50}\cdot${b}^{${t}}`),
+              step(`The power comes before the multiplication: $${b}^{${t}} = ${Array(t).fill(b).join("\\times")} = ${b ** t}$.`, r`f(${t}) = ${a / 50}\cdot${b ** t}`),
+              step("Multiply.", r`f(${t}) = ${(a / 50) * b ** t}`),
+            ],
           };
         }
         const factor = 1 + (grow ? p : -p) / 100;
@@ -43,7 +48,15 @@ export const exponentials: Unit = {
           prompt: `A quantity starts at $${a}$ and ${grow ? "grows" : "decays"} by $${p}\\%$ per year. What is it after $${t}$ years? (2 d.p.)`,
           answer: numberAnswer(val, { tolerance: 0.0005 }),
           hints: [`The factor is ${factor}.`, `Compute ${a} × ${factor}^${t}.`],
-          solution: [step("Apply the model.", r`${a}\cdot${factor}^{${t}} \approx ${val}`)],
+          solution: [
+            step(
+              `${grow ? "Growing" : "Shrinking"} by $${p}\\%$ leaves $${grow ? 100 + p : 100 - p}\\%$ of the amount each year, so each year multiplies it by $${factor}$.`,
+              r`1 ${grow ? "+" : "-"} \frac{${p}}{100} = ${factor}`,
+            ),
+            step(`After $${t}$ years you've multiplied by $${factor}$ a total of $${t}$ times.`, r`${a}\cdot${factor}^{${t}}`),
+            step("Work out the power first.", r`${factor}^{${t}} \approx ${round(factor ** t, 6)}`),
+            step("Multiply by the starting amount and round to 2 decimal places.", r`${a}\times${round(factor ** t, 6)} \approx ${val}`),
+          ],
         };
       },
     },
@@ -72,7 +85,15 @@ export const exponentials: Unit = {
           tex: r`\log_{${b}} ${xTex}`,
           answer: numberAnswer(y),
           hints: [`Ask: ${b} to what power gives ${y < 0 ? `1/${b ** -y}` : x}?`, y < 0 ? "Negative exponents give reciprocals." : "Count the factors."],
-          solution: [step("Rewrite as an exponent question.", r`${b}^{${y}} = ${xTex}`)],
+          solution: [
+            step(`$\\log_{${b}} ${xTex}$ asks: $${b}$ to what power gives $${xTex}$?`, r`${b}^{\,?} = ${xTex}`),
+            y === 0
+              ? step("Any number to the power $0$ is $1$.", r`${b}^{0} = 1`)
+              : y > 0
+                ? step(`Count up the powers of $${b}$.`, Array.from({ length: y }, (_, i) => r`${b}^{${i + 1}} = ${b ** (i + 1)}`).join(",\\quad "))
+                : step(`A fraction $1$ over a power means a negative exponent: $${b ** -y} = ${b}^{${-y}}$, so $\\frac{1}{${b ** -y}} = ${b}^{${y}}$.`, r`${b}^{${y}} = ${xTex}`),
+            step(`So the power is $${y}$.`, r`\log_{${b}} ${xTex} = ${y}`),
+          ],
         };
       },
     },
@@ -97,19 +118,39 @@ export const exponentials: Unit = {
         const n = rng.int(1, b === 10 ? 3 : 4);
         const m = rng.int(2, 6);
         const target = b ** n;
-        const forms: [string, number][] = [
-          [r`\log_{${b}} ${target * m} - \log_{${b}} ${m}`, n],
-          [r`\log_{${b}} ${b} + \log_{${b}} ${b ** (n - 1)}`, n],
+        const log = (x: string | number) => r`\log_{${b}} ${x}`;
+        const evalPower = (k: number) => step(`$${b ** k} = ${b}^{${k}}$, so its log base $${b}$ is $${k}$.`, `${log(b ** k)} = ${k}`);
+        const forms: [string, number, Step[]][] = [
+          [`${log(target * m)} - ${log(m)}`, n, [
+            step("Quotient law: a difference of logs is the log of a division.", `${log(target * m)} - ${log(m)} = ${log(r`\frac{${target * m}}{${m}}`)} = ${log(target)}`),
+            evalPower(n),
+          ]],
+          [`${log(b)} + ${log(b ** (n - 1))}`, n, [
+            step("Product law: a sum of logs is the log of a product.", `${log(b)} + ${log(b ** (n - 1))} = ${log(r`(${b}\times${b ** (n - 1)})`)} = ${log(target)}`),
+            evalPower(n),
+          ]],
         ];
-        if (level >= 2) forms.push([r`${m}\log_{${b}} ${b ** n}`, m * n], [r`\log_{${b}} ${b}^{${m}} + \log_{${b}} 1`, m]);
-        if (level === 3) forms.push([r`\tfrac{1}{2}\log_{${b}} ${b ** (2 * n)} + \log_{${b}} ${b * m} - \log_{${b}} ${m}`, n + 1]);
-        const [tex, ans] = rng.pick(forms);
+        if (level >= 2)
+          forms.push(
+            [r`${m}\log_{${b}} ${b ** n}`, m * n, [evalPower(n), step(`Multiply by $${m}$.`, r`${m}\times${n} = ${m * n}`)]],
+            [r`\log_{${b}} ${b}^{${m}} + \log_{${b}} 1`, m, [
+              step(`Power law: bring the exponent down in front. $\\log_{${b}} ${b} = 1$, because $${b}^1 = ${b}$.`, r`\log_{${b}} ${b}^{${m}} = ${m}\log_{${b}} ${b} = ${m}`),
+              step(`$\\log_{${b}} 1 = 0$, because $${b}^0 = 1$.`, r`${m} + 0 = ${m}`),
+            ]],
+          );
+        if (level === 3)
+          forms.push([r`\tfrac{1}{2}\log_{${b}} ${b ** (2 * n)} + \log_{${b}} ${b * m} - \log_{${b}} ${m}`, n + 1, [
+            step(`Power law on the first term: $${b ** (2 * n)} = ${b}^{${2 * n}}$, and half of $${2 * n}$ is $${n}$.`, r`\tfrac{1}{2}\log_{${b}} ${b}^{${2 * n}} = \tfrac{1}{2}\times${2 * n} = ${n}`),
+            step("Quotient law on the last two terms.", r`\log_{${b}} ${b * m} - \log_{${b}} ${m} = \log_{${b}} \frac{${b * m}}{${m}} = \log_{${b}} ${b} = 1`),
+            step("Add.", `${n} + 1 = ${n + 1}`),
+          ]]);
+        const [tex, ans, work] = rng.pick(forms);
         return {
           prompt: "Simplify to a single number.",
           tex,
           answer: numberAnswer(ans),
           hints: ["Combine using the product/quotient laws.", "Then evaluate the single log."],
-          solution: [step("Combine into one logarithm, then evaluate.", `${ans}`)],
+          solution: work,
         };
       },
     },
@@ -143,7 +184,10 @@ export const exponentials: Unit = {
               tex: r`\ln\left(e^{${k}}\right)`,
               answer: numberAnswer(k),
               hints: ["ln and e to the power undo each other."],
-              solution: [step("They're inverse functions.", r`\ln\left(e^{${k}}\right) = ${k}`)],
+              solution: [
+                step(`$\\ln$ asks: $e$ to what power gives this? Here the number is already written as $e^{${k}}$.`),
+                step("So $\\ln$ and $e^{\\,\\cdot}$ undo each other.", r`\ln\left(e^{${k}}\right) = ${k}`),
+              ],
             };
           if (kind === 1)
             return {
@@ -151,7 +195,10 @@ export const exponentials: Unit = {
               tex: r`e^{\ln ${k}}`,
               answer: numberAnswer(k),
               hints: ["e to the power and ln undo each other."],
-              solution: [step("They're inverse functions.", r`e^{\ln ${k}} = ${k}`)],
+              solution: [
+                step(`$\\ln ${k}$ is the power you raise $e$ to in order to get $${k}$.`),
+                step(`So raising $e$ to that power gives back $${k}$: the two undo each other.`, r`e^{\ln ${k}} = ${k}`),
+              ],
             };
           return {
             prompt: "Solve for $x$. Give an exact answer such as ln(5), or a decimal to 2 places.",
@@ -159,7 +206,10 @@ export const exponentials: Unit = {
             answer: decimalAnswer(Math.log(k)),
             inputHint: "e.g. ln(5)",
             hints: ["Take ln of both sides."],
-            solution: [step("Take ln of both sides.", r`x = \ln ${k} \approx ${round(Math.log(k), 3)}`)],
+            solution: [
+              step("Take $\\ln$ of both sides. Since $\\ln(e^x) = x$, that frees the $x$.", r`\ln\left(e^{x}\right) = \ln ${k}`),
+              step("So the exact answer is $\\ln$ of the right side.", r`x = \ln ${k} \approx ${round(Math.log(k), 3)}`),
+            ],
           };
         }
         if (level === 2) {
@@ -171,7 +221,10 @@ export const exponentials: Unit = {
               answer: decimalAnswer(Math.log(c) / k),
               inputHint: "e.g. ln(7)/3",
               hints: ["Take ln of both sides.", `Then divide by ${k}.`],
-              solution: [step("Take ln of both sides.", r`${k}x = \ln ${c}`), step(`Divide by ${k}.`, r`x = \frac{\ln ${c}}{${k}} \approx ${round(Math.log(c) / k, 3)}`)],
+              solution: [
+                step("Take $\\ln$ of both sides. $\\ln$ undoes $e$ to a power, leaving the exponent.", r`${k}x = \ln ${c}`),
+                step(`Divide by $${k}$.`, r`x = \frac{\ln ${c}}{${k}} \approx \frac{${round(Math.log(c), 4)}}{${k}} \approx ${round(Math.log(c) / k, 3)}`),
+              ],
             };
           }
           const P = rng.pick([100, 250, 500, 1000, 2000]), rate = rng.int(2, 8), t = rng.int(2, 20);
@@ -180,7 +233,11 @@ export const exponentials: Unit = {
             prompt: `$${P}$ dollars grows continuously at $${rate}\\%$ a year. How much is there after $${t}$ years? Give your answer to 2 decimal places.`,
             answer: decimalAnswer(A),
             hints: ["Use A = Pe^(rt), with r as a decimal.", `r = ${rate / 100}`],
-            solution: [step("Continuous growth.", r`A = ${P}e^{${rate / 100}\times${t}} \approx ${round(A, 2)}`)],
+            solution: [
+              step(`Continuous growth uses $A = Pe^{rt}$, with $P = ${P}$, the rate as a decimal $r = ${rate / 100}$, and $t = ${t}$.`, r`A = ${P}e^{${rate / 100}\times${t}}`),
+              step("Work out the exponent first.", r`${rate / 100}\times${t} = ${num((rate * t) / 100)}`),
+              step("Then the power of $e$, and multiply by $P$.", r`A = ${P}\times e^{${num((rate * t) / 100)}} \approx ${P}\times${round(Math.exp((rate * t) / 100), 6)} \approx ${round(A, 2)}`),
+            ],
           };
         }
         const kind = rng.int(0, 2);
@@ -190,7 +247,11 @@ export const exponentials: Unit = {
             prompt: `An investment grows continuously at $${rate}\\%$ a year. How many years does it take to double? Give your answer to 2 decimal places.`,
             answer: decimalAnswer(Math.log(2) / (rate / 100)),
             hints: ["Doubling means Pe^(rt) = 2P, so e^(rt) = 2.", "Take ln of both sides."],
-            solution: [step("Divide by P.", r`e^{${rate / 100}t} = 2`), step("Take ln and divide.", r`t = \frac{\ln 2}{${rate / 100}} \approx ${round(Math.log(2) / (rate / 100), 2)}`)],
+            solution: [
+              step(`Doubling means the amount reaches $2P$. Set up $Pe^{rt} = 2P$ with $r = ${rate / 100}$, and divide both sides by $P$.`, r`e^{${rate / 100}t} = 2`),
+              step("Take $\\ln$ of both sides to bring down the exponent.", r`${rate / 100}t = \ln 2`),
+              step(`Divide by $${rate / 100}$.`, r`t = \frac{\ln 2}{${rate / 100}} \approx \frac{${round(Math.log(2), 4)}}{${rate / 100}} \approx ${round(Math.log(2) / (rate / 100), 2)}`),
+            ],
           };
         }
         if (kind === 1) {
@@ -201,7 +262,10 @@ export const exponentials: Unit = {
             answer: decimalAnswer(Math.exp(a)),
             inputHint: "e.g. e^2",
             hints: ["Raise e to the power of both sides."],
-            solution: [step("Undo ln with e.", r`x = e^{${a}} \approx ${round(Math.exp(a), 3)}`)],
+            solution: [
+              step(`$\\ln x = ${a}$ means $e$ to the power $${a}$ gives $x$. Raise $e$ to the power of both sides.`, r`e^{\ln x} = e^{${a}}`),
+              step("$e$ to a power undoes $\\ln$.", r`x = e^{${a}} \approx ${round(Math.exp(a), 3)}`),
+            ],
           };
         }
         const m = rng.int(2, 5), b = rng.int(1, 9), c = m * rng.int(2, 6) - b;
@@ -211,7 +275,11 @@ export const exponentials: Unit = {
           answer: decimalAnswer(Math.log((c + b) / m)),
           inputHint: "e.g. ln(4)",
           hints: ["Isolate e^x first.", "Then take ln of both sides."],
-          solution: [step("Isolate the exponential.", r`e^{x} = \frac{${c} + ${b}}{${m}} = ${(c + b) / m}`), step("Take ln.", r`x = \ln ${(c + b) / m} \approx ${round(Math.log((c + b) / m), 3)}`)],
+          solution: [
+            step(`Get $e^x$ on its own. Add $${b}$ to both sides.`, r`${m}e^{x} = ${c} + ${b} = ${c + b}`),
+            step(`Divide both sides by $${m}$.`, r`e^{x} = \frac{${c + b}}{${m}} = ${(c + b) / m}`),
+            step("Take $\\ln$ of both sides.", r`x = \ln ${(c + b) / m} \approx ${round(Math.log((c + b) / m), 3)}`),
+          ],
         };
       },
     },
@@ -238,7 +306,18 @@ export const exponentials: Unit = {
             tex: r`${b}^{x + ${k}} = ${exp >= 0 ? b ** exp : `\\frac{1}{${b ** -exp}}`}`,
             answer: numberAnswer(x),
             hints: [`Write the right side as a power of ${b}.`, "Set the exponents equal."],
-            solution: [step("Same base.", r`${b}^{x+${k}} = ${b}^{${exp}}`), step("Solve.", `x = ${x}`)],
+            solution: [
+              step(
+                exp > 0
+                  ? `Write the right side as a power of $${b}$: $${b ** exp} = ${Array(exp).fill(b).join("\\times")} = ${b}^{${exp}}$.`
+                  : exp === 0
+                    ? `Write the right side as a power of $${b}$: $1 = ${b}^{0}$.`
+                    : `Write the right side as a power of $${b}$: $${b ** -exp} = ${b}^{${-exp}}$, and one over a power is a negative power.`,
+                r`${b}^{x + ${k}} = ${b}^{${exp}}`,
+              ),
+              step("The bases match, so the exponents must be equal.", `x + ${k} = ${exp}`),
+              step(`Subtract $${k}$ from both sides.`, `x = ${exp} - ${k} = ${x}`),
+            ],
           };
         }
         const c = rng.int(7, 90);
@@ -248,7 +327,11 @@ export const exponentials: Unit = {
           tex: `${b}^x = ${c}`,
           answer: numberAnswer(ans, { tolerance: 0.003 }),
           hints: ["Take the log of both sides.", "Use the power law to bring x down."],
-          solution: [step("Logs.", r`x = \frac{\log ${c}}{\log ${b}} \approx ${ans}`)],
+          solution: [
+            step(`$${c}$ isn't a whole power of $${b}$, so take the log of both sides. The power law brings $x$ down in front.`, r`x\log ${b} = \log ${c}`),
+            step(`Divide both sides by $\\log ${b}$.`, r`x = \frac{\log ${c}}{\log ${b}}`),
+            step("Use a calculator, then round to 2 decimal places.", r`x \approx \frac{${round(Math.log10(c), 4)}}{${round(Math.log10(b), 4)}} \approx ${ans}`),
+          ],
         };
       },
     },

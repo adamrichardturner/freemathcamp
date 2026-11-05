@@ -1,6 +1,10 @@
 import { example, key, math, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { linear, paren, quadratic, round } from "../../../core/math";
+import { linear, paren, poly, quadratic, round, signed } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { lines, substitute, type Terms } from "../../../core/working";
+
+/** " - 3" or " + 3" to undo a constant b on both sides. */
+const undo = (b: number) => (b > 0 ? ` - ${b}` : ` + ${-b}`);
 
 const r = String.raw;
 
@@ -29,13 +33,22 @@ export const functionsUnit: Unit = {
         const xs = rng.shuffle([-2, -1, 0, 1, 2, 3, 4]).slice(0, 4);
         const pairs = xs.map((x) => [x, rng.int(-5, 5)] as [number, number]);
         if (!isFn) pairs.push([pairs[0]![0], pairs[0]![1] + rng.nonZero(1, 3)]);
-        const shown = rng.shuffle(pairs).map(([x, y]) => `(${x}, ${y})`).join(r`,\ `);
+        const order = rng.shuffle(pairs);
+        const shown = order.map(([x, y]) => `(${x}, ${y})`).join(r`,\ `);
         return {
           prompt: "Does this set of ordered pairs describe a function?",
           tex: r`\{${shown}\}`,
           ...multipleChoice(rng, isFn ? "Yes — each input has one output" : "No — an input has two outputs", [isFn ? "No — an input has two outputs" : "Yes — each input has one output"]),
           hints: ["Look for a repeated x-value with different y-values."],
-          solution: [step(isFn ? "Every x-value appears once." : `x = ${pairs[0]![0]} is paired with two different outputs.`)],
+          solution: [
+            step("A function gives every input exactly one output. The inputs are the $x$-values, so look at the first number in each pair.", order.map(([x]) => x).join(r`,\ `)),
+            step(
+              isFn
+                ? "No $x$-value appears twice, so no input has two different outputs."
+                : `$x = ${pairs[0]![0]}$ appears twice, paired with $${pairs[0]![1]}$ and with $${pairs.at(-1)![1]}$: one input, two outputs.`,
+            ),
+            step(`So: ${isFn ? "Yes — each input has one output" : "No — an input has two outputs"}.`),
+          ],
         };
       },
     },
@@ -62,16 +75,24 @@ export const functionsUnit: Unit = {
             prompt: `If $f(x) = ${linear(m, b)}$, for what $x$ is $f(x) = ${m * target + b}$?`,
             answer: numberAnswer(target),
             hints: ["Set the expression equal to the output and solve."],
-            solution: [step("Solve.", r`${linear(m, b)} = ${m * target + b} \Rightarrow x = ${target}`)],
+            solution: [
+              step(`$f(x) = ${m * target + b}$ asks which input gives the output $${m * target + b}$. Set the rule equal to it.`, `${linear(m, b)} = ${m * target + b}`),
+              ...(b === 0 ? [] : [step(`${b > 0 ? "Subtract" : "Add"} $${Math.abs(b)}$ ${b > 0 ? "from" : "to"} both sides.`, `${linear(m, 0)} = ${m * target + b}${undo(b)} = ${m * target}`)]),
+              step(`Divide both sides by $${m}$.`, r`x = \frac{${m * target}}{${m}} = ${target}`),
+            ],
           };
         }
         const f = level === 1 ? linear(a, c) : quadratic(a, b, c);
         const val = level === 1 ? a * x + c : a * x * x + b * x + c;
+        const terms: Terms = level === 1 ? [[a, 1], [c, 0]] : [[a, 2], [b, 1], [c, 0]];
         return {
           prompt: `If $f(x) = ${f}$, find $f(${x})$.`,
           answer: numberAnswer(val),
           hints: ["Replace every x with the input, in brackets."],
-          solution: [step("Substitute and evaluate.", r`f(${x}) = ${val}`)],
+          solution: [
+            step(`$f(${x})$ means: replace every $x$ in the rule with $${x < 0 ? `(${x})` : x}$.`),
+            step("Then work it out: powers first, then multiplication, then addition.", substitute(`f(${x})`, terms, x).tex),
+          ],
         };
       },
     },
@@ -93,18 +114,29 @@ export const functionsUnit: Unit = {
         const a = rng.int(-8, 8);
         if (level <= 2 && rng.chance(0.5))
           return {
-            prompt: `Which value of $x$ is **excluded** from the domain of $f(x) = \\dfrac{5}{x ${a < 0 ? "+" : "-"} ${Math.abs(a)}}$?`,
+            prompt: `Which value of $x$ is **excluded** from the domain of $f(x) = \\dfrac{5}{${linear(1, -a)}}$?`,
             answer: numberAnswer(a),
             hints: ["The denominator cannot be zero."],
-            solution: [step("Set the denominator to 0.", `x = ${a}`)],
+            solution: [
+              step("You can't divide by zero, so the denominator can never be $0$."),
+              step("Find the input that would make it zero.", lines(`${linear(1, -a)} &= 0`, `x &= ${a}`)),
+              step(`So $x = ${a}$ is excluded. Every other input is fine.`),
+            ],
           };
         const k = rng.int(-5, 5);
         return {
-          prompt: `The domain of $f(x) = \\sqrt{x ${a < 0 ? "+" : "-"} ${Math.abs(a)}} ${k < 0 ? "-" : "+"} ${Math.abs(k)}$ is $x \\ge a$ and the range is $y \\ge b$. Enter $a, b$.`,
+          prompt: `The domain of $f(x) = \\sqrt{${linear(1, -a)}}${k === 0 ? "" : signed(k)}$ is $x \\ge a$ and the range is $y \\ge b$. Enter $a, b$.`,
           answer: { kind: "tuple", values: [a, k] },
           inputHint: "e.g. 3, -2",
           hints: ["The inside of a square root must be ≥ 0.", "The smallest output of √ is 0 — then add the constant."],
-          solution: [step("Domain.", `x \\ge ${a}`), step("Range.", `y \\ge ${k}`)],
+          solution: [
+            step("**Domain:** you can't take the square root of a negative number, so the inside must be $0$ or more.", lines(r`${linear(1, -a)} &\ge 0`, r`x &\ge ${a}`)),
+            step(
+              `**Range:** a square root is never negative. Its smallest value is $0$, at $x = ${a}$, and it grows without limit. ${k === 0 ? "Nothing is added" : `Then ${k > 0 ? "add" : "subtract"} $${Math.abs(k)}$`}, so the smallest output is $${k}$.`,
+              r`y \ge ${k}`,
+            ),
+            step(`So $a = ${a}$ and $b = ${k}$.`),
+          ],
         };
       },
     },
@@ -135,7 +167,6 @@ export const functionsUnit: Unit = {
         const c = rng.int(-2, 3);
         const a1 = rng.nonZero(-3, 3), b1 = rng.int(-5, 5), a2 = rng.nonZero(-3, 3), b2 = rng.int(-5, 5);
         const cases = (rows: [string, string][]) => r`f(x) = \begin{cases} ${rows.map(([e, cond]) => `${e} & ${cond}`).join(r` \\ `)} \end{cases}`;
-        const at = (expr: string, v: number) => expr.replace(/x/g, `(${v})`);
         if (level === 3) {
           // k makes the right piece start where the left piece ends.
           const left = a1 * c + b1, k = left - c * c;
@@ -144,7 +175,11 @@ export const functionsUnit: Unit = {
             tex: cases([[linear(a1, b1), `x < ${c}`], ["x^2 + k", r`x \ge ${c}`]]),
             answer: numberAnswer(k),
             hints: [`For the graph to join up, both pieces must give the same value at x = ${c}.`, "Work out the left piece at the boundary, then solve for k."],
-            solution: [step("The left piece at the boundary.", `${at(linear(a1, b1), c)} = ${left}`), step("Make the right piece match.", r`${paren(c)}^2 + k = ${left} \;\Rightarrow\; k = ${k}`)],
+            solution: [
+              step(`For the graph to join up at $x = ${c}$, both pieces must give the same value there. Work out the left piece at $x = ${c}$.`, substitute(linear(a1, b1), [[a1, 1], [b1, 0]], c).tex),
+              step(`The right piece at $x = ${c}$ is $${paren(c)}^2 + k = ${c * c} + k$. Set it equal to $${left}$.`, `${c * c} + k = ${left}`),
+              step(`Solve for $k$.`, `k = ${left} - ${paren(c * c)} = ${k}`),
+            ],
           };
         }
         const rows: [string, string][] =
@@ -153,13 +188,19 @@ export const functionsUnit: Unit = {
             : [[linear(a1, b1), `x < ${c}`], [String(b2), `x = ${c}`], [quadratic(1, 0, a2), `x > ${c}`]];
         const t = rng.chance(0.3) ? c : c + rng.nonZero(-4, 4);
         const piece = t < c ? 0 : level === 1 ? 1 : t === c ? 1 : 2;
+        const pieceTerms: Terms[] = level === 1 ? [[[a1, 1], [b1, 0]], [[a2, 1], [b2, 0]]] : [[[a1, 1], [b1, 0]], [[b2, 0]], [[1, 2], [a2, 0]]];
         const value = piece === 0 ? a1 * t + b1 : level === 1 ? a2 * t + b2 : piece === 1 ? b2 : t * t + a2;
         return {
           prompt: `Find $f(${t})$.`,
           tex: cases(rows),
           answer: numberAnswer(value),
           hints: [`First decide which condition x = ${t} satisfies.`, t === c ? "Careful: which piece includes the boundary point itself?" : "Then substitute into that piece only."],
-          solution: [step(`$${t}$ satisfies $${rows[piece]![1]}$, so use that piece.`), step("Substitute.", `f(${t}) = ${at(rows[piece]![0], t)} = ${value}`)],
+          solution: [
+            step(`Check each condition with $x = ${t}$. It satisfies $${rows[piece]![1]}$, so use that piece${t === c ? ` (the boundary $${c}$ belongs to this piece only)` : ""}.`),
+            pieceTerms[piece]!.length === 1 && pieceTerms[piece]![0]![1] === 0
+              ? step("That piece is a constant, so the output is the same for any input it covers.", `f(${t}) = ${value}`)
+              : step("Substitute into that piece only.", substitute(`f(${t})`, pieceTerms[piece]!, t).tex),
+          ],
         };
       },
     },
@@ -185,7 +226,12 @@ export const functionsUnit: Unit = {
             answer: { kind: "tuple", values: [a * c, a * d + b] },
             inputHint: "e.g. 6, -1",
             hints: ["Substitute the whole expression g(x) wherever f has an x."],
-            solution: [step("Substitute.", r`${a}(${linear(c, d)})${b < 0 ? "-" : "+"}${Math.abs(b)} = ${linear(a * c, a * d + b)}`)],
+            solution: [
+              step(`$f(g(x))$ means: put the whole of $g(x)$ in place of $x$ in $f$.`, r`f(g(x)) = ${a === 1 ? "" : a === -1 ? "-" : a}(${linear(c, d)})${b === 0 ? "" : signed(b)}`),
+              step(`Expand the bracket: multiply $${a}$ by each term.`, `f(g(x)) = ${poly([[a * c, "x"], [a * d, ""], [b, ""]])}`),
+              ...(a * d === 0 || b === 0 ? [] : [step("Combine the numbers.", `f(g(x)) = ${linear(a * c, a * d + b)}`)]),
+              step(`So $m = ${a * c}$ and $k = ${a * d + b}$.`),
+            ],
           };
         }
         const fsq = level === 2;
@@ -194,7 +240,11 @@ export const functionsUnit: Unit = {
           prompt: `If $f(x) = ${fsq ? quadratic(1, 0, b) : linear(a, b)}$ and $g(x) = ${linear(c, d)}$, find $f(g(${x}))$.`,
           answer: numberAnswer(f(g(x))),
           hints: [`Compute g(${x}) first.`, "Feed that result into f."],
-          solution: [step("Inside first.", `g(${x}) = ${g(x)}`), step("Then f.", `f(${g(x)}) = ${f(g(x))}`)],
+          solution: [
+            step(`Work from the inside out. Find $g(${x})$ first.`, substitute(`g(${x})`, [[c, 1], [d, 0]], x).tex),
+            step(`Now feed that output into $f$.`, substitute(`f(${g(x)})`, fsq ? [[1, 2], [b, 0]] : [[a, 1], [b, 0]], g(x)).tex),
+            step(`So $f(g(${x})) = ${f(g(x))}$.`),
+          ],
         };
       },
     },
@@ -223,13 +273,25 @@ export const functionsUnit: Unit = {
             answer: { kind: "tuple", values: [b, a] },
             inputHint: "e.g. -6, 3",
             hints: ["Swap x and y, then solve for y."],
-            solution: [step("Swap and solve.", r`f^{-1}(x) = \frac{x - ${paren(b)}}{${a}}`)],
+            solution: [
+              step("Write $y$ for $f(x)$, then swap $x$ and $y$: the inverse undoes $f$, so inputs and outputs trade places.", lines(`y &= ${linear(a, b)}`, `x &= ${linear(a, b, "y")}`)),
+              step(`Solve for $y$. ${b === 0 ? "There's no number to move." : `${b > 0 ? "Subtract" : "Add"} $${Math.abs(b)}$ ${b > 0 ? "from" : "to"} both sides.`}`, `${linear(1, -b)} = ${linear(a, 0, "y")}`),
+              a === 1
+                ? step("$y$ is already on its own. Dividing by $1$ changes nothing, so", r`f^{-1}(x) = ${linear(1, -b)} = \frac{${linear(1, -b)}}{1}`)
+                : step(`Divide by $${a}$.`, r`f^{-1}(x) = \frac{${linear(1, -b)}}{${a}}`),
+              step(`Match it to $\\dfrac{x - p}{q}$: ${b < 0 ? `$${linear(1, -b)}$ is $x - (${b})$, so ` : ""}$p = ${b}$ and $q = ${a}$.`),
+            ],
           };
         return {
           prompt: `If $f(x) = ${linear(a, b)}$, find $f^{-1}(${out})$.`,
           answer: numberAnswer(y),
           hints: [`Ask: which input makes f(x) = ${out}?`],
-          solution: [step("Solve f(x) = output.", r`${linear(a, b)} = ${out} \Rightarrow x = ${y}`)],
+          solution: [
+            step(`$f^{-1}(${out})$ is the input that $f$ sends to $${out}$. So solve $f(x) = ${out}$.`, `${linear(a, b)} = ${out}`),
+            ...(b === 0 ? [] : [step(`${b > 0 ? "Subtract" : "Add"} $${Math.abs(b)}$ ${b > 0 ? "from" : "to"} both sides.`, `${linear(a, 0)} = ${out}${undo(b)} = ${a * y}`)]),
+            ...(a === 1 ? [] : [step(`Divide by $${a}$.`, r`x = \frac{${a * y}}{${a}} = ${y}`)]),
+            step(`Check: $f(${y}) = ${out}$, so $f^{-1}(${out}) = ${y}$.`),
+          ],
         };
       },
     },
@@ -259,7 +321,15 @@ export const functionsUnit: Unit = {
             prompt: `How is $${tex}$ moved compared with $y = x^2$?`,
             ...multipleChoice(rng, correct, vertical ? [amt > 0 ? `Down ${amt}` : `Up ${-amt}`, `Right ${Math.abs(amt)}`, `Left ${Math.abs(amt)}`] : [amt > 0 ? `Left ${amt}` : `Right ${-amt}`, `Up ${Math.abs(amt)}`, `Down ${Math.abs(amt)}`]),
             hints: [vertical ? "Adding outside shifts vertically." : "Changes inside the bracket shift horizontally — opposite to the sign."],
-            solution: [step(`The graph moves ${correct.toLowerCase()}.`)],
+            solution: vertical
+              ? [
+                  step(`Adding a number **outside** the function changes every output: each point's height ${amt > 0 ? "goes up" : "goes down"} by $${Math.abs(amt)}$.`),
+                  step(`So the graph moves ${correct.toLowerCase()}.`),
+                ]
+              : [
+                  step(`A change **inside** the bracket moves the graph sideways, the opposite way to the sign. $(x ${amt < 0 ? "+" : "-"} ${Math.abs(amt)})^2$ is $0$ when $x = ${amt}$, so the lowest point moves from $x = 0$ to $x = ${amt}$.`),
+                  step(`So the graph moves ${correct.toLowerCase()}.`),
+                ],
           };
         }
         return {
@@ -267,7 +337,11 @@ export const functionsUnit: Unit = {
           answer: { kind: "tuple", values: [h, k] },
           inputHint: "e.g. (2, -3)",
           hints: ["The vertex of |x| starts at (0, 0).", "Apply each shift to the vertex."],
-          solution: [step("New function.", r`y = |x ${h < 0 ? "+" : "-"} ${Math.abs(h)}| ${k < 0 ? "-" : "+"} ${Math.abs(k)}`), step("Vertex.", `(${h}, ${k})`)],
+          solution: [
+            step("The vertex of $y = |x|$ starts at the origin.", "(0, 0)"),
+            step(`Shifting ${h >= 0 ? "right" : "left"} $${Math.abs(h)}$ changes the $x$-coordinate; shifting ${k >= 0 ? "up" : "down"} $${Math.abs(k)}$ changes the $y$-coordinate.`, `(0 ${h < 0 ? "-" : "+"} ${Math.abs(h)},\ 0 ${k < 0 ? "-" : "+"} ${Math.abs(k)})`),
+            step(`The new graph is $y = ${h === 0 ? "|x|" : `|x ${h < 0 ? "+" : "-"} ${Math.abs(h)}|`}${k === 0 ? "" : ` ${k < 0 ? "-" : "+"} ${Math.abs(k)}`}$, with its vertex at`, `(${h}, ${k})`),
+          ],
         };
       },
     },
@@ -311,8 +385,9 @@ export const functionsUnit: Unit = {
             answer: numberAnswer(rate),
             hints: ["Find f at both ends, subtract, and divide by the width of the interval.", `The width of the interval is ${h}.`],
             solution: [
-              step("Change in output.", r`${paren(b)}^2 - ${paren(a)}^2 = ${change}`),
-              step("Divide by the width.", r`\frac{${change}}{${h}} = ${rate}`),
+              step("Find $f$ at both ends of the interval.", lines(r`f(${b}) &= ${paren(b)}^2 = ${round(b * b, 8)}`, r`f(${a}) &= ${paren(a)}^2 = ${a * a}`)),
+              step("Subtract to get the change in output.", r`${round(b * b, 8)} - ${paren(a * a)} = ${change}`),
+              step(`Divide by the width of the interval, $${b} - ${paren(a)} = ${h}$.`, r`\frac{${change}}{${h}} = ${rate}`),
               step(`As the interval shrinks, this heads towards $${2 * a}$: the slope of $x^2$ exactly at $x = ${a}$.`),
             ],
           };
@@ -326,7 +401,10 @@ export const functionsUnit: Unit = {
           prompt: `Find the average rate of change of $f(x) = ${quadratic(A, B, C)}$ on $[${a}, ${b}]$.`,
           answer: numberAnswer(rate),
           hints: [`Find f(${b}) and f(${a}).`, "Subtract the outputs, then divide by the change in x."],
-          solution: [step("Evaluate both ends.", r`f(${b}) = ${f(b)}, \quad f(${a}) = ${f(a)}`), step("Slope of the secant.", r`\frac{${f(b)} - ${paren(f(a))}}{${b} - ${paren(a)}} = ${rate}`)],
+          solution: [
+            step("Find $f$ at both ends of the interval.", lines(substitute(`f(${b})`, [[A, 2], [B, 1], [C, 0]], b).tex.replace(/\\begin\{aligned\}|\\end\{aligned\}/g, ""), substitute(`f(${a})`, [[A, 2], [B, 1], [C, 0]], a).tex.replace(/\\begin\{aligned\}|\\end\{aligned\}/g, ""))),
+            step("Divide the change in output by the change in input.", r`\frac{f(${b}) - f(${a})}{${b} - ${paren(a)}} = \frac{${f(b)} - ${paren(f(a))}}{${b - a}} = \frac{${f(b) - f(a)}}{${b - a}} = ${rate}`),
+          ],
           solutionVisual: {
             type: "functionPlot",
             functions: [{ fn: f, tone: "muted" }, { fn: (x) => f(a) + rate * (x - a), tone: "accent", dashed: true }],

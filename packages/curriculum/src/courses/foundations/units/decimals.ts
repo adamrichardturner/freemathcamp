@@ -1,8 +1,35 @@
 import { example, math, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { round, texFrac } from "../../../core/math";
+import { num, round, texFrac } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { chunkDivision, columnAddition, columnSubtraction, decimalPlaces, partialProducts, simplifyStep, type Step } from "../../../core/working";
 
 const r = String.raw;
+
+const PLACES = ["tenths", "hundredths", "thousandths", "ten-thousandths"];
+
+/** The working for a decimal sum, difference or product, with the decimal points kept in line. */
+const decimalWorking = (a: number, b: number, op: "+" | "-" | "×"): Step[] => {
+  if (op === "+") return columnAddition(a, b);
+  if (op === "-") {
+    if (a >= b) return columnSubtraction(a, b);
+    return [
+      step(`$${b}$ is bigger than $${a}$, so the answer will be **negative**. Work out $${b} - ${a}$, then put a minus sign in front.`),
+      ...columnSubtraction(b, a),
+      step("Now make it negative.", r`${a} - ${b} = -(${b} - ${a}) = ${num(round(a - b, 6))}`),
+    ];
+  }
+  const da = decimalPlaces(a), db = decimalPlaces(b);
+  const A = Math.round(a * 10 ** da), B = Math.round(b * 10 ** db), t = da + db;
+  const fixed = ((A * B) / 10 ** t).toFixed(t);
+  return [
+    step(`Ignore the decimal points for now and multiply $${A}\\times${B}$ as whole numbers.`),
+    ...partialProducts(A, B),
+    step(
+      `Count the decimal places in the question: $${a}$ has $${da}$ and $${b}$ has $${db}$, so the answer needs $${t}$. Put the point back $${t}$ place${t > 1 ? "s" : ""} from the right.`,
+      r`${a}\times${b} = ${fixed}${fixed !== num(round(a * b, 6)) ? ` = ${num(round(a * b, 6))}` : ""}`,
+    ),
+  ];
+};
 
 export const decimals: Unit = {
   id: "decimals-percents",
@@ -34,7 +61,13 @@ export const decimals: Unit = {
             prompt: `Write $${texFrac(n, 10 ** dp, false)}$ as a decimal.`,
             answer: numberAnswer(value),
             hints: [`The denominator ${10 ** dp} has ${dp} zero${dp > 1 ? "s" : ""}, so use ${dp} decimal place${dp > 1 ? "s" : ""}.`],
-            solution: [step("Move the decimal point left once per zero.", `${value}`)],
+            solution: [
+              step(`The denominator $${10 ** dp}$ has $${dp}$ zero${dp > 1 ? "s" : ""}, so the decimal has $${dp}$ digit${dp > 1 ? "s" : ""} after the point: its last digit sits in the **${PLACES[dp - 1]}** place.`),
+              step(
+                `Write $${n}$ so that it ends in the ${PLACES[dp - 1]} place${String(n).length < dp ? ", filling the empty places with zeros" : ""}.`,
+                r`\frac{${n}}{${10 ** dp}} = ${(n / 10 ** dp).toFixed(dp)}${(n / 10 ** dp).toFixed(dp) !== `${value}` ? ` = ${value}` : ""}`,
+              ),
+            ],
           };
         const extra = rng.int(1, 9);
         const unrounded = (n * 10 + extra) / 10 ** (dp + 1);
@@ -43,7 +76,15 @@ export const decimals: Unit = {
           prompt: `Round $${unrounded.toFixed(dp + 1)}$ to ${dp} decimal place${dp > 1 ? "s" : ""}.`,
           answer: numberAnswer(round(rounded, dp)),
           hints: [`Look at decimal place ${dp + 1}: the digit is ${extra}.`, "5 or more rounds up; 4 or less rounds down."],
-          solution: [step(`The deciding digit is ${extra}, so round ${extra >= 5 ? "up" : "down"}.`, `${round(rounded, dp)}`)],
+          solution: [
+            step(`To round to $${dp}$ decimal place${dp > 1 ? "s" : ""}, keep the digits up to the ${PLACES[dp - 1]} place and look at the next digit along: it's $${extra}$.`),
+            step(
+              extra >= 5
+                ? `$${extra}$ is $5$ or more, so round **up**: add $1$ to the last digit you keep.`
+                : `$${extra}$ is $4$ or less, so round **down**: the digits you keep stay as they are.`,
+            ),
+            step("Drop the extra digit.", r`${unrounded.toFixed(dp + 1)} \approx ${rounded.toFixed(dp)}`),
+          ],
         };
       },
     },
@@ -72,7 +113,14 @@ export const decimals: Unit = {
             tex: r`${round(b * q, 4)} \div ${b}`,
             answer: numberAnswer(q),
             hints: ["Multiply both numbers by 10 (or 100) until the divisor is a whole number."],
-            solution: [step("Scale both by the same power of 10, then divide.", `${q}`)],
+            solution: [
+              step(
+                `Dividing is easier by a whole number. Multiply both numbers by $${10 ** decimalPlaces(b)}$: the answer doesn't change, because both are scaled the same.`,
+                r`${num(round(b * q, 4))} \div ${b} = ${num(round(b * q * 10 ** decimalPlaces(b), 4))} \div ${num(round(b * 10 ** decimalPlaces(b), 4))}`,
+              ),
+              ...chunkDivision(round(b * q * 10 ** decimalPlaces(b), 4), round(b * 10 ** decimalPlaces(b), 4)),
+              step("So", r`${num(round(b * q, 4))} \div ${b} = ${q}`),
+            ],
           };
         }
         const ans = op === "+" ? a + b : op === "-" ? a - b : a * b;
@@ -81,7 +129,7 @@ export const decimals: Unit = {
           tex: `${a} ${op === "×" ? r`\times` : op} ${b}`,
           answer: numberAnswer(round(ans, 6), { tolerance: 1e-6 }),
           hints: op === "×" ? ["Multiply as whole numbers.", "Count decimal places in both factors."] : ["Line up the decimal points."],
-          solution: [step("Compute carefully, keeping track of the decimal point.", `${round(ans, 6)}`)],
+          solution: decimalWorking(a, b, op),
         };
       },
     },
@@ -105,6 +153,8 @@ export const decimals: Unit = {
         const [n, d] = rng.pick(pairs);
         const pct = round((n / d) * 100, 4);
         const mode = rng.int(0, 2);
+        // The smallest power of ten the denominator divides (every denominator here is made of 2s and 5s).
+        const big = [100, 1000, 10000].find((p) => p % d === 0)!;
         if (mode === 0)
           return {
             prompt: `Write $\\frac{${n}}{${d}}$ as a percentage.`,
@@ -112,21 +162,39 @@ export const decimals: Unit = {
             solutionVisual: Number.isInteger(pct) ? { type: "percentGrid", percent: pct } : undefined,
             inputHint: "e.g. 35%",
             hints: [`Divide ${n} by ${d}.`, "Multiply the decimal by 100."],
-            solution: [step("Divide, then multiply by 100.", r`${n}\div${d} = ${n / d} = ${pct}\%`)],
+            solution:
+              100 % d === 0
+                ? [
+                    step(`Percent means "out of $100$". Multiply the top and bottom by $${100 / d}$ to make the denominator $100$.`, r`\frac{${n}}{${d}} = \frac{${n}\times${100 / d}}{${d}\times${100 / d}} = \frac{${pct}}{100}`),
+                    step(`$${pct}$ out of $100$ is $${pct}\\%$.`, r`\frac{${pct}}{100} = ${pct}\%`),
+                  ]
+                : [
+                    step(`$${d}$ doesn't go into $100$, but it goes into $${big}$. Multiply the top and bottom by $${big / d}$.`, r`\frac{${n}}{${d}} = \frac{${n * (big / d)}}{${big}} = ${n / d}`),
+                    step("Turn the decimal into a percentage by multiplying by $100$ (move the point two places right).", r`${n / d}\times 100 = ${pct}\%`),
+                  ],
           };
         if (mode === 1)
           return {
             prompt: `Write $${pct}\\%$ as a decimal.`,
             answer: numberAnswer(n / d),
             hints: ["Percent means per hundred: divide by 100."],
-            solution: [step("Divide by 100.", r`${pct}\div100 = ${n / d}`)],
+            solution: [
+              step(`Percent means "per hundred", so $${pct}\\%$ is $${pct}$ divided by $100$.`, r`${pct}\% = \frac{${pct}}{100}`),
+              step("Dividing by $100$ moves the decimal point two places to the left.", r`${pct}\div100 = ${n / d}`),
+            ],
           };
         return {
           prompt: `Write $${pct}\\%$ as a fraction in simplest form.`,
           answer: numberAnswer(n / d, { requireSimplest: true }),
           inputHint: "e.g. 7/20",
           hints: [`Write it over 100: $\\frac{${pct}}{100}$.`, "Simplify (clear any decimals first)."],
-          solution: [step("Over 100, then simplify.", r`\frac{${pct}}{100} = ${texFrac(n, d)}`)],
+          solution: [
+            step(`Percent means "out of $100$", so write it over $100$.`, r`${pct}\% = \frac{${pct}}{100}`),
+            ...(Number.isInteger(pct)
+              ? []
+              : [step(`Clear the decimal by multiplying the top and bottom by $${big / 100}$.`, r`\frac{${pct}}{100} = \frac{${round(pct * (big / 100), 4)}}{${big}}`)]),
+            simplifyStep(round(pct * (big / 100), 4), big),
+          ],
         };
       },
     },
@@ -148,20 +216,30 @@ export const decimals: Unit = {
       generate: (rng, level) => {
         const p = rng.pick(level === 1 ? [10, 20, 25, 50, 75] : [5, 15, 30, 35, 40, 60, 12, 45]);
         const x = rng.int(2, 20) * (level === 1 ? 4 : 20);
-        const part = (p / 100) * x;
+        const part = (p * x) / 100; // not (p / 100) * x, which leaves float noise like 28.799999999999997
         if (level === 3 && rng.chance(0.6))
           return {
             prompt: `$${p}\\%$ of a number is $${part}$. What is the number?`,
             answer: numberAnswer(x),
             hints: [`Write it as $${p / 100}x = ${part}$.`, `Divide ${part} by ${p / 100}.`],
-            solution: [step("Undo the multiplication.", r`x = ${part}\div${p / 100} = ${x}`)],
+            solution: [
+              step(`Call the number $x$. $${p}\\%$ of it is $${part}$.`, r`\frac{${p}}{100}\times x = ${part}`),
+              step(`So $${p}$ lots of $1\\%$ make $${part}$. Find $1\\%$ by dividing by $${p}$.`, r`1\% = ${part} \div ${p} = ${num(part / p)}`),
+              step("The whole number is $100\\%$, so multiply by $100$.", r`x = ${num(part / p)}\times 100 = ${x}`),
+            ],
           };
         return {
           prompt: `Find $${p}\\%$ of $${x}$.`,
           answer: numberAnswer(part),
           visual: { type: "tapeDiagram", parts: [{ label: `${p}%`, value: p, tone: "primary" }, { label: `${100 - p}%`, value: 100 - p, tone: "muted" }], totalLabel: `${x}` },
           hints: ["Find 10% first by dividing by 10.", `Or multiply ${x} by ${p / 100}.`],
-          solution: [step("Multiply by the decimal.", r`${p / 100}\times${x} = ${part}`)],
+          solution: [
+            step(`$${p}\\%$ means $${p}$ out of every $100$, so multiply by $\\frac{${p}}{100}$.`, r`${p}\%\text{ of }${x} = \frac{${p}}{100}\times${x}`),
+            step(`Multiply first, then divide by $100$.`, r`\frac{${p}\times${x}}{100} = \frac{${p * x}}{100} = ${part}`),
+            ...(p % 10 === 0
+              ? [step(`Check with $10\\%$: $10\\%$ of $${x}$ is $${x}\\div10 = ${num(x / 10)}$, and $${p}\\%$ is $${p / 10}$ of those.`, r`${p / 10}\times${num(x / 10)} = ${part}`)]
+              : []),
+          ],
         };
       },
     },
@@ -190,13 +268,24 @@ export const decimals: Unit = {
             answer: numberAnswer(p, { unit: "%" }),
             inputHint: "e.g. 15%",
             hints: ["Find the change first.", "Divide by the **original**, then × 100."],
-            solution: [step("Change ÷ original × 100.", r`\frac{${round(Math.abs(next - orig), 4)}}{${orig}}\times100 = ${p}\%`)],
+            solution: [
+              step(`Find the change: how much did it ${up ? "go up" : "go down"} by?`, r`${up ? `${next} - ${orig}` : `${orig} - ${next}`} = ${num(round(Math.abs(next - orig), 4))}`),
+              step("Divide the change by the **original** value.", r`\frac{${num(round(Math.abs(next - orig), 4))}}{${orig}} = ${num(p / 100)}`),
+              step("Multiply by $100$ to turn it into a percentage.", r`${num(p / 100)}\times100 = ${p}\%`),
+            ],
           };
         return {
           prompt: `${up ? "Increase" : "Decrease"} $${orig}$ by $${p}\\%$.`,
           answer: numberAnswer(next),
           hints: [`The multiplier is ${up ? 1 + p / 100 : 1 - p / 100}.`],
-          solution: [step("Multiply by the multiplier.", r`${orig}\times${round(1 + (up ? p : -p) / 100, 2)} = ${next}`)],
+          solution: [
+            step(`Find $${p}\\%$ of $${orig}$.`, r`\frac{${p}}{100}\times${orig} = ${num((p * orig) / 100)}`),
+            step(`${up ? "Add it on to" : "Take it away from"} the original.`, `${orig} ${up ? "+" : "-"} ${num((p * orig) / 100)} = ${next}`),
+            step(
+              `Or in one step: ${up ? "increasing" : "decreasing"} by $${p}\\%$ leaves $${up ? 100 + p : 100 - p}\\%$, so multiply by $${num(round(1 + (up ? p : -p) / 100, 2))}$.`,
+              r`${orig}\times${num(round(1 + (up ? p : -p) / 100, 2))} = ${next}`,
+            ),
+          ],
         };
       },
     },

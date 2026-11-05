@@ -1,6 +1,7 @@
 import { example, key, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { DEG, gcd, round } from "../../../core/math";
+import { DEG, gcd, round, texFrac } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { lines } from "../../../core/working";
 
 const r = String.raw;
 
@@ -17,6 +18,20 @@ const radTex = (deg: number) => {
   const n = deg / g, d = 180 / g;
   if (n === 0) return "0";
   return d === 1 ? `${n === 1 ? "" : n}\\pi` : `\\frac{${n === 1 ? "" : n}\\pi}{${d}}`;
+};
+
+/** How each quadrant's angle relates to the reference angle r. */
+const fromReference = (d: number, ref: number) =>
+  d < 90 ? `${d}^\\circ` : d < 180 ? `180^\\circ - ${ref}^\\circ = ${d}^\\circ` : d < 270 ? `180^\\circ + ${ref}^\\circ = ${d}^\\circ` : `360^\\circ - ${ref}^\\circ = ${d}^\\circ`;
+const quadrantOf = (d: number) => ["I", "II", "III", "IV"][Math.floor(d / 90)]!;
+
+/** sin²θ + cos²θ = 1 turned into the missing ratio, for an acute angle in an (o, a, h) triangle. */
+const otherRatio = (o: number, a: number, h: number, givenSin: boolean) => {
+  const [g, w, f] = givenSin ? [o, a, "cos"] : [a, o, "sin"];
+  return step(
+    `Use $\\sin^2\\theta + \\cos^2\\theta = 1$ to find $\\${f}\\theta$. The angle is acute, so it's positive.`,
+    lines(r`${"\\" + f}^2\theta &= 1 - \left(\frac{${g}}{${h}}\right)^2 = \frac{${h * h}}{${h * h}} - \frac{${g * g}}{${h * h}} = \frac{${w * w}}{${h * h}}`, r`${"\\" + f}\theta &= \sqrt{\frac{${w * w}}{${h * h}}} = \frac{${w}}{${h}}`),
+  );
 };
 
 export const trigonometry: Unit = {
@@ -52,7 +67,11 @@ export const trigonometry: Unit = {
             visual: { type: "rightTriangle", a: opp, b: adj, labels: { a: `${opp}`, b: `${adj}`, angle: "θ" } },
             inputHint: "degrees",
             hints: ["Opposite and adjacent → tangent.", "Use the inverse: θ = tan⁻¹(opp/adj)."],
-            solution: [step("Inverse tangent.", r`\theta = \tan^{-1}\!\left(\frac{${opp}}{${adj}}\right) \approx ${ang}^\circ`)],
+            solution: [
+              step("You know the opposite and adjacent sides, so use tangent (TOA).", r`\tan\theta = \frac{\text{opp}}{\text{adj}} = \frac{${opp}}{${adj}}`),
+              step("To find the angle itself, undo tan with the inverse tangent.", r`\theta = \tan^{-1}\!\left(\frac{${opp}}{${adj}}\right)`),
+              step("Use a calculator (in degree mode), then round to 1 decimal place.", r`\theta = \tan^{-1}(${round(opp / adj, 4)}) \approx ${ang}^\circ`),
+            ],
           };
         }
         if (level === 1) {
@@ -64,7 +83,13 @@ export const trigonometry: Unit = {
             answer: numberAnswer(ratio[0]! / ratio[1]!),
             inputHint: "e.g. 3/5",
             hints: ["SOH CAH TOA.", fn === "sin" ? "Opposite over hypotenuse." : fn === "cos" ? "Adjacent over hypotenuse." : "Opposite over adjacent."],
-            solution: [step("Apply the ratio.", r`\${fn}\theta = \frac{${ratio[0]}}{${ratio[1]}}`)],
+            solution: [
+              step(`Label the sides from $\\theta$'s point of view: opposite $= ${o}$, adjacent $= ${a}$, hypotenuse (the longest side) $= ${h}$.`),
+              step(
+                `SOH CAH TOA: $\\${fn}$ is ${fn === "sin" ? "opposite over hypotenuse" : fn === "cos" ? "adjacent over hypotenuse" : "opposite over adjacent"}.`,
+                r`${"\\" + fn}\theta = \frac{\text{${fn === "cos" ? "adj" : "opp"}}}{\text{${fn === "tan" ? "adj" : "hyp"}}} = \frac{${ratio[0]}}{${ratio[1]}}`,
+              ),
+            ],
           };
         }
         const side = fn === "sin" ? hyp * Math.sin(theta * DEG) : fn === "cos" ? hyp * Math.cos(theta * DEG) : hyp * Math.tan(theta * DEG);
@@ -73,7 +98,14 @@ export const trigonometry: Unit = {
           prompt: `A right triangle has angle $${theta}°$ and ${fn === "tan" ? "adjacent side" : "hypotenuse"} $${hyp}$. Find the ${label} side (2 d.p.).`,
           answer: numberAnswer(round(side, 2), { tolerance: 0.003 }),
           hints: [`You know the ${fn === "tan" ? "adjacent" : "hypotenuse"} and want the ${label}: use ${fn}.`],
-          solution: [step("Rearrange the ratio.", r`${label === "opposite" ? "opp" : "adj"} = ${hyp}\${fn}${theta}^\circ \approx ${round(side, 2)}`)],
+          solution: [
+            step(
+              `You know the ${fn === "tan" ? "adjacent side" : "hypotenuse"} and want the ${label} side, so use $\\${fn}$ (${fn === "sin" ? "SOH" : fn === "cos" ? "CAH" : "TOA"}).`,
+              r`${"\\" + fn} ${theta}^\circ = \frac{\text{${label === "opposite" ? "opp" : "adj"}}}{${hyp}}`,
+            ),
+            step(`Multiply both sides by $${hyp}$.`, r`\text{${label === "opposite" ? "opp" : "adj"}} = ${hyp}${"\\" + fn} ${theta}^\circ`),
+            step("Use a calculator (in degree mode), then round to 2 decimal places.", r`${hyp}\times${round(fn === "sin" ? Math.sin(theta * DEG) : fn === "cos" ? Math.cos(theta * DEG) : Math.tan(theta * DEG), 4)} \approx ${round(side, 2)}`),
+          ],
         };
       },
     },
@@ -93,19 +125,27 @@ export const trigonometry: Unit = {
       ],
       generate: (rng, level) => {
         const deg = rng.pick(level === 1 ? [90, 180, 360, 45, 60, 30] : [120, 135, 150, 210, 225, 240, 270, 300, 315, 330]);
+        // π → 180°: 2π/3 becomes (2 × 180°)/3.
+        const inDegrees = radTex(deg).replace(/(\d)\\pi/, "$1\\times 180^\\circ").replace("\\pi", "180^\\circ");
         if (rng.chance(0.5))
           return {
             prompt: `Convert $${radTex(deg)}$ radians to degrees.`,
             answer: numberAnswer(deg),
             inputHint: "degrees",
             hints: ["Replace π with 180°."],
-            solution: [step("Substitute π = 180°.", `${deg}^\\circ`)],
+            solution: [
+              step("$\\pi$ radians is half a turn, which is $180^\\circ$. So replace $\\pi$ with $180^\\circ$.", r`${radTex(deg)} \to ${inDegrees}`),
+              step("Work it out.", r`${inDegrees} = ${deg}^\circ`),
+            ],
           };
         return {
           prompt: `Convert $${deg}°$ to radians.`,
           ...multipleChoice(rng, `$${radTex(deg)}$`, [`$${radTex((deg * 2) % 360 || 90)}$`, `$${radTex(180 - (deg % 180) || 45)}$`, `$${radTex(deg + 30)}$`]),
           hints: ["Multiply by π/180 and simplify."],
-          solution: [step("Multiply by π/180.", radTex(deg))],
+          solution: [
+            step("$180^\\circ$ is $\\pi$ radians, so multiply the degrees by $\\frac{\\pi}{180}$.", r`${deg}^\circ = \frac{${deg}}{180}\pi`),
+            step(`Simplify the fraction: divide the top and bottom by $${gcd(deg, 180)}$.`, r`\frac{${deg}}{180}\pi = ${radTex(deg)}`),
+          ],
         };
       },
     },
@@ -138,7 +178,18 @@ export const trigonometry: Unit = {
           ...multipleChoice(rng, correct, [`$${value < 0 ? "" : "-"}${mag}$`, `$${value < 0 ? "-" : ""}${other}$`, `$${value < 0 ? "" : "-"}${other}$`]),
           solutionVisual: level === 1 ? { type: "unitCircle", angle: deg } : undefined,
           hints: [`The reference angle is ${base}°.`, `In quadrant ${["I", "II", "III", "IV"][quadrant]}, ${fn} is ${value < 0 ? "negative" : "positive"}.`],
-          solution: [step(`Reference angle ${base}°, sign from the quadrant.`, `${value < 0 ? "-" : ""}${mag}`)],
+          solution: [
+            ...(level === 3 ? [step("Convert to degrees first: replace $\\pi$ with $180^\\circ$.", r`${radTex(deg)} = ${deg}^\circ`)] : []),
+            step(
+              quadrant === 0 ? `$${deg}^\\circ$ is in quadrant I, so it is its own reference angle.` : `$${deg}^\\circ$ is in quadrant ${quadrantOf(deg)}. Its reference angle (its angle to the $x$-axis) is`,
+              quadrant === 0 ? undefined : [`180^\\circ - ${deg}^\\circ`, `${deg}^\\circ - 180^\\circ`, `360^\\circ - ${deg}^\\circ`][quadrant - 1] + ` = ${base}^\\circ`,
+            ),
+            step(`From the special triangles, $\\${fn} ${base}^\\circ = ${mag}$.`),
+            step(
+              `On the unit circle $\\${fn}$ is the ${fn === "sin" ? "$y$" : "$x$"}-coordinate, which is ${value < 0 ? "negative" : "positive"} in quadrant ${quadrantOf(deg)}.`,
+              r`${"\\" + fn}(${level === 3 ? radTex(deg) : `${deg}^\\circ`}) = ${value < 0 ? "-" : ""}${mag}`,
+            ),
+          ],
         };
       },
     },
@@ -162,17 +213,27 @@ export const trigonometry: Unit = {
         const fn = rng.pick(["sin", "cos"]);
         return askAmp
           ? {
-              prompt: `What is the amplitude of $y = ${A}\\${fn}(${B === 1 ? "" : B}x)$?`,
+              prompt: `What is the amplitude of $y = ${A === 1 ? "" : A === -1 ? "-" : A}\\${fn}(${B === 1 ? "" : B}x)$?`,
               answer: numberAnswer(Math.abs(A)),
               hints: ["Amplitude is the size of the coefficient in front — always positive."],
-              solution: [step("Amplitude = |A|.", `${Math.abs(A)}`)],
+              solution: [
+                step(
+                  Math.abs(A) === 1
+                    ? `$\\${fn}$ on its own swings between $-1$ and $1$. ${A < 0 ? "The minus sign flips it upside down, but it" : "Nothing stretches it, so it"} still swings between $-1$ and $1$.`
+                    : `$\\${fn}$ on its own swings between $-1$ and $1$. Multiplying by $${A}$ stretches that to between $-${Math.abs(A)}$ and $${Math.abs(A)}$${A < 0 ? " (the minus sign just flips it upside down)" : ""}.`,
+                ),
+                step("The amplitude is the size of that swing from the middle, so it's the number in front without its sign.", `|${A}| = ${Math.abs(A)}`),
+              ],
             }
           : {
-              prompt: `What is the period of $y = ${A}\\${fn}(${B}x)$? (Answer in terms of π, e.g. pi/2.)`,
+              prompt: `What is the period of $y = ${A === 1 ? "" : A === -1 ? "-" : A}\\${fn}(${B}x)$? (Answer in terms of π, e.g. pi/2.)`,
               answer: numberAnswer((2 * Math.PI) / B),
               inputHint: "e.g. pi/2",
               hints: ["Period = 2π ÷ B."],
-              solution: [step("Divide 2π by B.", r`\frac{2\pi}{${B}}`)],
+              solution: [
+                step(`$\\${fn} x$ repeats every $2\\pi$. Multiplying $x$ by $${B}$ makes it run through a cycle $${B}$ times as fast.`, r`\text{period} = \frac{2\pi}{B}`),
+                step("Substitute and simplify.", B === 3 ? r`\frac{2\pi}{3}` : r`\frac{2\pi}{${B}} = ${({ 1: r`2\pi`, 2: r`\pi`, 4: r`\frac{\pi}{2}` } as Record<number, string>)[B]}`),
+              ],
             };
       },
     },
@@ -208,10 +269,13 @@ export const trigonometry: Unit = {
             inputHint: "e.g. 24/25",
             hints: ["Find the other ratio first with sin²θ + cos²θ = 1.", sin2 ? "sin 2θ = 2 sin θ cos θ" : "cos 2θ = cos²θ − sin²θ"],
             solution: [
-              step("Both ratios.", r`\sin\theta = \frac{${o}}{${h}}, \quad \cos\theta = \frac{${a}}{${h}}`),
+              otherRatio(o, a, h, givenSin),
               sin2
-                ? step("Double angle.", r`\sin 2\theta = 2\cdot\frac{${o}}{${h}}\cdot\frac{${a}}{${h}} = \frac{${2 * o * a}}{${h * h}}`)
-                : step("Double angle.", r`\cos 2\theta = \frac{${a * a}}{${h * h}} - \frac{${o * o}}{${h * h}} = \frac{${a * a - o * o}}{${h * h}}`),
+                ? step("Use the double angle formula for sine.", r`\sin 2\theta = 2\sin\theta\cos\theta`)
+                : step("Use the double angle formula for cosine.", r`\cos 2\theta = \cos^2\theta - \sin^2\theta`),
+              sin2
+                ? step("Substitute and multiply.", r`\sin 2\theta = 2\cdot\frac{${o}}{${h}}\cdot\frac{${a}}{${h}} = ${texFrac(2 * o * a, h * h)}`)
+                : step("Substitute and subtract.", r`\cos 2\theta = \frac{${a * a}}{${h * h}} - \frac{${o * o}}{${h * h}} = ${texFrac(a * a - o * o, h * h)}`),
             ],
           };
         }
@@ -221,14 +285,17 @@ export const trigonometry: Unit = {
             answer: numberAnswer(o / a),
             inputHint: "e.g. 3/4",
             hints: ["Find the other ratio with the Pythagorean identity.", "Then tan = sin / cos."],
-            solution: [step("The other ratio.", givenSin ? r`\cos\theta = \frac{${a}}{${h}}` : r`\sin\theta = \frac{${o}}{${h}}`), step("Divide.", r`\tan\theta = \frac{${o}}{${a}}`)],
+            solution: [
+              otherRatio(o, a, h, givenSin),
+              step(`$\\tan\\theta$ is $\\sin\\theta$ divided by $\\cos\\theta$. The $${h}$s cancel.`, r`\tan\theta = \frac{\sin\theta}{\cos\theta} = \frac{${o}/${h}}{${a}/${h}} = \frac{${o}}{${a}}`),
+            ],
           };
         return {
           prompt: `If $\\${givenSin ? "sin" : "cos"}\\theta = \\frac{${givenSin ? o : a}}{${h}}$ and $\\theta$ is acute, find $\\${givenSin ? "cos" : "sin"}\\theta$.`,
           answer: numberAnswer((givenSin ? a : o) / h),
           inputHint: "e.g. 4/5",
           hints: ["Use sin²θ + cos²θ = 1.", "Acute angle → positive value."],
-          solution: [step("Identity.", r`1 - \left(\frac{${givenSin ? o : a}}{${h}}\right)^2 = \frac{${(givenSin ? a : o) ** 2}}{${h * h}}`), step("Square root.", r`\frac{${givenSin ? a : o}}{${h}}`)],
+          solution: [step("Every angle satisfies the Pythagorean identity.", r`\sin^2\theta + \cos^2\theta = 1`), otherRatio(o, a, h, givenSin)],
         };
       },
     },
@@ -267,6 +334,21 @@ export const trigonometry: Unit = {
           Array.from({ length: 24 }, (_, i) => i * 15).filter((d) => (fn !== "tan" || d % 180 !== 90) && Math.abs(fns[fn](d) - value) < 1e-9);
         const answerOf = (fn: Fn, value: number) => ({ kind: "set" as const, values: solve(fn, value) });
         const prompt = "Solve for $0^\\circ \\le x < 360^\\circ$. Enter every solution in degrees.";
+        /** Reference angle, the quadrants with the right sign, then each solution built from the reference angle. */
+        const allSolutions = (fn: Fn, value: number, tex: string, sols: number[]) => {
+          const list = step("So every solution in one turn is", sols.map((d) => `${d}^\\circ`).join(", "));
+          if (value === 0 || Math.abs(value) === 1)
+            return [
+              step(`On the unit circle, $\\${fn}$ is the ${fn === "sin" ? "$y$" : "$x$"}-coordinate. It equals $${value}$ only where the circle meets an axis: ${sols.map((d) => `$${d}^\\circ$`).join(" and ")}.`),
+              list,
+            ];
+          const ref = solve(fn, Math.abs(value))[0]!;
+          return [
+            step(`${value < 0 ? "Ignore the minus sign first. " : ""}The reference angle is the acute angle with $\\${fn}$ equal to $${tex.replace(/^-/, "")}$: that's $${ref}^\\circ$.`),
+            step(`${quadrantHint(fn, value)} Build each solution from the reference angle.`, lines(...sols.map((d) => r`\text{${quadrantOf(d)}: } & ${fromReference(d, ref)}`))),
+            list,
+          ];
+        };
         const quadrantHint = (fn: Fn, value: number) =>
           `${fn === "sin" ? "Sine" : fn === "cos" ? "Cosine" : "Tangent"} is ${value < 0 ? "negative" : "positive"} in quadrants ${
             { sin: value < 0 ? "III and IV" : "I and II", cos: value < 0 ? "II and III" : "I and IV", tan: value < 0 ? "II and IV" : "I and III" }[fn]
@@ -281,7 +363,10 @@ export const trigonometry: Unit = {
               tex: `\\${fn}^{-1}\\!\\left(${tex}\\right)`,
               answer: numberAnswer(principal),
               hints: [`Which special angle has ${fn} equal to this?`, "Inverse trig gives the principal value, here an acute angle."],
-              solution: [step(`$\\${fn}(${principal}^\\circ) = ${tex}$.`, `${principal}^\\circ`)],
+              solution: [
+                step(`$\\${fn}^{-1}$ asks: which angle has $\\${fn}$ equal to $${tex}$? It gives the principal value, here an angle between $0^\\circ$ and $90^\\circ$.`),
+                step(`From the special angles, $\\${fn}(${principal}^\\circ) = ${tex}$.`, `${principal}^\\circ`),
+              ],
             };
           }
           const sols = solve(fn, value);
@@ -291,7 +376,7 @@ export const trigonometry: Unit = {
             answer: answerOf(fn, value),
             inputHint: "e.g. 30, 150",
             hints: [`The reference angle is ${sols[0]}°.`, quadrantHint(fn, value)],
-            solution: [step(`Reference angle ${sols[0]}°.`), step("Every solution in one turn.", sols.map((d) => `${d}^\\circ`).join(", "))],
+            solution: allSolutions(fn, value, tex, sols),
           };
         }
         if (level === 2) {
@@ -308,7 +393,7 @@ export const trigonometry: Unit = {
             answer: answerOf(fn, value),
             inputHint: "e.g. 120, 240",
             hints: ["Find the reference angle from the value without its sign.", value === 0 || Math.abs(value) === 1 ? "Picture the unit circle: these values sit on the axes." : quadrantHint(fn, value)],
-            solution: [step("Every solution in one turn.", sols.map((d) => `${d}^\\circ`).join(", "))],
+            solution: allSolutions(fn, value, tex, sols),
           };
         }
         const [equation, fn, value, isolated] = rng.pick([
@@ -329,7 +414,15 @@ export const trigonometry: Unit = {
           answer: { kind: "set", values: sols },
           inputHint: "e.g. 30, 150",
           hints: ["Isolate the trig function first.", fn === "sin2" ? "Taking a square root gives both a positive and a negative value." : quadrantHint(fn, value)],
-          solution: [step("Isolate it.", isolated), step("Every solution in one turn.", sols.map((d) => `${d}^\\circ`).join(", "))],
+          solution: [
+            step(fn === "sin2" ? "Get $\\sin^2 x$ on its own, then take the square root. Remember the root can be positive **or** negative." : "Get the trig function on its own, like solving for a variable.", isolated),
+            ...(fn === "sin2"
+              ? [
+                  step(`The reference angle is $60^\\circ$, since $\\sin 60^\\circ = \\frac{\\sqrt3}{2}$. The positive value gives quadrants I and II, the negative value quadrants III and IV.`, lines(...sols.map((d) => r`x &= ${fromReference(d, 60)}`))),
+                  step("Every solution in one turn:", sols.map((d) => `${d}^\\circ`).join(", ")),
+                ]
+              : allSolutions(fn, value, isolated.split(" = ")[1]!, sols)),
+          ],
         };
       },
     },

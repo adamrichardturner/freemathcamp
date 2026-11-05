@@ -1,8 +1,21 @@
 import { example, key, math, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
-import { interval, linear, paren, poly, signed } from "../../../core/math";
+import { interval, linear, paren, poly, signed, texFrac } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { joinSigned, lines, substitute, times, type Step } from "../../../core/working";
+
+/** " - 3" to subtract 3 from both sides, " + 3" to add it: the move that cancels a constant b. */
+const undo = (b: number) => (b > 0 ? ` - ${b}` : ` + ${-b}`);
+const undoWords = (b: number, what = `$${Math.abs(b)}$`) => `${b > 0 ? "Subtract" : "Add"} ${what} ${b > 0 ? "from" : "to"} both sides`;
 
 const r = String.raw;
+
+/** Solving ax + b = cx + d: x terms to the left, numbers to the right, divide, check. */
+const collect = (a: number, b: number, c: number, d: number, x: number): Step[] => [
+  step(`Get the $x$ terms on one side: ${c > 0 ? "subtract" : "add"} $${linear(Math.abs(c), 0)}$ ${c > 0 ? "from" : "to"} both sides.`, `${linear(a - c, b)} = ${d}`),
+  ...(b === 0 ? [] : [step(`Now move the number: ${undoWords(b).toLowerCase()}.`, `${linear(a - c, 0)} = ${d}${undo(b)} = ${d - b}`)]),
+  step(a - c === 1 ? "That leaves $x$ on its own." : `Divide both sides by $${a - c}$.`, a - c === 1 ? `x = ${x}` : r`x = \frac{${d - b}}{${a - c}} = ${x}`),
+  step(`Check: both sides of $${linear(a, b)} = ${linear(c, d)}$ give $${a * x + b}$ when $x = ${x}$.`, `${times(a, x)}${signed(b)} = ${a * x + b} = ${times(c, x)}${signed(d)}`),
+];
 
 export const algebra: Unit = {
   id: "algebra",
@@ -26,19 +39,25 @@ export const algebra: Unit = {
       ],
       generate: (rng, level) => {
         const a = rng.int(2, 9), b = rng.int(2, 12);
-        const options: [string, string, string[]][] = [
-          [`${b} more than ${a} times a number $x$`, `$${a}x + ${b}$`, [`$${b}x + ${a}$`, `$${a}(x + ${b})$`, `$${a} + ${b}x$`]],
-          [`${b} less than ${a} times a number $x$`, `$${a}x - ${b}$`, [`$${b} - ${a}x$`, `$${a}(x - ${b})$`, `$${b}x - ${a}$`]],
-          [`${a} times the sum of a number $x$ and ${b}`, `$${a}(x + ${b})$`, [`$${a}x + ${b}$`, `$${a} + x + ${b}$`, `$x + ${a * b}$`]],
-          [`the square of a number $x$, decreased by ${b}`, `$x^2 - ${b}$`, [`$(x - ${b})^2$`, `$2x - ${b}$`, `$${b} - x^2$`]],
+        const options: [string, string, string[], string][] = [
+          [`${b} more than ${a} times a number $x$`, `$${a}x + ${b}$`, [`$${b}x + ${a}$`, `$${a}(x + ${b})$`, `$${a} + ${b}x$`], `"${a} times a number $x$" is $${a}x$. "${b} more than" that adds $${b}$ on.`],
+          [`${b} less than ${a} times a number $x$`, `$${a}x - ${b}$`, [`$${b} - ${a}x$`, `$${a}(x - ${b})$`, `$${b}x - ${a}$`], `"${a} times a number $x$" is $${a}x$. "${b} less than" it means start with $${a}x$ and take $${b}$ away, so $${a}x$ comes first.`],
+          [`${a} times the sum of a number $x$ and ${b}`, `$${a}(x + ${b})$`, [`$${a}x + ${b}$`, `$${a} + x + ${b}$`, `$x + ${a * b}$`], `"The sum of $x$ and ${b}" is $x + ${b}$. All of it is multiplied by ${a}, so it goes in brackets.`],
+          [`the square of a number $x$, decreased by ${b}`, `$x^2 - ${b}$`, [`$(x - ${b})^2$`, `$2x - ${b}$`, `$${b} - x^2$`], `"The square of $x$" is $x^2$ ($x$ times itself, not $2x$). "Decreased by ${b}" then takes $${b}$ away.`],
         ];
-        if (level >= 2) options.push([`the quotient of a number $x$ and ${a}, increased by ${b}`, `$\\frac{x}{${a}} + ${b}$`, [`$\\frac{x + ${b}}{${a}}$`, `$\\frac{${a}}{x} + ${b}$`, `$${a}x + ${b}$`]]);
-        const [words, correct, wrong] = rng.pick(options);
+        if (level >= 2)
+          options.push([
+            `the quotient of a number $x$ and ${a}, increased by ${b}`,
+            `$\\frac{x}{${a}} + ${b}$`,
+            [`$\\frac{x + ${b}}{${a}}$`, `$\\frac{${a}}{x} + ${b}$`, `$${a}x + ${b}$`],
+            `"The quotient of $x$ and ${a}" is $x$ divided by ${a}: $\\frac{x}{${a}}$. "Increased by ${b}" then adds $${b}$ after dividing.`,
+          ]);
+        const [words, correct, wrong, why] = rng.pick(options);
         return {
           prompt: `Which expression means: *${words}*?`,
           ...multipleChoice(rng, correct, wrong),
           hints: ["Translate piece by piece.", "Watch for \"less than\" — it reverses the order."],
-          solution: [step(`The expression is ${correct}.`)],
+          solution: [step("Translate the words one piece at a time."), step(why), step(`So the expression is ${correct}.`)],
         };
       },
     },
@@ -58,16 +77,26 @@ export const algebra: Unit = {
       generate: (rng, level) => {
         const x = rng.nonZero(level === 1 ? 1 : -6, 6), y = rng.nonZero(-5, 5);
         const a = rng.int(2, 6), b = rng.nonZero(-7, 7), c = rng.int(1, 5);
-        const forms: [string, number, string][] = [[linear(a, b), a * x + b, r`${a}${paren(x)}${signed(b)}`]];
-        if (level >= 2) forms.push([r`${a}x^2 ${b < 0 ? "-" : "+"} ${Math.abs(b)}x`, a * x * x + b * x, r`${a}${paren(x)}^2 ${b < 0 ? "-" : "+"} ${Math.abs(b)}${paren(x)}`]);
-        if (level === 3) forms.push([r`x^2 + ${c}xy - y^2`, x * x + c * x * y - y * y, r`${paren(x)}^2 + ${c}${paren(x)}${paren(y)} - ${paren(y)}^2`]);
-        const [tex, ans, sub] = rng.pick(forms);
+        const twoVars = (t: string) =>
+          lines(
+            r`${t} &= (${x})^2 + ${times(c, x, y)} - (${y})^2`,
+            r`&= ${x * x} + ${c}\cdot${paren(x * y)} - ${y * y}`,
+            r`&= ${joinSigned([x * x, c * x * y, -y * y])}`,
+            r`&= ${x * x + c * x * y - y * y}`,
+          );
+        const forms: [string, number, string][] = [[linear(a, b), a * x + b, substitute(linear(a, b), [[a, 1], [b, 0]], x).tex]];
+        if (level >= 2) forms.push([r`${a}x^2 ${b < 0 ? "-" : "+"} ${Math.abs(b)}x`, a * x * x + b * x, substitute(r`${a}x^2 ${b < 0 ? "-" : "+"} ${Math.abs(b)}x`, [[a, 2], [b, 1]], x).tex]);
+        if (level === 3) forms.push([r`x^2 + ${c}xy - y^2`, x * x + c * x * y - y * y, twoVars(r`x^2 + ${c}xy - y^2`)]);
+        const [tex, ans, work] = rng.pick(forms);
         return {
           prompt: `Evaluate when $x = ${x}${level === 3 ? `,\\ y = ${y}` : ""}$.`,
           tex,
           answer: numberAnswer(ans),
           hints: ["Substitute with brackets.", "Follow the order of operations."],
-          solution: [step("Substitute.", sub), step("Calculate.", `${ans}`)],
+          solution: [
+            step(`Replace ${level === 3 && tex.includes("y") ? `$x$ with $${paren(x)}$ and $y$ with $${paren(y)}$` : `every $x$ with $${paren(x)}$`}. Brackets keep any minus signs safe.`),
+            step("Then follow the order of operations: powers first, then multiplication, then addition and subtraction.", work),
+          ],
         };
       },
     },
@@ -95,7 +124,11 @@ export const algebra: Unit = {
             tex,
             answer: numberAnswer(b + e),
             hints: ["Group the $x$ terms only."],
-            solution: [step("Combine like terms.", poly([[a + c, "x^2"], [b + e, "x"], [d + f, ""]]))],
+            solution: [
+              step("Gather like terms together: $x^2$ terms, then $x$ terms, then plain numbers.", poly([[a, "x^2"], [c, "x^2"], [b, "x"], [e, "x"], [d, ""], [f, ""]])),
+              step("Add the coefficients within each group.", lines(r`x^2\text{: } & ${a} + ${paren(c)} = ${a + c}`, r`x\text{: } & ${b} + ${paren(e)} = ${b + e}`, r`\text{numbers: } & ${d} + ${paren(f)} = ${d + f}`)),
+              step(`So the expression simplifies to $${poly([[a + c, "x^2"], [b + e, "x"], [d + f, ""]])}$, and the coefficient of $x$ is $${b + e}$.`),
+            ],
           };
         }
         const tex = poly([[a, "x"], [c, ""], [b, "x"], [d, ""]]);
@@ -105,7 +138,11 @@ export const algebra: Unit = {
           tex,
           ...multipleChoice(rng, correct, [`$${linear(a + b + c + d, 0)}$`, `$${linear(a - b, c + d)}$`, `$${linear(a + b, c - d)}$`, `$${linear(c + d, a + b)}$`]),
           hints: ["Collect the $x$ terms, then the constants."],
-          solution: [step("Combine coefficients.", linear(a + b, c + d))],
+          solution: [
+            step("Gather like terms together: the $x$ terms, then the plain numbers.", poly([[a, "x"], [b, "x"], [c, ""], [d, ""]])),
+            step("Add the coefficients of $x$, and add the numbers.", lines(r`x\text{ terms: } & ${a} + ${paren(b)} = ${a + b}`, r`\text{numbers: } & ${c} + ${paren(d)} = ${c + d}`)),
+            step("Put the two results together.", linear(a + b, c + d)),
+          ],
         };
       },
     },
@@ -130,7 +167,10 @@ export const algebra: Unit = {
             prompt: `Expand $${a}(${linear(b, c)})$. Enter the constant term.`,
             answer: numberAnswer(a * c),
             hints: [`Multiply ${a} by each term inside.`],
-            solution: [step("Distribute.", linear(a * b, a * c))],
+            solution: [
+              step(`Multiply $${a}$ by **each** term inside the bracket.`, lines(r`${a}\times ${b === 1 ? "x" : `${b}x`} &= ${linear(a * b, 0)}`, r`${a}\times ${paren(c)} &= ${a * c}`)),
+              step(`So $${a}(${linear(b, c)}) = ${linear(a * b, a * c)}$, and the constant term is $${a * c}$.`),
+            ],
           };
         const d = rng.nonZero(-5, 5), e = rng.int(1, 4), f = rng.nonZero(-6, 6);
         const k = a * b + d * e, m = a * c + d * f;
@@ -140,7 +180,12 @@ export const algebra: Unit = {
           answer: { kind: "tuple", values: [k, m] },
           inputHint: "e.g. 6, -2",
           hints: ["Distribute each bracket separately.", "Then combine like terms."],
-          solution: [step("Distribute.", poly([[a * b, "x"], [a * c, ""], [d * e, "x"], [d * f, ""]])), step("Combine.", linear(k, m))],
+          solution: [
+            step(`Expand the first bracket: multiply $${a}$ by each term.`, r`${a}(${linear(b, c)}) = ${linear(a * b, a * c)}`),
+            step(`Expand the second: multiply $${d}$ by each term (the sign in front belongs to it).`, r`${d}(${linear(e, f)}) = ${linear(d * e, d * f)}`),
+            step("Put them together and collect like terms.", lines(r`&${poly([[a * b, "x"], [a * c, ""], [d * e, "x"], [d * f, ""]])}`, r`= \;&${poly([[a * b, "x"], [d * e, "x"], [a * c, ""], [d * f, ""]])}`, r`= \;&${linear(k, m)}`)),
+            step(`So $a = ${k}$ and $b = ${m}$.`),
+          ],
         };
       },
     },
@@ -161,13 +206,13 @@ export const algebra: Unit = {
       ],
       generate: (rng, level) => {
         const x = rng.int(level === 1 ? 1 : -15, 15), a = rng.int(2, 12);
-        const forms: [string, string][] = [
-          [`x + ${a} = ${x + a}`, `Subtract ${a} from both sides.`],
-          [`x - ${a} = ${x - a}`, `Add ${a} to both sides.`],
-          [`${a}x = ${a * x}`, `Divide both sides by ${a}.`],
-          [r`\frac{x}{${a}} = ${x}`, `Multiply both sides by ${a}.`],
+        const forms: [string, string, string, string][] = [
+          [`x + ${a} = ${x + a}`, `Subtract ${a} from both sides.`, r`x + ${a} - ${a} = ${x + a} - ${a}`, `${x} + ${a} = ${x + a}`],
+          [`x - ${a} = ${x - a}`, `Add ${a} to both sides.`, r`x - ${a} + ${a} = ${x - a} + ${a}`, `${x} - ${a} = ${x - a}`],
+          [`${a}x = ${a * x}`, `Divide both sides by ${a}.`, r`\frac{${a}x}{${a}} = \frac{${a * x}}{${a}}`, r`${a}\times${paren(x)} = ${a * x}`],
+          [r`\frac{x}{${a}} = ${x}`, `Multiply both sides by ${a}.`, r`\frac{x}{${a}}\times ${a} = ${paren(x)}\times ${a}`, r`\frac{${x * a}}{${a}} = ${x}`],
         ];
-        const [tex, hint] = rng.pick(forms);
+        const [tex, hint, both, check] = rng.pick(forms);
         const ans = tex.startsWith(r`\frac`) ? x * a : x;
         return {
           prompt: "Solve for $x$.",
@@ -175,7 +220,11 @@ export const algebra: Unit = {
           visual: level === 1 ? { type: "balance", left: tex.split(" = ")[0]!, right: tex.split(" = ")[1]! } : undefined,
           answer: numberAnswer(ans),
           hints: ["What operation is being done to x? Undo it.", hint],
-          solution: [step(hint, `x = ${ans}`)],
+          solution: [
+            step(`${hint.replace(/\.$/, "")}: it undoes what's being done to $x$, and doing the same to both sides keeps the balance.`, both),
+            step("Simplify each side.", `x = ${ans}`),
+            step("Check by putting it back into the original equation.", r`${check}\ \checkmark`),
+          ],
         };
       },
     },
@@ -200,10 +249,14 @@ export const algebra: Unit = {
           const xx = d * rng.int(-6, 6);
           return {
             prompt: "Solve for $x$.",
-            tex: r`\frac{x${signed(b)}}{${d}} = ${(xx + b) / d}`,
+            tex: r`\frac{x${signed(b)}}{${d}} = ${texFrac(xx + b, d)}`,
             answer: numberAnswer(xx),
             hints: [`Multiply both sides by ${d} first.`],
-            solution: [step(`Multiply by ${d}.`, r`x${signed(b)} = ${xx + b}`), step("Isolate x.", `x = ${xx}`)],
+            solution: [
+              step(`Multiply both sides by $${d}$ to clear the fraction.`, r`x${signed(b)} = ${Number.isInteger((xx + b) / d) ? (xx + b) / d : r`\left(${texFrac(xx + b, d)}\right)`}\times ${d} = ${xx + b}`),
+              step(`${undoWords(b)}.`, `x = ${xx + b}${undo(b)} = ${xx}`),
+              step("Check in the original equation.", r`\frac{${xx}${signed(b)}}{${d}} = \frac{${xx + b}}{${d}}${Number.isInteger((xx + b) / d) ? ` = ${(xx + b) / d}` : ""}\ \checkmark`),
+            ],
           };
         }
         return {
@@ -211,7 +264,11 @@ export const algebra: Unit = {
           tex: `${linear(a, b)} = ${a * x + b}`,
           answer: numberAnswer(x),
           hints: [`${b > 0 ? "Subtract" : "Add"} ${Math.abs(b)} on both sides.`, `Then divide by ${a}.`],
-          solution: [step("Undo the constant.", r`${a}x = ${a * x}`), step(`Divide by ${a}.`, `x = ${x}`)],
+          solution: [
+            step(`Undo the addition or subtraction first. ${undoWords(b)}.`, r`${linear(a, 0)} = ${a * x + b}${undo(b)} = ${a * x}`),
+            step(`Then undo the multiplication: divide both sides by $${a}$.`, r`x = \frac{${a * x}}{${a}} = ${x}`),
+            step("Check in the original equation.", r`${times(a, x)}${signed(b)} = ${a * x}${signed(b)} = ${a * x + b}\ \checkmark`),
+          ],
         };
       },
     },
@@ -238,13 +295,18 @@ export const algebra: Unit = {
         if (level >= 2) {
           const k = rng.int(2, 4);
           const p = rng.nonZero(-6, 6);
+          // With equal x-coefficients both sides would be the same line: true for every x.
+          while (c === k) c = rng.nonZero(-7, 9);
           const rhsConst = k * (x + p) - c * x;
           return {
             prompt: "Solve for $x$.",
             tex: r`${k}(x${signed(p)}) = ${linear(c, rhsConst)}`,
             answer: numberAnswer(x),
             hints: ["Expand the bracket first.", "Move the x terms to one side."],
-            solution: [step("Expand.", r`${linear(k, k * p)} = ${linear(c, rhsConst)}`), step("Collect and solve.", `x = ${x}`)],
+            solution: [
+              step(`Expand the bracket: multiply $${k}$ by each term inside.`, r`${linear(k, k * p)} = ${linear(c, rhsConst)}`),
+              ...collect(k, k * p, c, rhsConst, x),
+            ],
           };
         }
         return {
@@ -252,7 +314,7 @@ export const algebra: Unit = {
           tex: `${linear(a, b)} = ${linear(c, d)}`,
           answer: numberAnswer(x),
           hints: [`Subtract ${c}x from both sides.`, "Then solve the two-step equation."],
-          solution: [step("Gather x terms.", r`${linear(a - c, b)} = ${d}`), step("Solve.", `x = ${x}`)],
+          solution: collect(a, b, c, d, x),
         };
       },
     },
@@ -283,7 +345,16 @@ export const algebra: Unit = {
           tex: `${linear(a, b)} ${sym} ${a * x + b}`,
           ...multipleChoice(rng, correct, [`$x ${flip ? sym : flipped} ${x}$`, `$x ${final} ${-x}$`, `$x ${final} ${x + 1}$`]),
           hints: ["Solve it like an equation.", a < 0 ? "You'll divide by a negative — flip the sign!" : "Dividing by a positive keeps the sign."],
-          solution: [step(`Isolate $${a}x$.`, r`${a}x ${sym} ${a * x}`), step(`Divide by ${a}${flip ? " and flip" : ""}.`, `x ${final} ${x}`)],
+          solution: [
+            ...(b === 0 ? [] : [step(`Solve it like an equation. ${undoWords(b)}.`, r`${linear(a, 0)} ${sym} ${a * x + b}${undo(b)} = ${a * x}`)]),
+            step(
+              flip
+                ? `Divide both sides by $${a}$. Dividing by a **negative** number reverses the order of the two sides, so the sign flips from $${sym}$ to $${flipped}$.`
+                : `Divide both sides by $${a}$. It's positive, so the sign stays as $${sym}$.`,
+              r`x ${final} \frac{${a * x}}{${a}}`,
+            ),
+            step("Simplify.", `x ${final} ${x}`),
+          ],
         };
       },
     },
@@ -328,7 +399,13 @@ export const algebra: Unit = {
                 `$${closedInfinity}$`,
               ]),
               hints: [inc ? "The endpoint is included, so it takes a square bracket." : "The endpoint is excluded, so it takes a round bracket.", "Infinity always gets a round bracket."],
-              solution: [step(`${up ? "Everything from" : "Everything up to"} ${a}, ${inc ? "including" : "excluding"} ${a} itself.`, correct)],
+              solution: [
+                step(`The solutions are everything ${up ? "from" : "up to"} $${a}$, ${inc ? "including" : "but not including"} $${a}$ itself, and they go on forever ${up ? "upwards" : "downwards"}.`),
+                step(
+                  `$${a}$ ${inc ? "is included, so it gets a square bracket" : "is left out, so it gets a round bracket"}. The other end is $${up ? "\\infty" : "-\\infty"}$, which always gets a round bracket because it isn't a number you can reach.`,
+                  correct,
+                ),
+              ],
               solutionVisual: { type: "numberLine", min: a - 6, max: a + 6, step: 1, highlight: up ? { from: a, to: a + 6, openStart: !inc } : { from: a - 6, to: a, openEnd: !inc } },
             };
           }
@@ -339,7 +416,12 @@ export const algebra: Unit = {
             tex: `${lo} ${lt(incLo)} x ${lt(incHi)} ${hi}`,
             ...multipleChoice(rng, `$${correct}$`, [`$${interval(lo, hi, !incLo, incHi)}$`, `$${interval(lo, hi, incLo, !incHi)}$`, `$${interval(lo, hi, !incLo, !incHi)}$`]),
             hints: ["$\\le$ includes the endpoint: square bracket.", "$<$ excludes it: round bracket."],
-            solution: [step("Match each sign to a bracket.", correct)],
+            solution: [
+              step(
+                `Read each end. $${lo} ${lt(incLo)} x$ ${incLo ? "includes" : "excludes"} $${lo}$, so it gets a ${incLo ? "square" : "round"} bracket; $x ${lt(incHi)} ${hi}$ ${incHi ? "includes" : "excludes"} $${hi}$, so it gets a ${incHi ? "square" : "round"} bracket.`,
+              ),
+              step("Write the smaller end first, then the larger.", correct),
+            ],
             solutionVisual: { type: "numberLine", min: lo - 3, max: hi + 3, step: 1, highlight: { from: lo, to: hi, openStart: !incLo, openEnd: !incHi } },
           };
         }
@@ -359,8 +441,16 @@ export const algebra: Unit = {
             a < 0 ? "Dividing by a negative flips both signs, so the ends swap places." : "Dividing by a positive keeps the signs as they are.",
           ],
           solution: [
-            step(`Isolate the $${linear(a, 0)}$ term.`, middle(a * lo, linear(a, 0), a * hi)),
-            step(`Divide by ${a}${a < 0 ? " and flip the signs" : ""}.`, `${lo} ${lt(incLo)} x ${lt(incHi)} ${hi}`),
+            ...(b === 0
+              ? []
+              : [step(`Do the same thing to all three parts. ${b > 0 ? `Subtract $${b}$ from` : `Add $${-b}$ to`} each one.`, middle(a * lo, linear(a, 0), a * hi))]),
+            step(
+              a < 0
+                ? `Divide all three parts by $${a}$. Dividing by a negative flips both inequality signs, so rewrite it with the smaller number on the left.`
+                : `Divide all three parts by $${a}$. It's positive, so the signs stay the same.`,
+              `${lo} ${lt(incLo)} x ${lt(incHi)} ${hi}`,
+            ),
+            step(`${incLo ? "$\\le$ includes" : "$<$ excludes"} $${lo}$ and ${incHi ? "$\\le$ includes" : "$<$ excludes"} $${hi}$, which sets the brackets.`),
             step("Write the interval.", correct),
           ],
           solutionVisual: { type: "numberLine", min: lo - 3, max: hi + 3, step: 1, highlight: { from: lo, to: hi, openStart: !incLo, openEnd: !incHi } },
@@ -400,7 +490,11 @@ export const algebra: Unit = {
             answer: { kind: "set", values: [a - d, a + d] },
             inputHint: "e.g. -2, 5",
             hints: [`Which numbers are exactly ${d} away from ${a}?`, `Solve ${inside} = ${d} and ${inside} = −${d}.`],
-            solution: [step("The inside is either the positive or the negative value.", r`${inside} = ${d} \;\text{ or }\; ${inside} = -${d}`), step("Solve each.", r`x = ${a + d} \;\text{ or }\; x = ${a - d}`)],
+            solution: [
+              step(`$|${inside}| = ${d}$ means $${inside}$ is $${d}$ away from zero, so it's either $${d}$ or $-${d}$.`, r`${inside} = ${d} \;\text{ or }\; ${inside} = -${d}`),
+              step(a === 0 ? "These already give $x$." : `Solve each: ${a > 0 ? `add $${a}$ to` : `subtract $${-a}$ from`} both sides.`, lines(r`x &= ${d}${signed(a)} = ${a + d}`, r`x &= -${d}${signed(a)} = ${a - d}`).replace(/ \+ 0 /g, " ")),
+              step(`Both work: they're the two numbers exactly $${d}$ away from $${a}$.`, r`x = ${a + d} \;\text{ or }\; x = ${a - d}`),
+            ],
           };
         if (level === 2) {
           const k = rng.int(2, 4), x1 = rng.int(-5, 6), m = rng.int(1, 5), D = k * m;
@@ -413,7 +507,14 @@ export const algebra: Unit = {
             answer: { kind: "set", values: [x1, x2] },
             inputHint: "e.g. -2, 5",
             hints: ["The inside equals either the positive or the negative value.", `Solve ${expr} = ${D} and ${expr} = −${D}.`],
-            solution: [step("Two cases.", r`${expr} = ${D} \;\text{ or }\; ${expr} = -${D}`), step("Solve each.", r`x = ${x1} \;\text{ or }\; x = ${x2}`)],
+            solution: [
+              step(`The inside is $${D}$ away from zero, so it equals $${D}$ or $-${D}$. Solve both.`, r`${expr} = ${D} \;\text{ or }\; ${expr} = -${D}`),
+              step(
+                b === 0 ? `Divide both by $${k}$.` : `${undoWords(b)} of each, then divide by $${k}$.`,
+                lines(r`${k}x &= ${D}${undo(b)} = ${k * x1} &&\Rightarrow\; x = ${x1}`, r`${k}x &= -${D}${undo(b)} = ${k * x2} &&\Rightarrow\; x = ${x2}`).replace(/ - 0 | \+ 0 /g, " "),
+              ),
+              step("So the two solutions are", r`x = ${x1} \;\text{ or }\; x = ${x2}`),
+            ],
           };
         }
         const less = rng.chance(0.5), inc = rng.chance(0.5);
@@ -427,8 +528,14 @@ export const algebra: Unit = {
           ...multipleChoice(rng, `$${correct}$`, [`$${less ? beyond(inc) : within(inc)}$`, `$${less ? within(!inc) : beyond(!inc)}$`, `$${interval(-a - d, -a + d, inc, inc)}$`]),
           hints: [`Read it as: x is ${less ? "within" : "further than"} ${d} of ${a}.`, less ? "Being within a distance gives one interval." : "Being further away gives two separate pieces."],
           solution: [
-            step(`${less ? "Within" : "Beyond"} ${d} of ${a}.`, less ? `${a - d} ${sym} x ${sym} ${a + d}` : r`x ${inc ? r`\le` : "<"} ${a - d} \;\text{ or }\; x ${sym} ${a + d}`),
-            step("Write the intervals.", correct),
+            step(`$|${inside}|$ is the distance from $x$ to $${a}$. So this says $x$ is ${less ? "**within**" : "**further than**"} $${d}$ of $${a}$${inc ? " (or exactly that far)" : ""}.`),
+            step(
+              less
+                ? `That's between $${a} - ${d} = ${a - d}$ and $${a} + ${d} = ${a + d}$: one interval.`
+                : `That's below $${a} - ${d} = ${a - d}$ or above $${a} + ${d} = ${a + d}$: two separate pieces.`,
+              less ? `${a - d} ${sym} x ${sym} ${a + d}` : r`x ${inc ? r`\le` : "<"} ${a - d} \;\text{ or }\; x ${sym} ${a + d}`,
+            ),
+            step(`Write ${less ? "it" : "both pieces, joined with $\\cup$ (\"or\")"} in interval notation.`, correct),
           ],
           solutionVisual: less ? { type: "numberLine", min: a - d - 3, max: a + d + 3, step: 1, highlight: { from: a - d, to: a + d, openStart: !inc, openEnd: !inc } } : undefined,
         };
@@ -448,19 +555,34 @@ export const algebra: Unit = {
         example("Make $r$ the subject of $A = \\pi r^2$.", [["Divide by $\\pi$.", r`\frac{A}{\pi} = r^2`], ["Square root.", r`r = \sqrt{\frac{A}{\pi}}`]]),
       ],
       generate: (rng) => {
-        const options: [string, string, string, string[]][] = [
-          ["v = u + at", "t", r`t = \frac{v - u}{a}`, [r`t = \frac{v + u}{a}`, r`t = v - \frac{u}{a}`, r`t = a(v - u)`]],
-          ["P = 2l + 2w", "w", r`w = \frac{P - 2l}{2}`, [r`w = P - l`, r`w = \frac{P}{2} - 2l`, r`w = 2(P - l)`]],
-          ["y = mx + c", "x", r`x = \frac{y - c}{m}`, [r`x = \frac{y}{m} - c`, r`x = m(y - c)`, r`x = \frac{y + c}{m}`]],
-          ["A = \\tfrac{1}{2}bh", "h", r`h = \frac{2A}{b}`, [r`h = \frac{A}{2b}`, r`h = 2Ab`, r`h = \frac{b}{2A}`]],
-          ["F = \\tfrac{9}{5}C + 32", "C", r`C = \frac{5}{9}(F - 32)`, [r`C = \frac{9}{5}(F - 32)`, r`C = \frac{5}{9}F - 32`, r`C = \frac{5F}{9} + 32`]],
+        const options: [string, string, string, string[], [string, string][]][] = [
+          ["v = u + at", "t", r`t = \frac{v - u}{a}`, [r`t = \frac{v + u}{a}`, r`t = v - \frac{u}{a}`, r`t = a(v - u)`], [
+            ["$t$ is multiplied by $a$, then $u$ is added. Undo the adding first: subtract $u$ from both sides.", "v - u = at"],
+            ["Then undo the multiplying: divide both sides by $a$.", r`t = \frac{v - u}{a}`],
+          ]],
+          ["P = 2l + 2w", "w", r`w = \frac{P - 2l}{2}`, [r`w = P - l`, r`w = \frac{P}{2} - 2l`, r`w = 2(P - l)`], [
+            ["$w$ is multiplied by $2$, then $2l$ is added. Subtract $2l$ from both sides.", "P - 2l = 2w"],
+            ["Divide both sides by $2$.", r`w = \frac{P - 2l}{2}`],
+          ]],
+          ["y = mx + c", "x", r`x = \frac{y - c}{m}`, [r`x = \frac{y}{m} - c`, r`x = m(y - c)`, r`x = \frac{y + c}{m}`], [
+            ["$x$ is multiplied by $m$, then $c$ is added. Subtract $c$ from both sides.", "y - c = mx"],
+            ["Divide both sides by $m$.", r`x = \frac{y - c}{m}`],
+          ]],
+          ["A = \\tfrac{1}{2}bh", "h", r`h = \frac{2A}{b}`, [r`h = \frac{A}{2b}`, r`h = 2Ab`, r`h = \frac{b}{2A}`], [
+            ["Clear the half: multiply both sides by $2$.", "2A = bh"],
+            ["$h$ is multiplied by $b$, so divide both sides by $b$.", r`h = \frac{2A}{b}`],
+          ]],
+          ["F = \\tfrac{9}{5}C + 32", "C", r`C = \frac{5}{9}(F - 32)`, [r`C = \frac{9}{5}(F - 32)`, r`C = \frac{5}{9}F - 32`, r`C = \frac{5F}{9} + 32`], [
+            ["$C$ is multiplied by $\\tfrac{9}{5}$, then $32$ is added. Subtract $32$ from both sides.", r`F - 32 = \tfrac{9}{5}C`],
+            ["Undo multiplying by $\\tfrac{9}{5}$ by multiplying both sides by its reciprocal, $\\tfrac{5}{9}$. The whole of $F - 32$ gets multiplied, so keep it in brackets.", r`C = \frac{5}{9}(F - 32)`],
+          ]],
         ];
-        const [formula, v, correct, wrong] = rng.pick(options);
+        const [formula, v, correct, wrong, work] = rng.pick(options);
         return {
           prompt: `Make $${v}$ the subject of $${formula}$.`,
           ...multipleChoice(rng, `$${correct}$`, wrong.map((w) => `$${w}$`)),
           hints: [`Undo whatever is happening to ${v}, in reverse order.`],
-          solution: [step("Apply inverse operations.", correct)],
+          solution: [step(`Treat the other letters like numbers and undo what happens to $${v}$, in reverse order.`), ...work.map(([md, tex]) => step(md, tex))],
         };
       },
     },

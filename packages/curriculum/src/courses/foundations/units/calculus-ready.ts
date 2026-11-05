@@ -1,6 +1,8 @@
 import { example, key, math, multipleChoice, numberAnswer, rule, step, text, visual } from "../../../core/builders";
-import { factor, linear, paren, poly, quadratic, round } from "../../../core/math";
+import { factor, linear, paren, poly, quadratic, round, signed, texFrac } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { lines, substitute } from "../../../core/working";
+import { rationalisedLimit } from "./polynomials";
 
 const r = String.raw;
 
@@ -51,22 +53,33 @@ export const calculusReady: Unit = {
             ...multipleChoice(rng, `$${correct}$`, [`$${poly([[2 * a, "x"], [b, ""]])}$`, `$${poly([[a, "x"], [a, "h"], [b, ""]])}$`, `$${poly([[2 * a, "x"], [a, "h^2"], [b, ""]])}$`]),
             hints: ["Expand f(x + h), then subtract f(x): every term without an h cancels.", "Every remaining term has a factor of h, so divide it out."],
             solution: [
-              step("Expand and subtract.", r`f(x + h) - f(x) = ${poly([[2 * a, "xh"], [a, "h^2"], [b, "h"]])}`),
-              step("Divide by $h$.", correct),
-              step(`As $h \\to 0$ this becomes $${poly([[2 * a, "x"], [b, ""]])}$: the derivative.`),
+              step(
+                "Find $f(x + h)$: replace every $x$ with $(x + h)$, then expand.",
+                lines(
+                  r`f(x + h) &= ${a === 1 ? "" : a === -1 ? "-" : a}(x + h)^2${b === 0 ? "" : ` ${b < 0 ? "-" : "+"} ${Math.abs(b) === 1 ? "" : Math.abs(b)}(x + h)`}${c === 0 ? "" : signed(c)}`,
+                  r`&= ${poly([[a, "x^2"], [2 * a, "xh"], [a, "h^2"], [b, "x"], [b, "h"], [c, ""]])}`,
+                ),
+              ),
+              step(`Subtract $f(x) = ${f}$. Every term without an $h$ cancels.`, r`f(x + h) - f(x) = ${poly([[2 * a, "xh"], [a, "h^2"], [b, "h"]])}`),
+              step(
+                `Every remaining term has a factor of $h$, so divide it out. (As $h \\to 0$ this becomes $${poly([[2 * a, "x"], [b, ""]])}$: the derivative.)`,
+                r`\frac{${poly([[2 * a, "xh"], [a, "h^2"], [b, "h"]])}}{h} = ${correct}`,
+              ),
             ],
           };
         }
         const x0 = rng.int(-3, 4), h = rng.pick([1, 2, 0.5, 0.1]);
         const fx = (x: number) => a * x * x + b * x + c;
+        const terms: [number, number][] = [[a, 2], [b, 1], [c, 0]];
         const value = round(a * (2 * x0 + h) + b, 8);
         return {
           prompt: `For $f(x) = ${f}$, evaluate $\\dfrac{f(x + h) - f(x)}{h}$ at $x = ${x0}$ and $h = ${h}$.`,
           answer: numberAnswer(value),
           hints: [`Find f(${round(x0 + h, 6)}) and f(${x0}).`, `Subtract, then divide by ${h}.`],
           solution: [
-            step("Evaluate both points.", r`f(${round(x0 + h, 6)}) = ${round(fx(x0 + h), 6)}, \quad f(${x0}) = ${fx(x0)}`),
-            step("Divide the change by $h$.", r`\frac{${round(fx(x0 + h), 6)} - ${paren(fx(x0))}}{${h}} = ${value}`),
+            step(`Here $x + h = ${x0} + ${h} = ${round(x0 + h, 6)}$. Find $f$ there, and at $x = ${x0}$.`, lines(...[substitute(`f(${round(x0 + h, 6)})`, terms, round(x0 + h, 6)).tex, substitute(`f(${x0})`, terms, x0).tex].map((t) => t.replace(/\\(begin|end)\{aligned\}/g, "")))),
+            step("Subtract to get the change in $f$.", r`f(${round(x0 + h, 6)}) - f(${x0}) = ${round(fx(x0 + h), 6)} - ${paren(fx(x0))} = ${round(fx(x0 + h) - fx(x0), 6)}`),
+            step(`Divide by $h = ${h}$.`, r`\frac{${round(fx(x0 + h) - fx(x0), 6)}}{${h}} = ${value}`),
           ],
         };
       },
@@ -105,7 +118,10 @@ export const calculusReady: Unit = {
             tex: r`\lim_{x \to ${a}} \left(${quadratic(p, q, s)}\right)`,
             answer: numberAnswer(value),
             hints: ["Polynomials have no gaps or jumps, so you can substitute directly."],
-            solution: [step("Substitute.", `${quadratic(p, q, s).replace(/x/g, `(${a})`)} = ${value}`)],
+            solution: [
+              step("A polynomial has no gaps or jumps, so the limit is just its value at that point. Substitute directly."),
+              step(`Put $x = ${a}$.`, substitute(r`\lim_{x \to ${a}} \left(${quadratic(p, q, s)}\right)`, [[p, 2], [q, 1], [s, 0]], a).tex),
+            ],
           };
         }
         if (level === 2) {
@@ -117,7 +133,12 @@ export const calculusReady: Unit = {
             tex: r`\lim_{x \to ${a}} \frac{${quadratic(1, -(a + s), a * s)}}{${linear(1, -a)}}`,
             answer: numberAnswer(a - s),
             hints: ["Substituting gives 0/0, so factor the top.", `One factor of the top is ${factor(a)}.`],
-            solution: [step("Factor and cancel.", r`\frac{${factor(a)}${factor(s)}}{${factor(a)}} = ${linear(1, -s)}`), step("Substitute.", `${a} ${s < 0 ? "+" : "-"} ${Math.abs(s)} = ${a - s}`)],
+            solution: [
+              step(`Putting in $x = ${a}$ gives $\\frac{0}{0}$, which tells you nothing. That means $${factor(a)}$ is a factor of the top.`),
+              step(`Factor the top: $${-a}$ and $${-s}$ multiply to $${a * s}$ and add to $${-(a + s)}$.`, r`\frac{${quadratic(1, -(a + s), a * s)}}{${linear(1, -a)}} = \frac{${factor(a)}${factor(s)}}{${factor(a)}}`),
+              step(`Cancel $${factor(a)}$. A limit only cares about $x$ near $${a}$, never at it, so this is allowed.`, linear(1, -s)),
+              step(`Now substitute $x = ${a}$.`, `${a} ${s < 0 ? "+" : "-"} ${Math.abs(s)} = ${a - s}`),
+            ],
           };
         }
         const kind = rng.int(0, 2);
@@ -130,7 +151,12 @@ export const calculusReady: Unit = {
             answer: numberAnswer(lower ? 0 : p / d),
             inputHint: "e.g. 3/2",
             hints: ["For huge x, only the highest powers matter.", lower ? "The bottom grows faster than the top." : "Divide the leading coefficients."],
-            solution: [lower ? step("The bottom's degree is higher, so the fraction shrinks to 0.", "0") : step("Equal degrees: divide the leading coefficients.", r`\frac{${p}}{${d}}`)],
+            solution: [
+              step(`For huge $x$, only the highest power on the top and on the bottom matters: $${lower ? linear(p, 0) : poly([[p, "x^2"]])}$ over $${poly([[d, "x^2"]])}$.`),
+              lower
+                ? step(`That's like $\\frac{${p}}{${d === 1 ? "" : d}x}$, which shrinks to $0$ as $x$ grows.`, "0")
+                : step("The $x^2$ cancels, leaving the ratio of the leading coefficients.", r`\frac{${p}}{${d}}${texFrac(p, d) === r`\frac{${p}}{${d}}` ? "" : ` = ${texFrac(p, d)}`}`),
+            ],
           };
         }
         if (kind === 1) {
@@ -141,7 +167,7 @@ export const calculusReady: Unit = {
             answer: numberAnswer(1 / (2 * c)),
             inputHint: "e.g. 1/6",
             hints: ["Substitution gives 0/0. Rationalise the numerator.", `Multiply the top and bottom by √(x + ${c * c}) + ${c}.`],
-            solution: [step("Rationalise and cancel the x.", r`\frac{1}{\sqrt{x + ${c * c}} + ${c}}`), step("Substitute $x = 0$.", r`\frac{1}{${2 * c}}`)],
+            solution: rationalisedLimit(c),
           };
         }
         const x0 = rng.nonZero(-4, 5);
@@ -150,7 +176,11 @@ export const calculusReady: Unit = {
           tex: r`\lim_{h \to 0} \frac{(${x0} + h)^2 - ${paren(x0)}^2}{h}`,
           answer: numberAnswer(2 * x0),
           hints: ["Expand the top. The terms without h cancel.", "Divide by h, then let h go to 0."],
-          solution: [step("Expand and divide by $h$.", r`\frac{${2 * x0}h + h^2}{h} = ${2 * x0} + h`), step("Let $h \\to 0$.", `${2 * x0}`)],
+          solution: [
+            step("Expand the square on top. The plain numbers cancel.", r`(${x0} + h)^2 - ${paren(x0)}^2 = ${x0 * x0} ${2 * x0 < 0 ? "-" : "+"} ${Math.abs(2 * x0)}h + h^2 - ${x0 * x0} = ${2 * x0}h + h^2`),
+            step("Divide every term by $h$.", r`\frac{${2 * x0}h + h^2}{h} = ${2 * x0} + h`),
+            step(`As $h \\to 0$, the $h$ disappears. That's the slope of $y = x^2$ at $x = ${x0}$.`, `${2 * x0}`),
+          ],
         };
       },
     },

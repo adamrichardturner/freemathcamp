@@ -1,6 +1,7 @@
 import { example, key, math, multipleChoice, numberAnswer, rule, step, text, tip, visual, warn } from "../../../core/builders";
 import { formatThousands, gcd, isPrime, lcm, primeFactors, texPrimeFactorization } from "../../../core/math";
 import type { Unit } from "../../../core/types";
+import { chunkDivision, columnAddition, columnSubtraction, lines, partialProducts, skipCount } from "../../../core/working";
 
 const r = String.raw;
 
@@ -41,7 +42,14 @@ export const arithmetic: Unit = {
           solutionVisual: { type: "placeValue", value: n, highlight: pos },
           answer: numberAnswer(digit * place),
           hints: [`The ${ordinal(pos + 1)} digit from the left is in the **${names[str.length - 1 - pos]}** place.`, `Multiply the digit by ${formatThousands(place)}.`],
-          solution: [step(`The digit sits in the ${names[str.length - 1 - pos]} place, worth ${formatThousands(place)}.`, r`${digit}\times ${place} = ${digit * place}`)],
+          solution: [
+            step(
+              "Name the places, starting from the ones on the right.",
+              lines(...[...str].map((c, i) => r`${c} &\to \text{${names[str.length - 1 - i]}}${i === pos ? r`\quad\leftarrow` : ""}`)),
+            ),
+            step(`The highlighted digit, $${digit}$, is in the **${names[str.length - 1 - pos]}** place, so each one of it is worth $${formatThousands(place).replace(/,/g, "{,}")}$.`),
+            step("Its value is the digit times its place value.", r`${digit}\times ${place} = ${digit * place}`),
+          ],
         };
       },
     },
@@ -72,7 +80,7 @@ export const arithmetic: Unit = {
           tex: `${x} ${add ? "+" : "-"} ${y}`,
           answer: numberAnswer(ans),
           hints: ["Line up the digits by place value and start with the ones.", add ? "Carry a ten whenever a column reaches 10 or more." : "Borrow from the next place when the top digit is smaller."],
-          solution: [step("Work column by column from the right.", `${x} ${add ? "+" : "-"} ${y} = ${ans}`)],
+          solution: add ? columnAddition(x, y) : [...columnSubtraction(x, y), step("Check by adding back.", `${ans} + ${y} = ${x}`)],
         };
       },
     },
@@ -101,7 +109,7 @@ export const arithmetic: Unit = {
           solutionVisual: level > 1 ? { type: "areaModel", a, b } : undefined,
           answer: numberAnswer(a * b),
           hints: ["Split the larger number into tens and ones.", "Multiply each piece, then add the partial products."],
-          solution: [step("Use the area model and add the partial products.", r`${a}\times${b} = ${a * b}`)],
+          solution: level === 1 ? skipCount(a, b) : partialProducts(a, b),
         };
       },
     },
@@ -131,7 +139,11 @@ export const arithmetic: Unit = {
             tex: r`${n} \div ${d}`,
             answer: numberAnswer(rem),
             hints: [`Find the largest multiple of ${d} that is at most ${n}.`, `Subtract it from ${n}.`],
-            solution: [step(`${d} × ${q} = ${d * q}, the largest multiple not exceeding ${n}.`), step("The remainder is what is left.", r`${n} - ${d * q} = ${rem}`)],
+            solution: [
+              ...chunkDivision(n, d),
+              step(`So $${d}\\times${q} = ${d * q}$ is the largest multiple of $${d}$ that fits. The remainder is what's left over.`, r`${n} - ${d * q} = ${rem}`),
+              step(`Check: the remainder $${rem}$ is less than $${d}$, and it all adds back up.`, r`${d}\times${q} + ${rem} = ${n}`),
+            ],
           };
         }
         return {
@@ -139,7 +151,11 @@ export const arithmetic: Unit = {
           tex: r`${d * q} \div ${d}`,
           answer: numberAnswer(q),
           hints: [`Think: ${d} × ? = ${d * q}`],
-          solution: [step("Division undoes multiplication.", r`${d}\times${q} = ${d * q} \Rightarrow ${d * q}\div${d} = ${q}`)],
+          solution: [
+            step(`Division undoes multiplication: ask how many $${d}$s make $${d * q}$.`, r`${d}\times\,? = ${d * q}`),
+            ...chunkDivision(d * q, d),
+            step("So the quotient is", r`${d * q}\div${d} = ${q}`),
+          ],
         };
       },
     },
@@ -160,25 +176,49 @@ export const arithmetic: Unit = {
       ],
       generate: (rng, level) => {
         const a = rng.int(2, 9), b = rng.int(2, 9), c = rng.int(2, 9), d = rng.int(1, 9);
-        const forms: [string, number, string[]][] = [
-          [`${a} + ${b} \\times ${c}`, a + b * c, [`Multiply first: ${b} × ${c} = ${b * c}.`, `Then add ${a}.`]],
-          [`(${a} + ${b}) \\times ${c}`, (a + b) * c, [`Brackets first: ${a} + ${b} = ${a + b}.`]],
-          [`${a * c} \\div ${c} + ${b} \\times ${d}`, a + b * d, ["Do both × and ÷ before adding."]],
+        type Form = [string, number, string[], [string, string][]];
+        const s = a + d, t = d + c;
+        const forms: Form[] = [
+          [`${a} + ${b} \\times ${c}`, a + b * c, [`Multiply first: ${b} × ${c} = ${b * c}.`, `Then add ${a}.`], [
+            [`No brackets or powers. Multiply before adding: $${b}\\times${c} = ${b * c}$.`, `${a} + ${b * c}`],
+            ["Then add.", `${a + b * c}`],
+          ]],
+          [`(${a} + ${b}) \\times ${c}`, (a + b) * c, [`Brackets first: ${a} + ${b} = ${a + b}.`], [
+            [`Brackets first: $${a} + ${b} = ${a + b}$.`, r`${a + b} \times ${c}`],
+            ["Then multiply.", `${(a + b) * c}`],
+          ]],
+          [`${a * c} \\div ${c} + ${b} \\times ${d}`, a + b * d, ["Do both × and ÷ before adding."], [
+            [`Division and multiplication come before addition: $${a * c}\\div${c} = ${a}$ and $${b}\\times${d} = ${b * d}$.`, `${a} + ${b * d}`],
+            ["Then add.", `${a + b * d}`],
+          ]],
         ];
         if (level >= 2)
           forms.push(
-            [`${a} + ${b}^2 - ${d}`, a + b * b - d, [`Exponent first: ${b}² = ${b * b}.`]],
-            [`(${a} + ${d})^2 \\div ${a + d}`, a + d, [`Brackets: ${a + d}. Square it, then divide.`]],
+            [`${a} + ${b}^2 - ${d}`, a + b * b - d, [`Exponent first: ${b}² = ${b * b}.`], [
+              [`Exponent first: $${b}^2 = ${b}\\times${b} = ${b * b}$.`, `${a} + ${b * b} - ${d}`],
+              ["Addition and subtraction share a rank, so go left to right.", `${a + b * b} - ${d}`],
+              ["Subtract.", `${a + b * b - d}`],
+            ]],
+            [`(${a} + ${d})^2 \\div ${s}`, s, [`Brackets: ${s}. Square it, then divide.`], [
+              [`Brackets first: $${a} + ${d} = ${s}$.`, r`${s}^2 \div ${s}`],
+              [`Then the exponent: $${s}^2 = ${s * s}$.`, r`${s * s} \div ${s}`],
+              ["Divide.", `${s}`],
+            ]],
           );
         if (level === 3)
-          forms.push([`${a * b * 2} \\div ${a} \\times ${c} - (${d} + ${c})^2`, b * 2 * c - (d + c) ** 2, ["Brackets and exponent first.", "Then ÷ and × left to right."]]);
-        const [tex, ans, hints] = rng.pick(forms);
+          forms.push([`${a * b * 2} \\div ${a} \\times ${c} - (${d} + ${c})^2`, b * 2 * c - t ** 2, ["Brackets and exponent first.", "Then ÷ and × left to right."], [
+            [`Brackets first: $${d} + ${c} = ${t}$.`, r`${a * b * 2} \div ${a} \times ${c} - ${t}^2`],
+            [`Exponent: $${t}^2 = ${t * t}$.`, r`${a * b * 2} \div ${a} \times ${c} - ${t * t}`],
+            [`Divide and multiply from left to right: $${a * b * 2}\\div${a} = ${2 * b}$, then $${2 * b}\\times${c} = ${2 * b * c}$.`, `${2 * b * c} - ${t * t}`],
+            ["Subtract last.", `${2 * b * c - t * t}`],
+          ]]);
+        const [tex, ans, hints, work] = rng.pick(forms);
         return {
           prompt: "Evaluate using the order of operations.",
           tex,
           answer: numberAnswer(ans),
           hints: ["Brackets → exponents → × ÷ → + −", ...hints],
-          solution: [step("Apply the order of operations step by step.", `${tex} = ${ans}`)],
+          solution: work.map(([md, line], i) => step(md, `${i === 0 ? `${tex} ` : ""}= ${line}`)),
         };
       },
     },
@@ -204,7 +244,14 @@ export const arithmetic: Unit = {
             prompt: `How many factors does $${n}$ have (including $1$ and $${n}$)?`,
             answer: numberAnswer(factors.length),
             hints: ["List factor pairs starting from 1 × n.", `Stop once the pairs repeat (after √${n}).`],
-            solution: [step(`Factors of ${n}: ${factors.join(", ")}.`), step(`That is ${factors.length} factors.`)],
+            solution: [
+              step(
+                `Find the factor pairs: try $1, 2, 3, \\dots$ in turn and stop once the pairs start to repeat (past $\\sqrt{${n}} \\approx ${Math.sqrt(n).toFixed(1)}$).`,
+                lines(...factors.filter((f) => f * f <= n).map((f) => r`${f} &\times ${n / f}`)),
+              ),
+              step("List every number that appears in a pair.", factors.join(r`,\ `)),
+              step(`Count them: $${n}$ has $${factors.length}$ factors.`),
+            ],
           };
         }
         const nonFactor = rng.pick(Array.from({ length: n - 2 }, (_, i) => i + 2).filter((x) => n % x !== 0));
@@ -214,7 +261,10 @@ export const arithmetic: Unit = {
           prompt: `Which of these is **not** a factor of $${n}$?`,
           ...multipleChoice(rng, correct, others),
           hints: ["Try dividing: a factor leaves no remainder."],
-          solution: [step(`$${n} \\div ${nonFactor}$ leaves a remainder of $${n % nonFactor}$, so ${nonFactor} is not a factor.`)],
+          solution: [
+            step("A factor divides exactly, with no remainder. Divide by each option.", lines(...[nonFactor, ...others.map((o) => Number(o.slice(1, -1)))].sort((x, y) => x - y).map((f) => (n % f ? r`${n} \div ${f} &= ${Math.floor(n / f)}\text{ remainder }${n % f}` : r`${n} \div ${f} &= ${n / f}\ \checkmark`)))),
+            step(`Only $${nonFactor}$ leaves a remainder, so $${nonFactor}$ is **not** a factor of $${n}$.`),
+          ],
         };
       },
     },
@@ -241,7 +291,15 @@ export const arithmetic: Unit = {
             prompt: `Is $${n}$ prime or composite?`,
             ...multipleChoice(rng, prime ? "Prime" : "Composite", [prime ? "Composite" : "Prime"]),
             hints: ["Check divisibility by 2, 3, 5 and 7 (enough for numbers under 121)."],
-            solution: [step(prime ? `${n} has no factors other than 1 and itself.` : `${n} = ${primeFactors(n).join(" × ")}, so it is composite.`)],
+            solution: prime
+              ? [
+                  step(`You only need to test primes up to $\\sqrt{${n}} \\approx ${Math.sqrt(n).toFixed(1)}$: any bigger factor would pair with a smaller one.`, lines(...[2, 3, 5, 7].filter((q) => q * q <= n).map((q) => r`${n} \div ${q} &= ${Math.floor(n / q)}\text{ remainder }${n % q}`))),
+              step(`None of them divides exactly, so $${n}$ has no factors except $1$ and itself: it is **prime**.`),
+                ]
+              : [
+                  step(`Try small primes. $${primeFactors(n)[0]}$ divides $${n}$ exactly.`, r`${n} \div ${primeFactors(n)[0]} = ${n / primeFactors(n)[0]!}`),
+                  step(`So $${n} = ${primeFactors(n)[0]}\\times${n / primeFactors(n)[0]!}$ has a factor other than $1$ and itself: it is **composite**.`),
+                ],
           };
         }
         const pool = level === 1 ? [2, 3, 5] : level === 2 ? [2, 3, 5, 7] : [2, 3, 5, 7, 11, 13];
@@ -249,6 +307,10 @@ export const arithmetic: Unit = {
         const ps = Array.from({ length: count }, () => rng.pick(pool));
         const n = ps.reduce((a, b) => a * b, 1);
         const largest = Math.max(...ps);
+        // Divide by the smallest prime each time, as a learner would on a ladder.
+        const ladder: string[] = [];
+        for (let m = n, i = 0, f = primeFactors(n); i < f.length; m /= f[i]!, i++) ladder.push(r`${m} \div ${f[i]} &= ${m / f[i]!}`);
+        const divide = step("Keep dividing by the smallest prime that goes in exactly, until you reach $1$.", lines(...ladder));
         const correct = `$${texPrimeFactorization(n)}$`;
         const wrong1 = `$${texPrimeFactorization(n * 2)}$`;
         const wrong2 = `$${texPrimeFactorization(Math.max(2, n / largest))} \\cdot ${largest * largest}$`;
@@ -259,13 +321,21 @@ export const arithmetic: Unit = {
               ...multipleChoice(rng, correct, [wrong1, wrong2, wrong3]),
               solutionVisual: { type: "factorTree", value: n },
               hints: ["Divide by the smallest prime repeatedly.", "Every factor in the answer must be prime."],
-              solution: [step(`$${n} = ${primeFactors(n).join(" \\times ")} = ${texPrimeFactorization(n)}$`)],
+              solution: [
+                divide,
+                step("The primes you divided by multiply back to the number.", r`${n} = ${primeFactors(n).join(r` \times `)}`),
+                step("Group repeated primes with exponents.", `${n} = ${texPrimeFactorization(n)}`),
+              ],
             }
           : {
               prompt: `What is the **largest** prime factor of $${n}$?`,
               answer: numberAnswer(largest),
               hints: ["Divide out small primes first: 2, then 3, then 5…"],
-              solution: [step(`$${n} = ${texPrimeFactorization(n)}$, so the largest prime factor is ${largest}.`)],
+              solution: [
+                divide,
+                step(`So $${n} = ${texPrimeFactorization(n)}$.`),
+                step(`The largest prime in the list is $${largest}$.`),
+              ],
             };
       },
     },
@@ -290,11 +360,20 @@ export const arithmetic: Unit = {
         const a = g * x, b = g * y;
         const askGcf = rng.chance(0.5);
         const ans = askGcf ? gcd(a, b) : lcm(a, b);
+        const power = (n: number, q: number) => primeFactors(n).filter((f) => f === q).length;
+        const primes = [...new Set([...primeFactors(a), ...primeFactors(b)])].sort((x, y) => x - y);
+        const chosen = primes.map((q) => [q, (askGcf ? Math.min : Math.max)(power(a, q), power(b, q))] as const).filter(([, k]) => k > 0);
         return {
           prompt: `Find the ${askGcf ? "**greatest common factor**" : "**least common multiple**"} of $${a}$ and $${b}$.`,
           answer: numberAnswer(ans),
           hints: [`Write both as prime factorizations: $${a} = ${texPrimeFactorization(a)}$, $${b} = ${texPrimeFactorization(b)}$.`, askGcf ? "Take only shared primes, at their lowest power." : "Take every prime, at its highest power."],
-          solution: [step(`$${a} = ${texPrimeFactorization(a)}$ and $${b} = ${texPrimeFactorization(b)}$.`), step(askGcf ? "Shared primes with lowest powers:" : "All primes with highest powers:", `${ans}`)],
+          solution: [
+            step("Write each number as a product of primes.", lines(r`${a} &= ${texPrimeFactorization(a)}`, r`${b} &= ${texPrimeFactorization(b)}`)),
+            askGcf
+              ? step(`For the GCF, take only the primes **both** share, each at its **lower** power.`, `${chosen.map(([q, k]) => (k > 1 ? `${q}^{${k}}` : `${q}`)).join(r` \cdot `)}`)
+              : step(`For the LCM, take **every** prime that appears, each at its **higher** power.`, `${chosen.map(([q, k]) => (k > 1 ? `${q}^{${k}}` : `${q}`)).join(r` \cdot `)}`),
+            step("Multiply them out.", `${chosen.map(([q, k]) => (k > 1 ? `${q}^{${k}}` : `${q}`)).join(r` \cdot `)} = ${ans}`),
+          ],
         };
       },
     },
