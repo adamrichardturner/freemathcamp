@@ -12,6 +12,12 @@ export interface AppConfigShape {
   readonly googleIosClientId: Option.Option<string>;
   /** Sign in with Apple in the iOS app: Apple's ID tokens name the app's bundle id as their audience. */
   readonly appleBundleId: string;
+  /**
+   * A key with Sign in with Apple enabled (Apple Developer → Keys), to sign the
+   * client secret Apple's token and revoke endpoints ask for. Without it, sign-in
+   * still works but deleting an account can't revoke its Apple tokens.
+   */
+  readonly appleSignInKey: Option.Option<{ teamId: string; keyId: string; privateKey: Redacted.Redacted<string> }>;
   /** Shared secret the Next.js proxy uses to vouch for forwarded client IPs. */
   readonly proxySecret: Option.Option<Redacted.Redacted<string>>;
   /** Without a key, emails are logged instead of sent (development and tests). */
@@ -49,6 +55,13 @@ const config = Config.all({
   ),
   googleIosClientId: Config.option(Config.nonEmptyString("GOOGLE_IOS_CLIENT_ID")),
   appleBundleId: Config.string("APPLE_BUNDLE_ID").pipe(Config.withDefault("com.freemathcamp.app")),
+  appleSignInKey: Config.option(
+    Config.all({
+      teamId: Config.nonEmptyString("APPLE_TEAM_ID"),
+      keyId: Config.nonEmptyString("APPLE_KEY_ID"),
+      privateKey: Config.redacted("APPLE_PRIVATE_KEY"),
+    }),
+  ),
   proxySecret: Config.option(Config.redacted("PROXY_SECRET")),
   resendApiKey: Config.option(Config.redacted("RESEND_API_KEY")),
   emailFrom: Config.string("EMAIL_FROM").pipe(Config.withDefault("FreeMathCamp <noreply@freemathcamp.app>")),

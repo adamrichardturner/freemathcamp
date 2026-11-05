@@ -47,6 +47,9 @@ export interface UserRepositoryShape {
   updateDisplayName(id: string, displayName: string): Db<User>;
   findByOAuth(provider: OAuthProvider, providerUserId: string): Db<User | undefined>;
   /** Links a provider identity to a user (creating the user if needed) atomically. */
+  /** Stores the provider's refresh token for a linked account (Apple, for revocation). */
+  setOAuthRefreshToken(provider: OAuthProvider, providerUserId: string, token: string): Db<void>;
+  oauthRefreshTokens(userId: string, provider: OAuthProvider): Db<string[]>;
   upsertOAuthUser(input: { provider: OAuthProvider; providerUserId: string; email: string; displayName: string; avatarUrl: string | null }): Db<User>;
   markEmailVerified(id: string): Db<User>;
   /** Turns reminder emails off for whoever owns this token; returns the user, if any. */

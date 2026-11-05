@@ -8,6 +8,7 @@ import { Effect } from "effect";
 import { SessionRepository, UserRepository } from "../src/application/ports";
 import { outbox } from "../src/infrastructure/email/senders";
 import { hashToken } from "../src/infrastructure/security/tokens";
+import { purgeAccount } from "../src/application/account";
 
 /** Token from the newest verification email sent to an address. */
 const latestToken = (to: string) => {
@@ -242,7 +243,24 @@ describe.skipIf(!enabled)("iOS app sessions", () => {
     const res = await request(app)
       .post("/api/auth/apple")
       .set("x-fmc-client", "ios")
-      .send({ identityToken: forged, nonce: "0123456789abcdef0123" });
+      .send({ identityToken: forged, nonce: "0123456789abcdef0123", authorizationCode: "code" });
     expect(res.status).toBe(401);
+  });
+
+  it("deletes an account that signed in with Apple, revoking its token when a key is configured", async () => {
+    const email = `apple+${Date.now()}@example.com`;
+    const sub = `apple-${Date.now()}`;
+    const user = await runtime.runPromise(
+      Effect.gen(function* () {
+        const users = yield* UserRepository;
+        const u = yield* users.upsertOAuthUser({ provider: "apple", providerUserId: sub, email, displayName: "Apple Learner", avatarUrl: null });
+        yield* users.setOAuthRefreshToken("apple", sub, "apple-refresh-token");
+        expect(yield* users.oauthRefreshTokens(u.id, "apple")).toEqual(["apple-refresh-token"]);
+        return u;
+      }),
+    );
+    // No Apple key in tests, so revocation is skipped and deletion carries on.
+    await runtime.runPromise(purgeAccount(user.id));
+    expect(await runtime.runPromise(Effect.flatMap(UserRepository, (u) => u.findById(user.id)))).toBeUndefined();
   });
 });

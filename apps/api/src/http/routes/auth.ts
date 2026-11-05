@@ -1,7 +1,7 @@
 import { Cause, Effect, Exit } from "effect";
 import { Router, type Request } from "express";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
-import { login, loginWithGoogle, loginWithProvider, logout, register, signInVerified, toPublicUser } from "../../application/auth";
+import { login, loginWithGoogle, loginWithProvider, logout, register, rememberAppleSignIn, signInVerified, toPublicUser } from "../../application/auth";
 import { sendVerificationEmail, verifyEmail } from "../../application/email-verification";
 import { beginGoogleFlow, completeGoogleFlow, isGoogleEnabled, type OAuthFlowState } from "../../infrastructure/oauth/google";
 import { isGoogleNativeEnabled, verifyAppleIdToken, verifyGoogleIdToken } from "../../infrastructure/oauth/id-tokens";
@@ -136,6 +136,7 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
         const body = yield* decode(AppleIdTokenBody, req.body);
         const identity = yield* verifyAppleIdToken(body);
         const s = yield* loginWithProvider("apple", identity, clientInfo(req));
+        yield* rememberAppleSignIn(identity.sub, body.authorizationCode);
         return { user: s.user, ...issueSession(req, res, opts.secure, s) };
       }),
     ),

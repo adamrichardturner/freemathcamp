@@ -68,7 +68,11 @@ The local `build:*` scripts compile on your Mac, so they're free; EAS only manag
 In [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list):
 
 1. **Identifier** `com.freemathcamp.app` (App IDs → App). Enable **Sign in with Apple** and **Push Notifications**. (EAS creates this for you on the first build if it doesn't exist, but it needs the two capabilities.)
-2. **Key** for push: Keys → + → enable *Apple Push Notifications service (APNs)*. Download the `.p8` once. On the VPS, set `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID=com.freemathcamp.app`, `APNS_PRIVATE_KEY` (the file's contents with newlines as `\n`) and `APNS_PRODUCTION=true`.
+2. **Key** for push and Sign in with Apple: Keys → + → enable both *Apple Push Notifications service (APNs)* and *Sign in with Apple* (configure it with the App ID above). Download the `.p8` once. EAS makes its own push key for builds, but it can't be downloaded, so the API needs this one. On the VPS, set from it:
+   - `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID=com.freemathcamp.app`, `APNS_PRIVATE_KEY` and `APNS_PRODUCTION=true`, so the API can send pushes;
+   - `APPLE_KEY_ID`, `APPLE_TEAM_ID` and `APPLE_PRIVATE_KEY` (the same values), so deleting an account revokes its Apple tokens.
+
+   The private keys are the `.p8` file's contents with newlines written as `\n`.
 3. Note your **Team ID** (Membership details) for `APPLE_TEAM_ID`.
 
 ### 2. Google sign-in
@@ -97,7 +101,7 @@ npx eas-cli@latest init          # already done: the project is @adamrichardturn
 
 ### 5. App Store Connect
 
-In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), the app **FreeMathCamp** with bundle id `com.freemathcamp.app` already exists. EAS finds it by bundle id when you submit; to submit without an Apple sign-in (CI), add its **Apple ID** (App Information → General, a number like `6740000000`) to `eas.json` → `submit.production.ios.ascAppId`.
+In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), the app **FreeMathCamp** with bundle id `com.freemathcamp.app` already exists. Its Apple ID, `6829382170`, is in `eas.json` → `submit.production.ios.ascAppId`, and EAS holds an App Store Connect API key for submitting, so `pnpm submit:ios` needs no Apple sign-in.
 
 ## Ship a build to App Store Connect
 
@@ -130,7 +134,7 @@ On the app's version page in App Store Connect:
 - **App Privacy**: the app collects email address and name (account), product interaction (learning progress), and a device token for push. None are used for tracking or advertising.
 - **Age rating**: 4+. **Category**: Education.
 - **Sign-in for review**: give App Review a demo account with a confirmed email (Settings → Account), since practice needs one.
-- The app offers Sign in with Apple alongside Google (guideline 4.8) and account deletion in Settings → Your data (guideline 5.1.1(v)).
+- The app offers Sign in with Apple alongside Google (guideline 4.8) and account deletion in Settings → Your data (guideline 5.1.1(v)). Deleting an account revokes its Sign in with Apple tokens once the `APPLE_*` key is set on the API.
 
 Then **Add for Review → Submit**. When it's approved, release it by hand or automatically.
 

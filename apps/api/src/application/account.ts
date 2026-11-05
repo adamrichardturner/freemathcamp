@@ -2,6 +2,7 @@ import { getCourse } from "@fmc/curriculum";
 import { Effect } from "effect";
 import { RateLimited, Unauthorized, ValidationError } from "../domain/errors";
 import type { User } from "../infrastructure/db/schema";
+import { revokeAppleToken } from "../infrastructure/oauth/apple";
 import { PasswordHasher } from "../infrastructure/security/password";
 import { hashToken } from "../infrastructure/security/tokens";
 import { checkUsername, toPublicUser } from "./auth";
@@ -120,7 +121,18 @@ export const resetCourseProgress = (user: User, courseId: string) =>
   });
 
 /** Removes an account and everything it owns. Shared by self-service deletion and the admin panel. */
-export const purgeAccount = (userId: string) => Effect.flatMap(UserRepository, (u) => u.delete(userId));
+/**
+ * Deletes an account and everything in it. First revokes any Sign in with
+ * Apple tokens, as Apple requires; that's best effort, so an Apple outage
+ * never stops someone deleting their account.
+ */
+export const purgeAccount = (userId: string) =>
+  Effect.gen(function* () {
+    const users = yield* UserRepository;
+    const appleTokens = yield* users.oauthRefreshTokens(userId, "apple");
+    yield* Effect.forEach(appleTokens, (t) => revokeAppleToken(t).pipe(Effect.catchAll((e) => Effect.logWarning("couldn't revoke an Apple token", e))), { discard: true });
+    yield* users.delete(userId);
+  });
 
 export const exportAccountData = (user: User) => Effect.flatMap(AccountRepository, (a) => a.exportData(user.id));
 

@@ -55,6 +55,8 @@ export interface OAuthAccountsTable {
   provider_user_id: string;
   user_id: string;
   email: string;
+  /** Apple only: the refresh token, so deleting the account can revoke it. */
+  refresh_token: string | null;
   created_at: Generated<Date>;
 }
 

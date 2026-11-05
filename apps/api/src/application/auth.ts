@@ -13,6 +13,7 @@ import { notifySafely } from "./notifications";
 import { SessionRepository, UserRepository } from "./ports";
 import { addDays } from "../domain/engine";
 import type { GoogleIdentity } from "../infrastructure/oauth/google";
+import { exchangeAppleCode } from "../infrastructure/oauth/apple";
 import type { ProviderIdentity } from "../infrastructure/oauth/id-tokens";
 
 export interface PublicUser {
@@ -148,6 +149,19 @@ export const loginWithProvider = (provider: OAuthProvider, identity: ProviderIde
   });
 
 export const loginWithGoogle = (identity: GoogleIdentity, client: ClientInfo) => loginWithProvider("google", identity, client);
+
+/**
+ * After a Sign in with Apple, swaps the one-time authorization code for a
+ * refresh token and keeps it, so deleting the account can revoke it. Never
+ * fails the sign-in: without an Apple key, or if Apple is unreachable, the
+ * learner is signed in all the same.
+ */
+export const rememberAppleSignIn = (providerUserId: string, authorizationCode: string | undefined) =>
+  Effect.gen(function* () {
+    if (!authorizationCode) return;
+    const token = yield* exchangeAppleCode(authorizationCode);
+    if (token) yield* Effect.flatMap(UserRepository, (u) => u.setOAuthRefreshToken("apple", providerUserId, token));
+  }).pipe(Effect.catchAll((e) => Effect.logWarning("couldn't keep the Apple refresh token", e)));
 
 export const logout = (token: string) => Effect.flatMap(SessionRepository, (s) => s.delete(hashToken(token)));
 

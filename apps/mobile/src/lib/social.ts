@@ -54,7 +54,13 @@ export async function signInWithApple(): Promise<SignedIn | null> {
     if (!credential.identityToken) throw new Error("Apple didn't return an identity token.");
     // Apple shares the name only the first time someone signs in to the app.
     const name = credential.fullName ? AppleAuthentication.formatFullName(credential.fullName) : "";
-    return await api.post<SignedIn>("/auth/apple", { identityToken: credential.identityToken, nonce, ...(name ? { name } : {}) });
+    // The one-time code lets the API keep a refresh token, so deleting the account can revoke Apple access.
+    return await api.post<SignedIn>("/auth/apple", {
+      identityToken: credential.identityToken,
+      nonce,
+      ...(name ? { name } : {}),
+      ...(credential.authorizationCode ? { authorizationCode: credential.authorizationCode } : {}),
+    });
   } catch (e) {
     if ((e as { code?: string }).code === "ERR_REQUEST_CANCELED") return null;
     throw e;

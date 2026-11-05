@@ -38,6 +38,8 @@ export const AppleIdTokenBody = Schema.Struct({
   identityToken: Schema.String.pipe(Schema.minLength(20), Schema.maxLength(4096)),
   nonce: Schema.String.pipe(Schema.minLength(16), Schema.maxLength(128)),
   name: Schema.optional(Schema.String.pipe(Schema.maxLength(120))),
+  /** Exchanged for a refresh token, so deleting the account can revoke it. */
+  authorizationCode: Schema.optional(Schema.String.pipe(Schema.maxLength(1024))),
 });
 export const LoginBody = Schema.Struct({ email: Email, password: Schema.String.pipe(Schema.maxLength(128)) });
 export const ProfileBody = Schema.Struct({ displayName: DisplayName });

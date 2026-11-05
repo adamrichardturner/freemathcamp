@@ -87,6 +87,14 @@ export const UserRepositoryLive = repo(UserRepository, (run) => ({
         .where("oauth_accounts.provider_user_id", "=", providerUserId)
         .executeTakeFirst(),
     ),
+  setOAuthRefreshToken: (provider, providerUserId, token) =>
+    run((db) =>
+      db.updateTable("oauth_accounts").set({ refresh_token: token }).where("provider", "=", provider).where("provider_user_id", "=", providerUserId).execute(),
+    ).pipe(Effect.asVoid),
+  oauthRefreshTokens: (userId, provider) =>
+    run((db) =>
+      db.selectFrom("oauth_accounts").select("refresh_token").where("user_id", "=", userId).where("provider", "=", provider).where("refresh_token", "is not", null).execute(),
+    ).pipe(Effect.map((rows) => rows.map((r) => r.refresh_token!))),
   upsertOAuthUser: ({ provider, providerUserId, email, displayName, avatarUrl }) =>
     run((db) =>
       db.transaction().execute(async (trx) => {
