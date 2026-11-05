@@ -198,3 +198,48 @@ describe.skipIf(!enabled)("email verification edge cases", () => {
     expect(owner.email_verified_at).not.toBeNull();
   });
 });
+
+describe.skipIf(!enabled)("iOS app sessions", () => {
+  let runtime: AppRuntime;
+  let app: ReturnType<typeof createApp>;
+  const email = `ios+${Date.now()}@example.com`;
+  beforeAll(() => {
+    runtime = makeRuntime();
+    app = createApp(runtime, { webOrigin: ORIGIN, secureCookies: false });
+  });
+  afterAll(() => runtime.dispose());
+
+  it("refuses writes with no origin unless they come from the app", async () => {
+    const res = await request(app).post("/api/auth/login").send({ email, password: "x" });
+    expect(res.status).toBe(403);
+  });
+
+  it("returns a bearer token instead of a cookie, and accepts it", async () => {
+    const reg = await request(app).post("/api/auth/register").set("x-fmc-client", "ios").send({ email, password: "correct-horse-42", displayName: "Ada", username: handle() });
+    expect(reg.status).toBe(201);
+    expect(reg.headers["set-cookie"]).toBeUndefined();
+    const token = reg.body.session.token as string;
+    expect(token.length).toBeGreaterThan(20);
+
+    const me = await request(app).get("/api/auth/me").set("x-fmc-client", "ios").set("authorization", `Bearer ${token}`);
+    expect(me.body.user.email).toBe(email);
+    // The bearer header only counts alongside the app's client header.
+    const web = await request(app).get("/api/auth/me").set("authorization", `Bearer ${token}`);
+    expect(web.body.user).toBeNull();
+
+    const out = await request(app).post("/api/auth/logout").set("x-fmc-client", "ios").set("authorization", `Bearer ${token}`).send({});
+    expect(out.status).toBe(200);
+    const after = await request(app).get("/api/auth/me").set("x-fmc-client", "ios").set("authorization", `Bearer ${token}`);
+    expect(after.body.user).toBeNull();
+  });
+
+  it("lists Apple as a provider only for the app, and rejects forged Apple tokens", async () => {
+    expect((await request(app).get("/api/auth/providers")).body.apple).toBe(false);
+    expect((await request(app).get("/api/auth/providers").set("x-fmc-client", "ios")).body.apple).toBe(true);
+    const res = await request(app)
+      .post("/api/auth/apple")
+      .set("x-fmc-client", "ios")
+      .send({ identityToken: "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ4In0.c2lnbmF0dXJl", nonce: "0123456789abcdef0123" });
+    expect(res.status).toBe(401);
+  });
+});

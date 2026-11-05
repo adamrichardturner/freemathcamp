@@ -1,13 +1,14 @@
 import { Cause, Effect, Exit } from "effect";
 import { Router, type Request } from "express";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
-import { login, loginWithGoogle, logout, register, signInVerified, toPublicUser } from "../../application/auth";
+import { login, loginWithGoogle, loginWithProvider, logout, register, signInVerified, toPublicUser } from "../../application/auth";
 import { sendVerificationEmail, verifyEmail } from "../../application/email-verification";
 import { beginGoogleFlow, completeGoogleFlow, isGoogleEnabled, type OAuthFlowState } from "../../infrastructure/oauth/google";
-import { clearSessionCookie, cookieOptions, currentUser, requireUser, setSessionCookie } from "../middleware/auth";
+import { isGoogleNativeEnabled, verifyAppleIdToken, verifyGoogleIdToken } from "../../infrastructure/oauth/id-tokens";
+import { clearSessionCookie, cookieOptions, currentUser, isNativeClient, issueSession, requireUser, setSessionCookie } from "../middleware/auth";
 import { handle, type AppRuntime } from "../runtime";
 import { usernameAvailability } from "../../application/account";
-import { decode, LoginBody, RegisterBody, UsernameQuery, VerifyEmailBody } from "../validation";
+import { AppleIdTokenBody, decode, GoogleIdTokenBody, LoginBody, RegisterBody, UsernameQuery, VerifyEmailBody } from "../validation";
 
 const OAUTH_COOKIE = "fmc_oauth";
 
@@ -48,7 +49,11 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
   // Live feedback while choosing a username, at sign-up or later.
   router.get("/username-available", h((req) => Effect.flatMap(decode(UsernameQuery, req.query), (q) => usernameAvailability(q.username, req.user))));
 
-  router.get("/providers", h(() => Effect.map(isGoogleEnabled, (google) => ({ google, password: true }))));
+  // The web app signs in with Google by redirect; the iOS app with an ID token (and with Apple, always).
+  router.get(
+    "/providers",
+    h((req) => (isNativeClient(req) ? Effect.map(isGoogleNativeEnabled, (google) => ({ google, apple: true, password: true })) : Effect.map(isGoogleEnabled, (google) => ({ google, apple: false, password: true })))),
+  );
 
   router.post(
     "/register",
@@ -57,9 +62,8 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
       Effect.gen(function* () {
         const body = yield* decode(RegisterBody, req.body);
         const s = yield* register(body, clientInfo(req));
-        setSessionCookie(res, opts.secure, s.token, s.expiresAt);
         res.status(201);
-        return { user: s.user };
+        return { user: s.user, ...issueSession(req, res, opts.secure, s) };
       }),
     ),
   );
@@ -71,8 +75,7 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
       Effect.gen(function* () {
         const body = yield* decode(LoginBody, req.body);
         const s = yield* login(body, clientInfo(req));
-        setSessionCookie(res, opts.secure, s.token, s.expiresAt);
-        return { user: s.user };
+        return { user: s.user, ...issueSession(req, res, opts.secure, s) };
       }),
     ),
   );
@@ -98,7 +101,7 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
         // The link proves control of the inbox, so sign in whoever opened it.
         if (req.user?.id !== user.id) {
           const s = yield* signInVerified(user, clientInfo(req));
-          setSessionCookie(res, opts.secure, s.token, s.expiresAt);
+          return { user: toPublicUser(user), ...issueSession(req, res, opts.secure, s) };
         }
         return { user: toPublicUser(user) };
       }),
@@ -109,6 +112,33 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
     "/resend-verification",
     requireUser,
     h((req) => Effect.flatMap(currentUser(req), (user) => sendVerificationEmail(user))),
+  );
+
+  // Native sign-in from the iOS app: the provider's ID token, verified here.
+  router.post(
+    "/google/id-token",
+    loginLimiter,
+    h((req, res) =>
+      Effect.gen(function* () {
+        const { idToken } = yield* decode(GoogleIdTokenBody, req.body);
+        const identity = yield* verifyGoogleIdToken(idToken);
+        const s = yield* loginWithProvider("google", identity, clientInfo(req));
+        return { user: s.user, ...issueSession(req, res, opts.secure, s) };
+      }),
+    ),
+  );
+
+  router.post(
+    "/apple",
+    loginLimiter,
+    h((req, res) =>
+      Effect.gen(function* () {
+        const body = yield* decode(AppleIdTokenBody, req.body);
+        const identity = yield* verifyAppleIdToken(body);
+        const s = yield* loginWithProvider("apple", identity, clientInfo(req));
+        return { user: s.user, ...issueSession(req, res, opts.secure, s) };
+      }),
+    ),
   );
 
   router.get("/me", h((req) => Effect.succeed({ user: req.user ? toPublicUser(req.user) : null })));

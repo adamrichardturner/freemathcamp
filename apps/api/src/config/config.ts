@@ -8,6 +8,10 @@ export interface AppConfigShape {
   readonly sessionTtlDays: number;
   /** Google sign-in is enabled only when both are set. */
   readonly google: Option.Option<{ clientId: string; clientSecret: Redacted.Redacted<string> }>;
+  /** Google sign-in in the iOS app: the iOS OAuth client its ID tokens are issued to. */
+  readonly googleIosClientId: Option.Option<string>;
+  /** Sign in with Apple in the iOS app: Apple's ID tokens name the app's bundle id as their audience. */
+  readonly appleBundleId: string;
   /** Shared secret the Next.js proxy uses to vouch for forwarded client IPs. */
   readonly proxySecret: Option.Option<Redacted.Redacted<string>>;
   /** Without a key, emails are logged instead of sent (development and tests). */
@@ -43,6 +47,8 @@ const config = Config.all({
       clientSecret: Config.redacted("GOOGLE_CLIENT_SECRET"),
     }),
   ),
+  googleIosClientId: Config.option(Config.nonEmptyString("GOOGLE_IOS_CLIENT_ID")),
+  appleBundleId: Config.string("APPLE_BUNDLE_ID").pipe(Config.withDefault("com.freemathcamp.app")),
   proxySecret: Config.option(Config.redacted("PROXY_SECRET")),
   resendApiKey: Config.option(Config.redacted("RESEND_API_KEY")),
   emailFrom: Config.string("EMAIL_FROM").pipe(Config.withDefault("FreeMathCamp <noreply@freemathcamp.app>")),

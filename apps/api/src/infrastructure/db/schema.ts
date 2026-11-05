@@ -47,8 +47,11 @@ export interface EmailVerificationTokensTable {
   created_at: Generated<Date>;
 }
 
+/** Third-party sign-in providers: Google (web and iOS) and Sign in with Apple (iOS). */
+export type OAuthProvider = "google" | "apple";
+
 export interface OAuthAccountsTable {
-  provider: "google";
+  provider: OAuthProvider;
   provider_user_id: string;
   user_id: string;
   email: string;

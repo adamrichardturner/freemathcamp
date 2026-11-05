@@ -1,0 +1,139 @@
+# FreeMathCamp for iOS
+
+The FreeMathCamp app, built with Expo (SDK 58, React Native 0.88, Expo Router). It mirrors the web app: the course map, lessons with typeset maths and interactive visuals, adaptive practice, the daily plan, leagues, progress, notifications and settings. Sign-in works with email and password, **Sign in with Apple** and **Google**.
+
+App Store Connect name **FreeMathCamp**, bundle id **`com.freemathcamp.app`**.
+
+## How it fits together
+
+| Piece | How |
+| --- | --- |
+| Screens | Native, with Expo Router: native tabs (Learn, Course, Leagues, Progress, Settings), large-title stacks, form sheets, SF Symbols, haptics, SwiftUI segmented controls and Swift Charts through `@expo/ui` |
+| Look | The web's design tokens (`src/lib/theme.ts`, converted from `apps/web/src/app/globals.css`), Geist and Instrument Serif, light and dark |
+| Lessons, articles and problems | Expo DOM components (`src/dom`) render them in a web view with KaTeX, reusing the web app's own visual components (number lines, Mafs explorers, step-throughs) so they look the same as on the site. Metro maps `@fmc/web/…` to `apps/web/src` (see `metro.config.js`) |
+| Curriculum | `@fmc/curriculum`, shared with the web and API. Problems are regenerated from their seed on the device; the API marks every answer |
+| API | `https://api.freemathcamp.app` directly, with a bearer token kept in the iOS keychain. The app sends `x-fmc-client: ios`, which the API requires for origin-less writes |
+| Sign-in | Apple (`expo-apple-authentication`) and Google (`@react-native-google-signin/google-signin`) on the device; the API verifies the ID token against the provider's keys (`POST /api/auth/apple`, `POST /api/auth/google/id-token`) |
+| Push | APNs directly: the app registers its device token with `POST /api/me/push/subscriptions` (see `docs/notifications.md`) |
+
+## Run it locally
+
+You need Xcode (with an iOS simulator), Node 22+, pnpm 10 and CocoaPods.
+
+```bash
+pnpm install
+cp apps/mobile/.env.example apps/mobile/.env   # then fill it in
+pnpm dev:api                                   # the API on :4100, from the repo root
+```
+
+Then, in another terminal:
+
+```bash
+pnpm --filter @fmc/mobile ios
+```
+
+`ios` generates the native project (`ios/` is git-ignored and rebuilt from `app.config.ts`), builds a development build and opens it in the simulator. After that, `pnpm dev:mobile` starts Metro on its own for JavaScript changes; rebuild with `ios` after adding a native module or changing `app.config.ts`.
+
+If CocoaPods fails with an encoding error, add `export LANG=en_US.UTF-8` to your shell profile.
+
+## Scripts
+
+Run them in `apps/mobile` with `pnpm <script>` (or from the root with `pnpm --filter @fmc/mobile <script>`).
+
+| Script | What it does |
+| --- | --- |
+| `start` | Metro for the development build |
+| `ios` | Build and run a development build in the simulator |
+| `ios:device` | The same, on a plugged-in iPhone (pick your team in Xcode once) |
+| `ios:release` | A Release build in the simulator, to check performance |
+| `prebuild` | Regenerate `ios/` from `app.config.ts` |
+| `typecheck` | TypeScript |
+| `doctor` | `expo-doctor`: checks dependency versions and config |
+| `katex-css` | Regenerate `src/dom/katex.generated.css` (KaTeX's styles with fonts inlined) after upgrading KaTeX |
+| `build:ios:sim` | Local EAS build of a simulator app (`build/FreeMathCamp-sim.tar.gz`) |
+| `build:ios:dev` | Local EAS development build for registered devices |
+| `build:ios:preview` | Local EAS ad-hoc build to share with testers' registered devices |
+| `build:ios` | Local EAS **App Store** build: `build/FreeMathCamp.ipa` |
+| `build:ios:cloud` | The same App Store build on EAS's servers |
+| `submit:ios` | Upload `build/FreeMathCamp.ipa` to App Store Connect |
+| `release:ios` | `build:ios` then `submit:ios` |
+| `archive:ios` | An App Store `.ipa` with Xcode alone (no EAS), via `scripts/archive-ios.sh` |
+
+The local `build:*` scripts compile on your Mac, so they're free; EAS only manages signing credentials. They need an Expo account (`npx eas-cli@latest login`); the scripts run EAS CLI through `npx`, so nothing is installed globally.
+
+## Before the first release: one-time setup
+
+### 1. Apple Developer
+
+In [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list):
+
+1. **Identifier** `com.freemathcamp.app` (App IDs → App). Enable **Sign in with Apple** and **Push Notifications**. (EAS creates this for you on the first build if it doesn't exist, but it needs the two capabilities.)
+2. **Key** for push: Keys → + → enable *Apple Push Notifications service (APNs)*. Download the `.p8` once. On the VPS, set `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID=com.freemathcamp.app`, `APNS_PRIVATE_KEY` (the file's contents with newlines as `\n`) and `APNS_PRODUCTION=true`.
+3. Note your **Team ID** (Membership details) for `APPLE_TEAM_ID`.
+
+### 2. Google sign-in
+
+In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials), in the same project as the web client:
+
+1. **Create credentials → OAuth client ID → iOS**, bundle id `com.freemathcamp.app`.
+2. Put its client id (`…apps.googleusercontent.com`) in two places:
+   - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` for the app (`apps/mobile/.env`, and as an EAS environment variable for cloud builds: `npx eas-cli@latest env:create --name EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID --value … --environment production --visibility plaintext`).
+   - `GOOGLE_IOS_CLIENT_ID` for the API (`/var/www/freemathcamp/.env` on the VPS), then redeploy the API.
+
+The app config derives Google's callback URL scheme from the client id, so rebuild the app after setting it.
+
+### 3. The API
+
+Deploy this branch's API changes first: bearer sessions for the app, and the Apple and Google ID-token endpoints. `APPLE_BUNDLE_ID` defaults to `com.freemathcamp.app`. Nothing else changes for the web app.
+
+### 4. Expo / EAS
+
+```bash
+cd apps/mobile
+npx eas-cli@latest login
+npx eas-cli@latest init          # creates the EAS project; copy the id into .env as EAS_PROJECT_ID (and EXPO_OWNER)
+```
+
+### 5. App Store Connect
+
+In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), the app **FreeMathCamp** with bundle id `com.freemathcamp.app` already exists. Copy its **Apple ID** (App Information → General, a number like `6740000000`) into `eas.json` → `submit.production.ios.ascAppId`.
+
+## Ship a build to App Store Connect
+
+```bash
+cd apps/mobile
+pnpm build:ios        # signs with your distribution certificate; the first run asks to sign in to Apple and creates it
+pnpm submit:ios       # uploads build/FreeMathCamp.ipa
+```
+
+or both at once with `pnpm release:ios`. The first submission asks how to authenticate: let EAS create an **App Store Connect API key** for you, which it then reuses.
+
+The build number goes up by one each build (`autoIncrement`, tracked by EAS). Bump `version` in `app.config.ts` for each new App Store version (1.0.0 → 1.0.1 …).
+
+Without EAS: `APPLE_TEAM_ID=… pnpm archive:ios`, then upload `build/FreeMathCamp.ipa` with Apple's **Transporter** app, or open `build/FreeMathCamp.xcarchive` in Xcode's Organizer and choose *Distribute App*.
+
+Processing takes 5–30 minutes; the build then appears under **TestFlight**.
+
+### TestFlight
+
+1. TestFlight → the build → answer the export compliance question (the app declares no non-exempt encryption, so it's usually pre-answered).
+2. **Internal testing**: add yourself and team members; they install through the TestFlight app straight away.
+3. **External testing** needs a short beta review the first time.
+
+### App Review checklist
+
+On the app's version page in App Store Connect:
+
+- **Screenshots**: 6.9" iPhone (1320 × 2868) are required; 13" iPad too, since the app supports iPad. Take them in the iPhone 17 Pro Max and iPad Pro 13" simulators (⌘S saves one).
+- **Description, keywords, support URL** (`https://freemathcamp.app`), **privacy policy URL** (`https://freemathcamp.app/privacy`).
+- **App Privacy**: the app collects email address and name (account), product interaction (learning progress), and a device token for push. None are used for tracking or advertising.
+- **Age rating**: 4+. **Category**: Education.
+- **Sign-in for review**: give App Review a demo account with a confirmed email (Settings → Account), since practice needs one.
+- The app offers Sign in with Apple alongside Google (guideline 4.8) and account deletion in Settings → Your data (guideline 5.1.1(v)).
+
+Then **Add for Review → Submit**. When it's approved, release it by hand or automatically.
+
+## Updating
+
+- JavaScript-only changes still need a new build and review for the App Store. (EAS Update can ship them over the air later; it isn't set up yet.)
+- Native changes (`app.config.ts`, new native modules) need `pnpm prebuild` or `pnpm ios` locally, and a new build.

@@ -17,6 +17,7 @@ const KINDS = {
   email_verified: "account",
   new_sign_in: "account",
   google_linked: "account",
+  apple_linked: "account",
   password_changed: "account",
   password_set: "account",
   password_reset: "account",
@@ -51,6 +52,7 @@ export const categoryOf = (kind: NotificationKind): NotificationCategory => KIND
 const EMAIL: Partial<Record<NotificationKind, "always" | "reminder">> = {
   new_sign_in: "always",
   google_linked: "always",
+  apple_linked: "always",
   password_changed: "always",
   password_set: "always",
   password_reset: "always",
@@ -94,13 +96,16 @@ export const notices = {
     href: "/settings#security",
     data: { device },
   }),
-  googleLinked: (): NotificationDraft => ({
-    kind: "google_linked",
-    title: "Google sign-in connected",
-    body: "You can now sign in with Google as well as with your email address. If you didn't do this, review your account security straight away.",
-    href: "/settings#security",
-    dedupeKey: "google_linked",
-  }),
+  providerLinked: (provider: "google" | "apple"): NotificationDraft => {
+    const name = provider === "google" ? "Google" : "Apple";
+    return {
+      kind: provider === "google" ? "google_linked" : "apple_linked",
+      title: `${name} sign-in connected`,
+      body: `You can now sign in with ${name} as well as with your email address. If you didn't do this, review your account security straight away.`,
+      href: "/settings#security",
+      dedupeKey: `${provider}_linked`,
+    };
+  },
   passwordChanged: (hadPassword: boolean, signedOut: number): NotificationDraft => ({
     kind: hadPassword ? "password_changed" : "password_set",
     title: hadPassword ? "Password changed" : "Password added",

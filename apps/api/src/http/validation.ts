@@ -33,6 +33,12 @@ export const RegisterBody = Schema.Struct({ email: Email, password: Password, di
 export const UsernameBody = Schema.Struct({ username: Username });
 export const UsernameQuery = Schema.Struct({ username: Username });
 export const LeagueOptInBody = Schema.Struct({ optIn: Schema.Boolean });
+export const GoogleIdTokenBody = Schema.Struct({ idToken: Schema.String.pipe(Schema.minLength(20), Schema.maxLength(4096)) });
+export const AppleIdTokenBody = Schema.Struct({
+  identityToken: Schema.String.pipe(Schema.minLength(20), Schema.maxLength(4096)),
+  nonce: Schema.String.pipe(Schema.minLength(16), Schema.maxLength(128)),
+  name: Schema.optional(Schema.String.pipe(Schema.maxLength(120))),
+});
 export const LoginBody = Schema.Struct({ email: Email, password: Schema.String.pipe(Schema.maxLength(128)) });
 export const ProfileBody = Schema.Struct({ displayName: DisplayName });
 export const PreferencesBody = Schema.Struct({
