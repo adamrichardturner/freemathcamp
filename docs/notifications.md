@@ -108,8 +108,8 @@ All routes are under the signed-in session.
    as `/courses/foundations/division`, to deep-link to) and `badge`.
 3. When the learner opens a push, call `PATCH /api/me/notifications/:id` with
    `{ "read": true }`, and show the same centre using the list endpoints above.
-4. Two API changes the native app will need. Both are small:
-   - **Bearer-token sessions.** Sessions are currently cookie-based, and write
-     requests are checked against the web origin.
-   - **An app-specific `User-Agent`** (e.g. `FreeMathCamp/1.0 iOS`), so
-     sign-in notices read "the FreeMathCamp iOS app".
+4. The app (`apps/mobile`) signs in with a bearer token: it sends `x-fmc-client: ios`
+   on every request and `Authorization: Bearer <token>` once signed in, and the
+   sign-in routes return `{ user, session: { token, expiresAt } }` instead of
+   setting a cookie. Its `User-Agent` is `FreeMathCamp/<version> iOS`, so sign-in
+   notices read "the FreeMathCamp iOS app".

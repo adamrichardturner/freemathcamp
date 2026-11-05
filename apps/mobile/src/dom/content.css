@@ -1,0 +1,173 @@
+/*
+ * Styles for the DOM components, which render lesson content in a web view.
+ * The tokens mirror apps/web/src/app/globals.css so lessons look the same as
+ * on the site; Tailwind scans the web visuals reused here as well as this folder.
+ */
+@import "tailwindcss";
+@import "../../../web/node_modules/shadcn/dist/tailwind.css";
+
+@source "./";
+@source "../../../web/src/components/visuals";
+@source "../../../web/src/components/ui/slider.tsx";
+@source "../../../web/src/components/ui/button.tsx";
+@source "../../../web/src/components/ui/toggle-group.tsx";
+@source "../../../web/src/components/ui/toggle.tsx";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-highlight: var(--highlight);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+}
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.99 0.004 270);
+  --foreground: oklch(0.21 0.03 272);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.03 272);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.03 272);
+  --primary: oklch(0.52 0.22 277);
+  --primary-foreground: oklch(0.985 0.01 270);
+  --secondary: oklch(0.96 0.012 272);
+  --secondary-foreground: oklch(0.28 0.05 275);
+  --muted: oklch(0.965 0.01 272);
+  --muted-foreground: oklch(0.5 0.03 272);
+  --accent: oklch(0.95 0.035 282);
+  --accent-foreground: oklch(0.32 0.12 280);
+  --destructive: oklch(0.6 0.22 25);
+  --border: oklch(0.915 0.014 272);
+  --input: oklch(0.9 0.016 272);
+  --ring: oklch(0.6 0.18 277);
+  --success: oklch(0.62 0.16 158);
+  --warning: oklch(0.74 0.16 68);
+  --danger: oklch(0.62 0.21 22);
+  --info: oklch(0.63 0.15 240);
+  --highlight: oklch(0.8 0.15 85);
+  --chart-1: oklch(0.55 0.22 277);
+  --chart-2: oklch(0.66 0.14 185);
+  --chart-3: oklch(0.76 0.16 70);
+  --chart-4: oklch(0.64 0.2 15);
+  --chart-5: oklch(0.66 0.15 238);
+  --grid-dot: oklch(0.21 0.03 272 / 7%);
+}
+
+.dark {
+  --background: oklch(0.155 0.02 276);
+  --foreground: oklch(0.96 0.01 272);
+  --card: oklch(0.195 0.025 276);
+  --card-foreground: oklch(0.96 0.01 272);
+  --popover: oklch(0.2 0.025 276);
+  --popover-foreground: oklch(0.96 0.01 272);
+  --primary: oklch(0.72 0.16 280);
+  --primary-foreground: oklch(0.17 0.03 276);
+  --secondary: oklch(0.25 0.03 276);
+  --secondary-foreground: oklch(0.94 0.01 272);
+  --muted: oklch(0.24 0.025 276);
+  --muted-foreground: oklch(0.7 0.03 272);
+  --accent: oklch(0.28 0.06 280);
+  --accent-foreground: oklch(0.92 0.04 280);
+  --destructive: oklch(0.68 0.19 22);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.72 0.16 280);
+  --success: oklch(0.72 0.15 158);
+  --warning: oklch(0.8 0.14 72);
+  --danger: oklch(0.7 0.18 22);
+  --info: oklch(0.72 0.13 240);
+  --highlight: oklch(0.84 0.14 85);
+  --chart-1: oklch(0.72 0.16 280);
+  --chart-2: oklch(0.74 0.13 185);
+  --chart-3: oklch(0.8 0.14 72);
+  --chart-4: oklch(0.7 0.18 15);
+  --chart-5: oklch(0.72 0.13 238);
+  --grid-dot: oklch(1 0 0 / 6%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    /* The native screen behind shows through, so the web view blends into it. */
+    background: transparent;
+    margin: 0;
+    /* Wide content scrolls inside its own block (formulas, graphs), never the page. */
+    width: 100%;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply text-foreground font-sans antialiased;
+    font-size: 17px;
+  }
+}
+
+.MafsView {
+  --mafs-bg: transparent;
+  --mafs-fg: var(--foreground);
+  --mafs-line-color: color-mix(in oklch, var(--foreground) 14%, transparent);
+  --mafs-origin-color: color-mix(in oklch, var(--foreground) 45%, transparent);
+  --mafs-blue: var(--primary);
+  --mafs-indigo: var(--primary);
+  --mafs-green: var(--success);
+  --mafs-orange: var(--warning);
+  --mafs-red: var(--danger);
+  --mafs-pink: var(--chart-4);
+  --mafs-violet: var(--chart-1);
+  --mafs-yellow: var(--highlight);
+  font-family: var(--font-sans);
+  border-radius: var(--radius);
+}
+
+.katex {
+  font-size: 1.08em;
+}
+.katex-display {
+  margin: 0.5em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+@utility bg-dots {
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+}

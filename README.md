@@ -92,7 +92,7 @@ Lessons are read on the page. They are not videos.
 
 The progress page fills in once practice begins: an activity heatmap, first-try accuracy, time spent, hints and reveals, mastery by unit, a difficulty breakdown, and a view of strengths and weak spots.
 
-Accounts support email and password, with email verification, and optional Google sign-in. Settings cover profile, course mode (Path or Audit), daily goal, light, dark and system appearance, notifications, password, active sessions, a data export, resetting progress, and deleting the account. The email address is shown with its verification status; it cannot yet be changed from Settings.
+Accounts support email and password, with email verification, and optional Google sign-in. The iOS app adds Sign in with Apple. Settings cover profile, course mode (Path or Audit), daily goal, light, dark and system appearance, notifications, password, active sessions, a data export, resetting progress, and deleting the account. The email address is shown with its verification status; it cannot yet be changed from Settings.
 
 **Leagues** add optional, friendly competition. Every account has a unique username (asked for at sign-up, or after sign-in for older accounts), and it is the only thing other learners see. Everyone is in by default and can leave from the welcome tour, the Dashboard, the leagues page or Settings. Learners in the leagues join a weekly table of up to 30 at their tier (Bronze, Silver, Gold, Platinum, Diamond, Obsidian). Solving problems earns XP, weighted by difficulty and first-try accuracy; at the end of the week the top of each table moves up and the bottom moves down. See [docs/leagues.md](docs/leagues.md).
 
@@ -108,6 +108,7 @@ A notification centre (behind the avatar) collects account notices, milestones a
 | Curriculum | `packages/curriculum` — lessons, seeded generators, answer checking and the prerequisite graph, shared by the API and the web app |
 | API | Node, Express 5, Effect 3, Kysely, Postgres 17, Argon2id, Web Push (VAPID) and APNs, Resend, Vitest |
 | Web | Next.js 16 (App Router, Cache Components), React 19, Tailwind 4, shadcn/ui (Base UI), TanStack Query, Motion, KaTeX, Mafs, Recharts, React Flow |
+| iOS | Expo SDK 58, React Native 0.88, Expo Router (native tabs), Expo DOM components for lessons (reusing the web's visuals), `@expo/ui` (SwiftUI), Sign in with Apple and Google, APNs |
 
 ```
 apps/
@@ -117,6 +118,7 @@ apps/
     src/infrastructure/  Postgres, migrations, security, email, push, Google OAuth
     src/http/            Express adapters, validation, middleware
   web/                 Next.js app
+  mobile/              Expo app for iOS (see apps/mobile/README.md)
 packages/
   curriculum/          Foundations content and generators
 ```
@@ -183,6 +185,8 @@ Run these from the repository root.
 | `pnpm dev` | API and web in watch mode |
 | `pnpm dev:full` | Start Postgres, migrate, then run `pnpm dev` |
 | `pnpm dev:api` / `pnpm dev:web` | Run one side only |
+| `pnpm ios` / `pnpm dev:mobile` | Build and run the iOS app in the simulator / start Metro for it |
+| `pnpm build:ios` / `pnpm submit:ios` | Build the App Store `.ipa` locally / upload it to App Store Connect (see `apps/mobile/README.md`) |
 | `pnpm build` | Production builds of the API and the web app |
 | `pnpm start` | Run the production builds (`start:api` / `start:web` for one side) |
 | `pnpm check` | Typecheck, lint and test |

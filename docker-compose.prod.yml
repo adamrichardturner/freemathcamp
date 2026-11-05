@@ -37,6 +37,8 @@ services:
       SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-30}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_IOS_CLIENT_ID: ${GOOGLE_IOS_CLIENT_ID:-}
+      APPLE_BUNDLE_ID: ${APPLE_BUNDLE_ID:-com.freemathcamp.app}
       TRUST_PROXY: ${TRUST_PROXY:-loopback, linklocal, uniquelocal}
       PROXY_SECRET: ${PROXY_SECRET:?set in .env (shared with the web app)}
       RESEND_API_KEY: ${RESEND_API_KEY:-}

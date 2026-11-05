@@ -9,6 +9,7 @@ import type {
   ItemResult,
   Notification,
   NotificationCategory,
+  OAuthProvider,
   PracticeItem,
   PracticeSession,
   PushPlatform,
@@ -44,9 +45,9 @@ export interface UserRepositoryShape {
   /** Stores the IP of a new sign-in and returns the one it replaced. */
   recordLoginIp(id: string, ip: string | null): Db<string | null>;
   updateDisplayName(id: string, displayName: string): Db<User>;
-  findByOAuth(provider: "google", providerUserId: string): Db<User | undefined>;
+  findByOAuth(provider: OAuthProvider, providerUserId: string): Db<User | undefined>;
   /** Links a provider identity to a user (creating the user if needed) atomically. */
-  upsertOAuthUser(input: { provider: "google"; providerUserId: string; email: string; displayName: string; avatarUrl: string | null }): Db<User>;
+  upsertOAuthUser(input: { provider: OAuthProvider; providerUserId: string; email: string; displayName: string; avatarUrl: string | null }): Db<User>;
   markEmailVerified(id: string): Db<User>;
   /** Turns reminder emails off for whoever owns this token; returns the user, if any. */
   unsubscribeReminderEmails(token: string): Db<User | undefined>;

@@ -51,6 +51,7 @@ const ICONS: Record<string, LucideIcon> = {
   email_verified: BadgeCheck,
   new_sign_in: ShieldAlert,
   google_linked: Link2,
+  apple_linked: Link2,
   password_changed: KeyRound,
   password_set: KeyRound,
   sessions_revoked: LogOut,

@@ -6,13 +6,14 @@ import { Unauthorized, ValidationError } from "../domain/errors";
 import { isReservedUsername } from "../domain/leagues";
 import { PasswordHasher } from "../infrastructure/security/password";
 import { hashToken, newSessionToken } from "../infrastructure/security/tokens";
-import type { User } from "../infrastructure/db/schema";
+import type { OAuthProvider, User } from "../infrastructure/db/schema";
 import { describeDevice, notices } from "../domain/notifications";
 import { sendVerificationEmail } from "./email-verification";
 import { notifySafely } from "./notifications";
 import { SessionRepository, UserRepository } from "./ports";
 import { addDays } from "../domain/engine";
 import type { GoogleIdentity } from "../infrastructure/oauth/google";
+import type { ProviderIdentity } from "../infrastructure/oauth/id-tokens";
 
 export interface PublicUser {
   id: string;
@@ -119,30 +120,34 @@ export const login = (input: { email: string; password: string }, client: Client
     return yield* startSessionNoticing(user, client);
   });
 
-/** Signs in (or signs up) with an identity Google has already verified. */
-export const loginWithGoogle = (identity: GoogleIdentity, client: ClientInfo) =>
+/** Signs in (or signs up) with an identity a provider (Google or Apple) has already verified. */
+export const loginWithProvider = (provider: OAuthProvider, identity: ProviderIdentity, client: ClientInfo) =>
   Effect.gen(function* () {
     const users = yield* UserRepository;
-    const existing = yield* users.findByOAuth("google", identity.sub);
+    const existing = yield* users.findByOAuth(provider, identity.sub);
     if (existing) {
       yield* users.touch(existing.id);
       return yield* startSessionNoticing(existing, client);
     }
-    // Linking by email is safe: Google verified it. An unverified password account
+    // Apple only shares the email on the first sign-in; without one there's nothing to create or link.
+    if (!identity.email) return yield* Effect.fail(new Unauthorized({ message: "We couldn't read an email address from your account. Please try again." }));
+    // Linking by email is safe: the provider verified it. An unverified password account
     // with the same email is reclaimed (password cleared, sessions ended) in the repository.
     const email = identity.email.toLowerCase();
     const byEmail = yield* users.findByEmail(email);
     const user = yield* users.upsertOAuthUser({
-      provider: "google",
+      provider,
       providerUserId: identity.sub,
       email,
-      displayName: identity.name || identity.email.split("@")[0]!,
+      displayName: identity.name || email.split("@")[0]!,
       avatarUrl: identity.picture,
     });
     yield* users.touch(user.id);
-    yield* notifySafely(user, byEmail?.email_verified_at ? notices.googleLinked() : notices.welcome(user.display_name, true));
+    yield* notifySafely(user, byEmail?.email_verified_at ? notices.providerLinked(provider) : notices.welcome(user.display_name, true));
     return yield* startSession(user, client);
   });
+
+export const loginWithGoogle = (identity: GoogleIdentity, client: ClientInfo) => loginWithProvider("google", identity, client);
 
 export const logout = (token: string) => Effect.flatMap(SessionRepository, (s) => s.delete(hashToken(token)));
 
