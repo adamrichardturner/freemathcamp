@@ -6,6 +6,8 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
  * EAS builds and CI.
  */
 const BUNDLE_ID = "com.freemathcamp.app";
+/** The EAS project (expo.dev/@adamrichardturner/freemathcamp). */
+const EAS_PROJECT_ID = "fda6a835-737f-4b26-a6bc-91e22d028fed";
 
 /** The iOS OAuth client from Google Cloud, e.g. 1234-abc.apps.googleusercontent.com. */
 const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
@@ -16,7 +18,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "FreeMathCamp",
   slug: "freemathcamp",
-  owner: process.env.EXPO_OWNER || undefined,
+  owner: "adamrichardturner",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
@@ -25,7 +27,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   backgroundColor: "#fbfcff",
   ios: {
     bundleIdentifier: BUNDLE_ID,
-    buildNumber: process.env.IOS_BUILD_NUMBER ?? "1",
     supportsTablet: true,
     usesAppleSignIn: true,
     appleTeamId: process.env.APPLE_TEAM_ID || undefined,
@@ -82,6 +83,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     reactCompiler: true,
   },
   extra: {
-    eas: process.env.EAS_PROJECT_ID ? { projectId: process.env.EAS_PROJECT_ID } : undefined,
+    eas: { projectId: EAS_PROJECT_ID },
   },
 });

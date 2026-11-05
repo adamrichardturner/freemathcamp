@@ -92,12 +92,12 @@ Deploy this branch's API changes first: bearer sessions for the app, and the App
 ```bash
 cd apps/mobile
 npx eas-cli@latest login
-npx eas-cli@latest init          # creates the EAS project; copy the id into .env as EAS_PROJECT_ID (and EXPO_OWNER)
+npx eas-cli@latest init          # already done: the project is @adamrichardturner/freemathcamp (id in app.config.ts)
 ```
 
 ### 5. App Store Connect
 
-In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), the app **FreeMathCamp** with bundle id `com.freemathcamp.app` already exists. Copy its **Apple ID** (App Information → General, a number like `6740000000`) into `eas.json` → `submit.production.ios.ascAppId`.
+In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), the app **FreeMathCamp** with bundle id `com.freemathcamp.app` already exists. EAS finds it by bundle id when you submit; to submit without an Apple sign-in (CI), add its **Apple ID** (App Information → General, a number like `6740000000`) to `eas.json` → `submit.production.ios.ascAppId`.
 
 ## Ship a build to App Store Connect
 
