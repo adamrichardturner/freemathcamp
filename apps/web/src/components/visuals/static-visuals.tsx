@@ -185,14 +185,27 @@ const splitPlace = (n: number) => {
   return parts.length ? parts : [0];
 };
 
+// Splits `total` in proportion to `parts`, but never below `min`: small parts
+// are lifted to the minimum and the rest share what remains, so the sizes
+// always sum to `total` and nothing spills past the drawing.
+const fitSizes = (parts: number[], total: number, min: number) => {
+  const fixed = parts.map(() => false);
+  for (;;) {
+    const room = total - fixed.filter(Boolean).length * min;
+    const sum = parts.reduce((s, p, i) => (fixed[i] ? s : s + p), 0);
+    const short = parts.findIndex((p, i) => !fixed[i] && (sum === 0 || (p / sum) * room < min));
+    if (short === -1) return parts.map((p, i) => (fixed[i] ? min : (p / sum) * room));
+    fixed[short] = true;
+  }
+};
+
 export function AreaModel({ a, b, conceal }: V<"areaModel">) {
   const A = splitPlace(a), B = splitPlace(b);
   const W = 520, H = 300, pad = 46;
-  const sx = (W - pad - 8) / a, sy = (H - pad - 8) / b;
   const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-5)"];
-  const widths = A.map((pa) => Math.max(pa * sx, 34));
+  const widths = fitSizes(A, W - pad - 8, 44);
   const xStarts = widths.map((_, i) => pad + widths.slice(0, i).reduce((s, w) => s + w, 0));
-  const heights = B.map((pb) => Math.max(pb * sy, 30));
+  const heights = fitSizes(B, H - pad - 8, 30);
   const yStarts = heights.map((_, j) => pad + heights.slice(0, j).reduce((s, h) => s + h, 0));
   return (
     <VisualFrame>
