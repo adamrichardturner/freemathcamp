@@ -13,6 +13,9 @@ const EAS_PROJECT_ID = "fda6a835-737f-4b26-a6bc-91e22d028fed";
 const googleIosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 /** Google calls back into the app on the reversed client id. */
 const googleUrlScheme = googleIosClientId?.split(".").reverse().join(".");
+// A release without it ships with no Google button, so stop the build instead.
+if (!googleIosClientId && (process.env.EAS_BUILD_PROFILE === "production" || process.env.EAS_BUILD_PROFILE === "preview"))
+  throw new Error("EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID is missing: Google sign-in would be left out of this build (see eas.json).");
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
