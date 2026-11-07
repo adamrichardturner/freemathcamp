@@ -143,7 +143,7 @@ export const decimals: Unit = {
       keyIdeas: ["Percent means \"per hundred\".", "Decimal → percent: × 100. Fraction → decimal: divide."],
       lesson: [
         text("**Percent** means *per hundred*. So $35\\% = \\frac{35}{100} = 0.35$. Every percent is a fraction with denominator 100."),
-        visual({ type: "percentGrid", percent: 35 }, "35 of 100 squares: $35\\% = 0.35 = \\frac{7}{20}$"),
+        visual({ type: "percentGrid", percent: 35 }, "35 of 100 squares, which is also $0.35$, or $\\frac{7}{20}$."),
         rule("Conversions", r`\frac{a}{b} \xrightarrow{\;a\div b\;} \text{decimal} \xrightarrow{\;\times 100\;} \text{percent}`),
         example("Write $\\frac{3}{8}$ as a percent.", [["Divide.", r`3 \div 8 = 0.375`], ["Multiply by 100.", r`37.5\%`]]),
         tip("Memorise the classics: $\\frac12 = 50\\%$, $\\frac14 = 25\\%$, $\\frac15 = 20\\%$, $\\frac{1}{10} = 10\\%$, $\\frac13 \\approx 33.3\\%$."),

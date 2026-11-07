@@ -96,7 +96,7 @@ export const arithmetic: Unit = {
         text("Multiplication is fast repeated addition. $4 \\times 6$ means four groups of six — picture a grid with $4$ rows and $6$ columns."),
         visual({ type: "arrayGrid", rows: 4, cols: 6 }, "$4 \\times 6 = 24$ dots."),
         text("For larger numbers, split each factor by place value and multiply the pieces. This is the **area model** — each rectangle's area is a partial product."),
-        visual({ type: "areaModel", a: 23, b: 14 }, "$23 \\times 14 = 200 + 30 + 80 + 12 = 322$"),
+        visual({ type: "areaModel", a: 23, b: 14 }),
         rule("Commutative & distributive", r`a\times b = b\times a \qquad a(b + c) = ab + ac`),
         example("Compute $36 \\times 7$.", [["Split $36$ into $30 + 6$.", r`36\times7 = 30\times7 + 6\times7`], ["Add the partial products.", r`210 + 42 = 252`]]),
       ],

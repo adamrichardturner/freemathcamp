@@ -256,7 +256,7 @@ export const fractions = [
     related: ["percentage-change", "decimals", "what-is-a-fraction"],
     body: [
       text("**Percent** comes from the Latin *per centum*, \"for each hundred\". A percentage is simply a fraction with denominator $100$, written with a $\\%$ sign instead."),
-      visual({ type: "percentGrid", percent: 35 }, "35 out of 100 squares: $35\\% = \\frac{35}{100} = 0.35 = \\frac{7}{20}$."),
+      visual({ type: "percentGrid", percent: 35 }, "35 out of 100 squares, which is also $0.35$, or $\\frac{7}{20}$."),
       text("Because everything is out of a hundred, percentages make comparisons easy. Is $\\frac{17}{20}$ better than $\\frac{41}{50}$? As percentages, $85\\%$ beats $82\\%$ at a glance."),
       heading("Three ways to write a number"),
       rule("Conversions", r`\frac{a}{b} \xrightarrow{\;a \div b\;} \text{decimal} \xrightarrow{\;\times 100\;} \text{percent}`, "Going backwards: divide by $100$ to get a decimal, then write it as a fraction and simplify."),

@@ -86,7 +86,7 @@ export const polynomials: Unit = {
       keyIdeas: ["Every term in the first bracket multiplies every term in the second.", "$(a + b)^2 = a^2 + 2ab + b^2$"],
       lesson: [
         text("To multiply two brackets, multiply **every** term by **every** term. A grid (area model) makes sure nothing is missed."),
-        visual({ type: "areaModel", a: 13, b: 12 }, "$(10 + 3)(10 + 2) = 100 + 20 + 30 + 6$ — the same idea as $(x + 3)(x + 2) = x^2 + 2x + 3x + 6$."),
+        visual({ type: "areaModel", a: 13, b: 12 }, "Swap the tens for $x$ and it is the same idea: $(x + 3)(x + 2) = x^2 + 2x + 3x + 6$."),
         example("Expand $(x + 3)(x - 5)$.", [["First, Outer, Inner, Last.", r`x^2 - 5x + 3x - 15`], ["Combine.", r`x^2 - 2x - 15`]]),
         rule("Perfect square", r`(a + b)^2 = a^2 + 2ab + b^2`),
         warn("$(x + 3)^2 \\neq x^2 + 9$. Don't forget the middle term $6x$."),

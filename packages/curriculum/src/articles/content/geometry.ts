@@ -249,7 +249,7 @@ export const geometry = [
     related: ["area-and-perimeter", "circles-and-pi", "exponents"],
     body: [
       text("Area counts unit squares covering a flat shape. **Volume** counts unit cubes filling a solid. A box $3$ by $3$ by $3$ holds $27$ unit cubes, which is why $3^3$ is called \"three cubed\"."),
-      visual({ type: "exponentBlocks", base: 3, exponent: 3 }, "$3 \\times 3 \\times 3 = 27$ cubic units."),
+      visual({ type: "exponentBlocks", base: 3, exponent: 3 }, "Each block is one cubic unit, so the volume is the number of blocks."),
       heading("Prisms and cylinders"),
       text("A **prism** has the same cross-section all the way through, like a stick of rock. Think of it as a stack of identical thin slices. Each slice has the area of the cross-section, and there is a length's worth of them."),
       key("For any prism or cylinder: **volume = cross-sectional area × length**."),
