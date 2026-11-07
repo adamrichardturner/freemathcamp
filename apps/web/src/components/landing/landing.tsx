@@ -1,11 +1,13 @@
 "use client";
 
-import { ArrowRight, Bell, BrainCircuit, CalendarClock, Check, ChevronDown, Gauge, Network, RefreshCw, ShieldCheck, Smartphone, Sparkles, TrendingUp } from "lucide-react";
-import { motion } from "motion/react";
+import { ArrowDown, ArrowRight, Bell, BrainCircuit, CalendarClock, Check, Gauge, Network, RefreshCw, ShieldCheck, Smartphone, Sparkles, TrendingUp } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
+import type { MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ButtonLink } from "@/components/app/button-link";
 import { UnitIcon } from "@/components/app/unit-icon";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tex } from "@/components/math/tex";
 import { Visual } from "@/components/visuals/visual";
 import { useSession } from "@/hooks/queries";
@@ -56,6 +58,7 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
               Explore the course
             </ButtonLink>
           </motion.div>
+          <AppComingSoonBadge />
           <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }} className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
             {[`${course.units.length} units`, `${graph.refs.length} lessons`, "Unlimited practice", "Light & dark mode"].map((x) => (
               <li key={x} className="flex items-center gap-1.5">
@@ -67,6 +70,63 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
         <HeroDemo />
       </div>
     </section>
+  );
+}
+
+/** Hero pill that glides the reader down to the iPhone & iPad section. */
+function AppComingSoonBadge() {
+  const reduceMotion = useReducedMotion();
+  const live = IOS_APP.available;
+  const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    const target = document.getElementById("app");
+    if (!target) return;
+    e.preventDefault();
+    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    history.replaceState(null, "", "#app");
+  };
+  return (
+    <motion.a
+      href="#app"
+      onClick={onClick}
+      initial={{ opacity: 0, y: 12, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ delay: 0.28, type: "spring", stiffness: 260, damping: 22 }}
+      whileHover={reduceMotion ? undefined : { y: -2 }}
+      whileTap={{ scale: 0.97 }}
+      aria-label={live ? "The FreeMathCamp app is on the App Store for iPhone and iPad. Jump to the app section" : "FreeMathCamp for iPhone and iPad is coming soon to the App Store. Jump to the app section"}
+      className="group relative mt-6 inline-flex max-w-full items-center gap-3 overflow-hidden rounded-full border bg-card/80 py-1.5 pr-3 pl-1.5 text-sm shadow-sm backdrop-blur transition-[border-color,box-shadow] hover:border-primary/40 hover:shadow-md hover:shadow-primary/10 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+    >
+      {/* A soft sheen that sweeps across now and then, so the pill catches the eye without shouting. */}
+      {!reduceMotion && (
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-primary/15 to-transparent"
+          animate={{ x: ["0%", "450%"] }}
+          transition={{ duration: 1.6, ease: "easeInOut", repeat: Infinity, repeatDelay: 4, delay: 1.2 }}
+        />
+      )}
+      <span className="relative inline-flex shrink-0 items-center gap-1.5 rounded-full bg-foreground py-1 pr-2.5 pl-2 text-xs font-semibold text-background">
+        <svg viewBox="0 0 384 512" className="size-3.5 fill-current" aria-hidden>
+          <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+        </svg>
+        {live ? "Out now" : "Coming soon"}
+      </span>
+      <span className="relative flex min-w-0 items-center gap-2">
+        {!live && (
+          <span className="relative flex size-2 shrink-0" aria-hidden>
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60 motion-reduce:animate-none" />
+            <span className="relative inline-flex size-2 rounded-full bg-primary" />
+          </span>
+        )}
+        <span className="truncate font-medium">
+          {live ? "On the App Store" : "App Store"} <span className="text-muted-foreground">
+            · <span className="sm:hidden">iOS</span>
+            <span className="hidden sm:inline">iPhone & iPad</span>
+          </span>
+        </span>
+      </span>
+      <ArrowDown className="relative size-4 shrink-0 text-muted-foreground transition-transform duration-300 group-hover:translate-y-0.5 group-hover:text-primary" />
+    </motion.a>
   );
 }
 
@@ -301,21 +361,23 @@ function AppStoreBadge() {
 
 function Faq() {
   return (
-    <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pb-20 sm:px-6" aria-labelledby="faq-heading">
+    <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pt-20 pb-20 sm:px-6 sm:pt-24" aria-labelledby="faq-heading">
       <motion.h2 {...fadeUp} id="faq-heading" className="text-center font-display text-4xl sm:text-5xl">
         FreeMathCamp, answered
       </motion.h2>
-      <div className="mt-10 divide-y rounded-2xl border bg-card">
-        {FAQS.map((f, i) => (
-          <details key={f.q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden" open={i === 0}>
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
-              <h3 className="text-base">{f.q}</h3>
-              <ChevronDown className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-            </summary>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
-          </details>
-        ))}
-      </div>
+      <motion.div {...fadeUp} transition={{ delay: 0.08, duration: 0.5 }}>
+        <Accordion defaultValue={[FAQS[0].q]} className="mt-10 rounded-2xl border bg-card">
+          {FAQS.map((f) => (
+            <AccordionItem key={f.q} value={f.q} className="px-5">
+              <AccordionTrigger className="items-center gap-4 py-4 text-base font-semibold hover:no-underline focus-visible:ring-offset-0">{f.q}</AccordionTrigger>
+              {/* keepMounted leaves every answer in the HTML, so crawlers and find-in-page still see it. */}
+              <AccordionContent keepMounted className="pb-4 text-sm leading-relaxed text-muted-foreground">
+                <p>{f.a}</p>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </motion.div>
     </section>
   );
 }
