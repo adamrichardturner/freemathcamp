@@ -26,7 +26,7 @@ export const learningRoutes = (runtime: AppRuntime) => {
   );
   router.get(
     "/courses/:courseId/dashboard",
-    h((req) => Effect.flatMap(decode(CourseParams, req.params), (p) => withUser(req, (uid, u) => dashboard(uid, p.courseId, u.learning_mode)))),
+    h((req) => Effect.flatMap(decode(CourseParams, req.params), (p) => withUser(req, (uid, u) => dashboard(uid, p.courseId, u.learning_mode, u.daily_goal)))),
   );
   router.get(
     "/courses/:courseId/analytics",

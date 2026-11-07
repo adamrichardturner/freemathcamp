@@ -1,5 +1,6 @@
 import { getGraph, type LearningMode } from "@fmc/curriculum";
 import { Effect } from "effect";
+import { planDay } from "../domain/engine";
 import { NotFound } from "../domain/errors";
 import { round } from "../utils/math";
 import { learnerQueues, progressView, statusOf } from "./learning";
@@ -33,17 +34,26 @@ export const streaks = (activeDays: string[], today = new Date()) => {
   return { current, longest, activeToday: days.has(isoDay(today)) };
 };
 
-export const dashboard = (userId: string, courseId: string, mode: LearningMode) =>
+export const dashboard = (userId: string, courseId: string, mode: LearningMode, dailyGoal: number) =>
   Effect.gen(function* () {
     const queues = yield* learnerQueues(userId, courseId, mode);
     const analyticsRepo = yield* AnalyticsRepository;
     const rows = yield* Effect.flatMap(ProgressRepository, (r) => r.listForCourse(userId, courseId));
     const activeDays = yield* analyticsRepo.activeDays(userId);
     const recentDays = yield* analyticsRepo.dailyActivity(userId, courseId, 7);
-    const today = recentDays.find((d) => d.day === isoDay(new Date()));
+    const todayKey = isoDay(new Date());
+    const today = recentDays.find((d) => d.day === todayKey);
     const total = getGraph(courseId)?.refs.length ?? 0;
+    const recent = yield* Effect.flatMap(PracticeRepository, (r) => r.recentSessions(userId, courseId, 30));
+    // Latest session per lesson finished today, newest first.
+    const completed = new Map<string, { exerciseId: string; mode: "learn" | "review" | "challenge"; mastery: number; completedAt: string }>();
+    for (const s of recent)
+      if (s.completed_at && isoDay(s.completed_at) === todayKey && !completed.has(s.exercise_id))
+        completed.set(s.exercise_id, { exerciseId: s.exercise_id, mode: s.mode, mastery: round(s.mastery_after ?? s.mastery_before), completedAt: s.completed_at.toISOString() });
+    const day = planDay(queues.plan, dailyGoal, today?.problems ?? 0, new Set(completed.keys()));
     return {
       queues,
+      day: { ...day, completed: [...completed.values()] },
       stats: {
         streak: streaks(activeDays),
         today: { problems: today?.problems ?? 0, cleanSolves: today?.cleanSolves ?? 0, timeMs: Number(today?.timeMs ?? 0) },

@@ -145,6 +145,15 @@ describe.skipIf(!enabled)("API", () => {
     await agent.patch("/api/me/preferences").set("Origin", ORIGIN).send({ learningMode: "path" });
     expect((await post("/api/practice", { courseId: "foundations", exerciseId: "add-subtract" })).status).toBe(201);
     expect(dash.body.queues.plan.length).toBeGreaterThan(0);
+    // Today's plan is sized to the daily goal and stops growing once it's met.
+    expect(dash.body.day).toMatchObject({ goal: 10, done: 6, complete: false });
+    expect(dash.body.day.completed.map((c: { exerciseId: string }) => c.exerciseId)).toContain("add-subtract");
+    expect(dash.body.day.today.length).toBeGreaterThan(0);
+    await agent.patch("/api/me/preferences").set("Origin", ORIGIN).send({ dailyGoal: 5 });
+    const met = (await agent.get("/api/courses/foundations/dashboard")).body.day;
+    expect(met).toMatchObject({ goal: 5, complete: true, today: [] });
+    expect(met.upcoming.length).toBeGreaterThan(0);
+    await agent.patch("/api/me/preferences").set("Origin", ORIGIN).send({ dailyGoal: 10 });
     expect(dash.body.stats.streak.current).toBe(1);
     const stats = await agent.get("/api/courses/foundations/analytics");
     expect(stats.body.totals.problems).toBeGreaterThan(0);

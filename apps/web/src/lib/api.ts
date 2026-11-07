@@ -112,8 +112,26 @@ export interface Streak {
   activeToday: boolean;
 }
 
+export interface CompletedToday {
+  exerciseId: string;
+  mode: "learn" | "review" | "challenge";
+  mastery: number;
+  completedAt: string;
+}
+
+/** Today's plan sized to the daily goal; once it's met `today` stays empty and the rest waits in `upcoming`. */
+export interface DayPlan {
+  goal: number;
+  done: number;
+  complete: boolean;
+  today: Recommendation[];
+  upcoming: Recommendation[];
+  completed: CompletedToday[];
+}
+
 export interface Dashboard {
   queues: Queues;
+  day: DayPlan;
   stats: {
     streak: Streak;
     today: { problems: number; cleanSolves: number; timeMs: number };

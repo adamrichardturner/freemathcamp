@@ -2,6 +2,7 @@ import { getGraph } from "@fmc/curriculum";
 import { describe, expect, it } from "vitest";
 import {
   buildQueues,
+  planDay,
   INITIAL_SCHEDULE,
   itemSignal,
   nextLevel,
@@ -10,6 +11,7 @@ import {
   updateMastery,
   updateStruggle,
   type ItemOutcome,
+  type Recommendation,
   type ProgressSnapshot,
 } from "../src/domain/engine";
 
@@ -139,5 +141,35 @@ describe("queues", () => {
     expect(ch).toBeDefined();
     expect(q.next.map((r) => r.exerciseId)).toContain("negative-numbers");
     expect(q.plan.map((r) => r.kind)).toEqual(expect.arrayContaining(["review", "challenge", "next"]));
+  });
+});
+
+describe("planDay", () => {
+  const rec = (exerciseId: string, kind: Recommendation["kind"]): Recommendation => ({ exerciseId, kind, priority: 0, reason: "", effectiveMastery: 0 });
+  const suggestions = [rec("a", "review"), rec("b", "next"), rec("c", "challenge"), rec("d", "continue"), rec("e", "next")];
+
+  it("plans just enough sessions to cover what's left of the goal", () => {
+    const day = planDay(suggestions, 10, 0);
+    expect(day.today.map((r) => r.exerciseId)).toEqual(["a", "b"]);
+    expect(day.upcoming.map((r) => r.exerciseId)).toEqual(["c", "d", "e"]);
+    expect(day.complete).toBe(false);
+    expect(planDay(suggestions, 10, 6).today.map((r) => r.exerciseId)).toEqual(["a"]);
+  });
+
+  it("adds nothing to today once the goal is met, and keeps the rest as upcoming", () => {
+    const day = planDay(suggestions, 10, 12);
+    expect(day).toMatchObject({ complete: true, today: [] });
+    expect(day.upcoming.map((r) => r.exerciseId)).toEqual(["a", "b", "c", "d", "e"]);
+  });
+
+  it("recalculates when the goal changes", () => {
+    expect(planDay(suggestions, 10, 10).complete).toBe(true);
+    const raised = planDay(suggestions, 20, 10);
+    expect(raised.complete).toBe(false);
+    expect(raised.today.map((r) => r.exerciseId)).toEqual(["a", "b"]);
+  });
+
+  it("moves lessons already practised today to the back", () => {
+    expect(planDay(suggestions, 5, 0, new Set(["a"])).today.map((r) => r.exerciseId)).toEqual(["b"]);
   });
 });
