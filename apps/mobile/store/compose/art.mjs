@@ -145,3 +145,52 @@ const motifs = {
 };
 
 export const cards = (name) => (motifs[name] ? motifs[name]().join("") : "");
+
+/* ---------------- Header and Search Results creatives ---------------- */
+
+/**
+ * A full-bleed field of glyphs for the creatives, kept out of the centre
+ * `clear` box (fractions of the canvas) where the key art sits, plus curves
+ * running the full width. Sizes are in vh so the field scales with the canvas.
+ */
+export function field(name, { count = 22, clear = [0.3, 0.25, 0.7, 0.75] } = {}) {
+  const r = rng(hash(name));
+  const [cx0, cy0, cx1, cy1] = clear;
+  const glyphs = [];
+  for (let tries = 0; glyphs.length < count && tries < 2000; tries++) {
+    const x = 0.02 + r() * 0.96, y = 0.04 + r() * 0.92;
+    if (x > cx0 && x < cx1 && y > cy0 && y < cy1) continue;
+    if (glyphs.some((g) => Math.hypot(g.x - x, (g.y - y) * 0.6) < 0.07)) continue;
+    glyphs.push({ x, y, g: GLYPHS[Math.floor(r() * GLYPHS.length)], s: 4 + r() * 5, rot: (r() - 0.5) * 30, o: 0.3 + r() * 0.45 });
+  }
+  const wave = (amp, freq, phase, y0) =>
+    Array.from({ length: 101 }, (_, i) => `${i === 0 ? "M" : "L"}${i} ${(y0 + amp * Math.sin((i / 100) * Math.PI * 2 * freq + phase)).toFixed(2)}`).join(" ");
+  const phase = r() * Math.PI * 2;
+  return `<svg class="field-curves" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+    <defs><linearGradient id="fcurve" x1="0" x2="1"><stop offset="0" stop-color="var(--a1)" stop-opacity="0"/><stop offset="0.3" stop-color="var(--a1)"/><stop offset="0.7" stop-color="var(--a2)"/><stop offset="1" stop-color="var(--a2)" stop-opacity="0"/></linearGradient></defs>
+    <path d="${wave(7, 1.1, phase, 78)}" fill="none" stroke="url(#fcurve)" stroke-width="0.35" vector-effect="non-scaling-stroke" opacity="0.85"/>
+    <path d="${wave(5, 1.6, phase + 2, 84)}" fill="none" stroke="url(#fcurve)" stroke-width="0.25" vector-effect="non-scaling-stroke" opacity="0.5"/>
+    <path d="${wave(6, 0.8, phase + 4, 18)}" fill="none" stroke="url(#fcurve)" stroke-width="0.25" vector-effect="non-scaling-stroke" opacity="0.4"/>
+  </svg>
+  ${glyphs.map((g) => `<span class="glyph" style="left:${(g.x * 100).toFixed(1)}%;top:${(g.y * 100).toFixed(1)}%;font-size:${g.s.toFixed(2)}vh;opacity:${g.o.toFixed(2)};transform:translate(-50%,-50%) rotate(${g.rot.toFixed(1)}deg)">${g.g}</span>`).join("")}`;
+}
+
+/** A free-standing card for the creatives, placed by its centre in % of the canvas. */
+const at = (body, x, y, rot, cls = "") => `<div class="card free ${cls}" style="left:${x}%;top:${y}%;--rot:${rot}deg">${body}</div>`;
+
+/**
+ * Header (21:9): the cards orbit a centred headline. Search Results (3:2): two
+ * cards hang off the device, as on the screenshots.
+ */
+export const creativeCards = {
+  header: () =>
+    [
+      at(areaModel(), 21, 58, -5),
+      at(plot(), 79, 52, 5),
+      at(pie(3, 8), 33, 20, 4),
+      at(ring(67, "Daily goal", "10 of 15 problems"), 69, 17, -3),
+      at(check("Correct!", "+10 XP · 6 in a row"), 64, 85, 3),
+      at(stars("Stretch unlocked", "Level 3 problems next"), 37, 86, -3),
+    ].join(""),
+  search: () => [card(plot(), { side: "right", top: 20, rot: 4 }), card(pie(3, 8), { side: "left", top: 76, rot: -3 })].join(""),
+};

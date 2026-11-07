@@ -93,52 +93,6 @@
   .night .halo { background: rgba(146, 150, 255, 0.14); }
 
 
-  /* ---- Generated art (art.mjs) ---- */
-  /* The header's backdrop: glyphs around the headline, curves above the device. */
-  .art-head { position: absolute; left: 0; right: 0; top: 0; height: var(--hh); pointer-events: none; }
-  .backdrop { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .glyph { position: absolute; font-family: "Instrument Serif", serif; font-style: italic; line-height: 1; white-space: nowrap; }
-  .indigo .art-head { --a1: #ffe08a; --a2: #ffb4c6; } .indigo .glyph { color: #fff; }
-  .aurora .art-head { --a1: #524ce3; --a2: #ec4764; } .aurora .glyph { color: #524ce3; }
-  .night .art-head { --a1: #9296ff; --a2: #f9667a; } .night .glyph { color: #b9bcff; }
-  .indigo .glyph { opacity: 0.5; } .backdrop .c1 { opacity: 0.9; } .backdrop .c2 { opacity: 0.5; }
-
-  /* Cards hanging off the device's edges, in the app's light (or, at night, dark) tokens. */
-  .card { position: absolute; z-index: 2; font-size: var(--u); padding: 1.3em 1.5em; border-radius: 1.7em; min-width: 13em;
-    --card: oklch(1 0 0); --fg: oklch(0.21 0.03 272); --mfg: oklch(0.5 0.03 272); --muted: oklch(0.94 0.012 272); --border: oklch(0.915 0.014 272);
-    --primary: oklch(0.52 0.22 277); --chart-1: oklch(0.55 0.22 277); --chart-2: oklch(0.66 0.14 185); --chart-3: oklch(0.76 0.16 70); --chart-4: oklch(0.64 0.2 15); --success: oklch(0.62 0.16 158); --warning: oklch(0.74 0.16 68);
-    background: var(--card); color: var(--fg); border: 0.1em solid var(--border);
-    box-shadow: 0 2.4em 5em -1em rgba(18, 14, 70, 0.38), 0 0.6em 1.4em rgba(18, 14, 70, 0.14);
-    transform: rotate(var(--rot)); }
-  .night .card { --card: oklch(0.205 0.026 276); --fg: oklch(0.96 0.01 272); --mfg: oklch(0.7 0.03 272); --muted: oklch(0.28 0.025 276); --border: oklch(1 0 0 / 12%);
-    --primary: oklch(0.72 0.16 280); --chart-1: oklch(0.72 0.16 280); --chart-2: oklch(0.74 0.13 185); --chart-3: oklch(0.8 0.14 72); --chart-4: oklch(0.7 0.18 15); --success: oklch(0.72 0.15 158); --warning: oklch(0.8 0.14 72);
-    box-shadow: 0 2.4em 5em -1em rgba(0, 0, 0, 0.6), 0 0 4em rgba(146, 150, 255, 0.18); }
-  .card.left { left: var(--hang); } .card.right { right: var(--hang); }
-  .card svg { display: block; }
-  .card .row { display: flex; align-items: center; gap: 1em; }
-  .card .t { font-weight: 600; font-size: 1.45em; letter-spacing: -0.02em; line-height: 1.15; }
-  .card .t.big { font-size: 2.6em; letter-spacing: -0.03em; line-height: 1; }
-  .card .s { margin-top: 0.25em; font-size: 1.05em; color: var(--mfg); }
-  .card .eyebrow { font-size: 0.85em; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--primary); margin-bottom: 0.7em; }
-  .card .tex { font-family: "Instrument Serif", serif; font-size: 1.75em; line-height: 1.1; white-space: nowrap; }
-  .card .foot { margin-top: 0.4em; text-align: center; color: var(--mfg); }
-  .card .foot .tex { font-size: 1.5em; }
-  .card text { font-family: "Geist", sans-serif; fill: var(--fg); }
-  .card text.n { font-size: 15px; font-weight: 500; } .card text.lbl { font-size: 13px; font-weight: 600; fill: var(--mfg); } .card text.pct { font-size: 15px; font-weight: 600; }
-  .w-area { width: 17em; } .w-ring { width: 5.6em; } .w-plot { width: 15em; } .w-pie { width: 6.2em; } .w-bars { width: 14em; } .w-graph { width: 17em; }
-  .card .g { stroke: var(--border); stroke-width: 1; } .card .ax { stroke: var(--mfg); stroke-opacity: 0.55; stroke-width: 1.4; } .card .edge { stroke: var(--border); stroke-width: 3; }
-  .card .frac .tex { display: inline-flex; flex-direction: column; align-items: center; font-size: 2.6em; line-height: 0.95; }
-  .card .frac .num { border-bottom: 0.05em solid currentColor; padding: 0 0.12em; }
-  .card .badge { display: grid; place-items: center; width: 3.6em; height: 3.6em; border-radius: 1.1em; flex: none; color: #fff; }
-  .card .badge svg { width: 55%; height: 55%; }
-  .card .badge.ok { background: var(--success); box-shadow: 0 0.5em 1.2em color-mix(in oklch, var(--success) 45%, transparent); }
-  .card .badge.star { background: linear-gradient(160deg, var(--primary), var(--chart-4)); box-shadow: 0 0.5em 1.2em color-mix(in oklch, var(--primary) 40%, transparent); }
-  .card .rank { display: flex; align-items: center; gap: 0.8em; padding: 0.5em 0.7em; border-radius: 0.9em; font-size: 1.15em; }
-  .card .rank + .rank { margin-top: 0.2em; }
-  .card .rank.me { background: color-mix(in oklch, var(--primary) 12%, transparent); color: var(--primary); font-weight: 600; }
-  .card .rank .p { width: 1.2em; font-weight: 600; color: var(--mfg); } .card .rank.me .p { color: var(--primary); }
-  .card .rank .nm { flex: 1; } .card .rank .xp { font-variant-numeric: tabular-nums; color: var(--mfg); } .card .rank.me .xp { color: var(--primary); }
-
   .phone { --hh: 54.5vw; --gs: 1vw; --u: 2vw; --hang: -13%; --h1max: 80vw; --top: 6.5vw; --chip: 3.4vw; --h1: 11vw; --sub: 3.7vw; --gap: 2.4vw; }
   .phone .device { width: 72.5vw; top: 54.5vw; --bezel: 1.7vw; --r: 10.6vw; }
 
@@ -150,6 +104,7 @@
 
   .tablet .island, .duo .island { display: none; }
 </style>
+<link rel="stylesheet" href="{{ART_CSS}}" />
 </head>
 <body class="{{FRAME}} {{THEME}}">
   <div class="bg"></div>
