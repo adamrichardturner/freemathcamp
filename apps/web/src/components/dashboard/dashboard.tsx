@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowRight, CalendarCheck, Flame, GraduationCap, Hourglass, Sparkles, Target } from "lucide-react";
+import { ArrowDown, ArrowRight, CalendarCheck, Check, Flame, GraduationCap, Hourglass, Map as MapIcon, Sparkles, Target } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useState } from "react";
+import { ButtonLink } from "@/components/app/button-link";
 import { MasteryRing, queueMeta } from "@/components/app/status";
 import { UnitIcon } from "@/components/app/unit-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,8 @@ import { VerifyEmailCard } from "@/components/app/verify-email-card";
 import { LessonLink } from "@/components/course/lesson-link";
 import { LeagueCard } from "@/components/leagues/league-card";
 import { useCourseProgress, useDashboard, useSession } from "@/hooks/queries";
-import type { QueueKind, Recommendation } from "@/lib/api";
+import type { LearningMode } from "@fmc/curriculum";
+import type { CompletedToday, DayPlan, QueueKind, Recommendation } from "@/lib/api";
 import { course, exerciseRef } from "@/lib/course";
 import { greeting, minutes, shortMinutes } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -25,7 +27,7 @@ export function DashboardView() {
 
   if (ready && user && !verified) return <VerifyEmailCard user={user} />;
   if (isLoading || !data) return <DashboardSkeleton />;
-  const { queues, stats } = data;
+  const { queues, stats, day } = data;
   const firstName = user?.displayName.split(" ")[0] ?? "there";
   const isNew = stats.exercisesStarted === 0;
 
@@ -38,7 +40,9 @@ export function DashboardView() {
           <p className="mt-2 max-w-lg text-muted-foreground">
             {isNew
               ? "Welcome to Foundations. We've lined up the perfect place to start."
-              : stats.reviewsDue > 0
+              : day.complete
+                ? "You've met today's goal. Anything more today is a bonus."
+                : stats.reviewsDue > 0
                 ? `You have ${stats.reviewsDue} review${stats.reviewsDue > 1 ? "s" : ""} due — a quick refresh keeps them locked in.`
                 : "Here's your plan for today, tuned to how you've been doing."}
           </p>
@@ -53,24 +57,15 @@ export function DashboardView() {
         <StatCard
           icon={Target}
           label="Today"
-          value={`${stats.today.problems}/${user?.dailyGoal ?? 10}`}
-          sub={stats.today.problems >= (user?.dailyGoal ?? 10) ? "Daily goal reached 🎉" : "problems toward your daily goal"}
+          value={`${day.done}/${day.goal}`}
+          sub={day.complete ? "Daily goal reached 🎉" : "problems toward your daily goal"}
           tone="text-info"
-          progress={Math.min(1, stats.today.problems / (user?.dailyGoal ?? 10))}
+          progress={Math.min(1, day.done / day.goal)}
         />
       </section>
 
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Today&apos;s plan</h2>
-          <span className="text-xs text-muted-foreground">Mixed for you: review, repair and new ideas</span>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {queues.plan.map((r, i) => (
-            <PlanCard key={r.exerciseId} rec={r} index={i} featured={i === 0} />
-          ))}
-        </div>
-      </section>
+      <TodayPlan day={day} mode={user?.learningMode ?? "path"} />
+      <Upcoming day={day} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <Card>
@@ -211,7 +206,158 @@ function StatCard({ icon: Icon, label, value, sub, tone, progress }: { icon: typ
   );
 }
 
-function PlanCard({ rec, index, featured }: { rec: Recommendation; index: number; featured: boolean }) {
+/** The day's share of the plan. It stops growing once the daily goal is met and says so. */
+function TodayPlan({ day, mode }: { day: DayPlan; mode: LearningMode }) {
+  const left = Math.max(0, day.goal - day.done);
+  return (
+    <section>
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+        <div>
+          <h2 className="text-lg font-semibold">Today&apos;s plan</h2>
+          <p className="text-xs text-muted-foreground">
+            {day.complete
+              ? "All done. A fresh plan arrives tomorrow."
+              : `About ${left} more problem${left === 1 ? "" : "s"} to reach your daily goal`}
+          </p>
+        </div>
+        <GoalMeter done={day.done} goal={day.goal} />
+      </div>
+      {day.complete ? (
+        <DayComplete day={day} mode={mode} />
+      ) : (
+        <div className="space-y-3">
+          {day.completed.length > 0 && <CompletedList items={day.completed} />}
+          {day.today.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {day.today.map((r, i) => (
+                <PlanCard key={r.exerciseId} rec={r} index={i} featured={i === 0} />
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+              Nothing is lined up right now.{" "}
+              <Link href="/courses/foundations" className="font-medium text-primary hover:underline">
+                Open the course
+              </Link>{" "}
+              to pick a lesson.
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function GoalMeter({ done, goal }: { done: number; goal: number }) {
+  const complete = done >= goal;
+  return (
+    <div className="flex items-center gap-2.5 text-xs text-muted-foreground" aria-label={`${done} of ${goal} problems today`}>
+      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
+        <motion.div className={cn("h-full rounded-full", complete ? "bg-success" : "bg-info")} initial={{ width: 0 }} animate={{ width: `${Math.min(1, done / goal) * 100}%` }} transition={{ duration: 0.8 }} />
+      </div>
+      <span className="tabular-nums">
+        <span className={cn("font-semibold", complete ? "text-success" : "text-foreground")}>{done}</span>/{goal} problems
+      </span>
+    </div>
+  );
+}
+
+function DayComplete({ day, mode }: { day: DayPlan; mode: LearningMode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative overflow-hidden rounded-2xl border border-success/30 bg-gradient-to-br from-success/[0.10] via-card to-card p-6 sm:p-8"
+    >
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+        <motion.div
+          initial={{ scale: 0.4, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 14, delay: 0.1 }}
+          className="grid size-14 shrink-0 place-items-center rounded-2xl bg-success text-white shadow-lg shadow-success/25"
+        >
+          <Check className="size-7" strokeWidth={3} />
+        </motion.div>
+        <div className="min-w-0 flex-1 space-y-4">
+          <div>
+            <h3 className="font-display text-2xl sm:text-3xl">That&apos;s today done</h3>
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+              You solved {day.done} problem{day.done === 1 ? "" : "s"} and met your daily goal of {day.goal}. Nothing more will be added to today&apos;s plan. If you have
+              energy left, get ahead with what&apos;s upcoming, or {mode === "audit" ? "explore any lesson in the course" : "pick any lesson you've unlocked in the course"}.
+            </p>
+          </div>
+          {day.completed.length > 0 && <CompletedList items={day.completed} />}
+          <div className="flex flex-wrap items-center gap-2">
+            {day.upcoming.length > 0 && (
+              <ButtonLink href="#upcoming" className="gap-1.5">
+                Keep going with Upcoming <ArrowDown className="size-4" />
+              </ButtonLink>
+            )}
+            <ButtonLink href="/courses/foundations" variant="outline" className="gap-1.5">
+              <MapIcon className="size-4" /> Browse the course
+            </ButtonLink>
+            <Link href="/settings" className="px-2 text-xs text-muted-foreground hover:text-foreground hover:underline">
+              Want more each day? Raise your goal
+            </Link>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+const MODE_LABEL: Record<CompletedToday["mode"], string> = { learn: "Practised", review: "Reviewed", challenge: "Strengthened" };
+
+/** Sessions finished today, ticked off. */
+function CompletedList({ items }: { items: CompletedToday[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs font-medium text-muted-foreground">Done today</span>
+      {items.map((c) => {
+        const ref = exerciseRef(c.exerciseId);
+        if (!ref) return null;
+        return (
+          <Link
+            key={c.exerciseId}
+            href={`/courses/foundations/${c.exerciseId}`}
+            title={`${MODE_LABEL[c.mode]} · ${Math.round(c.mastery * 100)}% mastered`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-success/25 bg-success/10 py-1 pr-3 pl-1.5 text-xs font-medium transition-colors hover:border-success/50"
+          >
+            <span className="grid size-4 place-items-center rounded-full bg-success text-white">
+              <Check className="size-2.5" strokeWidth={3.5} />
+            </span>
+            <span>{ref.exercise.title}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
+/** What comes after today's share, for anyone who wants to keep going. */
+function Upcoming({ day }: { day: DayPlan }) {
+  if (day.upcoming.length === 0) return null;
+  return (
+    <section id="upcoming" className="scroll-mt-24">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+        <div>
+          <h2 className="text-lg font-semibold">Upcoming</h2>
+          <p className="text-xs text-muted-foreground">
+            {day.complete ? "Optional. A head start on what's next." : "Lined up after today's plan"}
+          </p>
+        </div>
+        <span className="text-xs text-muted-foreground">Mixed for you: review, repair and new ideas</span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {day.upcoming.map((r, i) => (
+          <PlanCard key={r.exerciseId} rec={r} index={i} featured={false} compact />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PlanCard({ rec, index, featured, compact = false }: { rec: Recommendation; index: number; featured: boolean; compact?: boolean }) {
   const ref = exerciseRef(rec.exerciseId);
   if (!ref) return null;
   const m = queueMeta[rec.kind];
@@ -221,7 +367,8 @@ function PlanCard({ rec, index, featured }: { rec: Recommendation; index: number
         id={rec.exerciseId}
         query={`mode=${m.mode}`}
         className={cn(
-          "group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card p-5 transition-all",
+          "group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card transition-all",
+          compact ? "p-4" : "p-5",
           featured && "border-primary/30 bg-gradient-to-br from-primary/[0.09] via-card to-card",
         )}
         openClassName="hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5"
@@ -231,17 +378,17 @@ function PlanCard({ rec, index, featured }: { rec: Recommendation; index: number
           <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", m.className)}>
             <m.icon className="size-3" /> {m.label}
           </span>
-          {rec.kind !== "next" && <MasteryRing value={rec.effectiveMastery} size={36} stroke={3.5} />}
+          {rec.kind !== "next" && <MasteryRing value={rec.effectiveMastery} size={compact ? 30 : 36} stroke={3.5} />}
         </div>
-        <div className="mt-3 text-xs text-muted-foreground">{ref.unit.title}</div>
-        <div className="text-lg leading-snug font-semibold group-hover:text-primary">{ref.exercise.title}</div>
-        <p className="mt-1 flex-1 text-sm text-muted-foreground">{rec.reason}</p>
-        {rec.brushUp && rec.brushUp.length > 0 && (
+        <div className={cn("text-xs text-muted-foreground", compact ? "mt-2" : "mt-3")}>{ref.unit.title}</div>
+        <div className={cn("leading-snug font-semibold group-hover:text-primary", compact ? "text-base" : "text-lg")}>{ref.exercise.title}</div>
+        <p className={cn("mt-1 flex-1 text-sm text-muted-foreground", compact && "line-clamp-2")}>{rec.reason}</p>
+        {!compact && rec.brushUp && rec.brushUp.length > 0 && (
           <p className="mt-2 text-xs text-muted-foreground">
             Brush up: {rec.brushUp.map((id) => exerciseRef(id)?.exercise.title).join(", ")}
           </p>
         )}
-        <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
+        <div className={cn("flex items-center justify-between text-xs text-muted-foreground", compact ? "mt-3" : "mt-4")}>
           <span>~{ref.exercise.estimatedMinutes} min</span>
           <span className="flex items-center gap-1 font-semibold text-primary opacity-80 transition-all group-hover:gap-2 group-hover:opacity-100">
             {featured ? "Start here" : "Start"} <ArrowRight className="size-3.5" />
@@ -256,7 +403,7 @@ const EMPTY: Record<QueueKind, string> = {
   review: "Nothing due — your memory is in great shape. Reviews appear here as they fall due.",
   challenge: "No weak spots right now. Topics you find tricky will show up here with targeted practice.",
   next: "You've started everything! Keep reviewing to reach mastery.",
-  continue: "Nothing in progress. Start something new from Today's plan.",
+  continue: "Nothing in progress. Start something new from Today's plan or Upcoming.",
 };
 
 function QueueList({ items, kind }: { items: Recommendation[]; kind: QueueKind }) {

@@ -1,5 +1,6 @@
 import { ancestors, unlockWeight, type CourseGraph } from "@fmc/curriculum";
 import { mean, round } from "../../utils/math";
+import { ITEMS_PER_SESSION } from "./difficulty";
 import { effectiveMastery, MASTERED_THRESHOLD, MIN_ITEMS_FOR_STRUGGLE, STRUGGLING_THRESHOLD } from "./mastery";
 
 /** The subset of stored progress the recommender needs. */
@@ -32,7 +33,7 @@ export interface Queues {
   challenge: Recommendation[];
   next: Recommendation[];
   continue: Recommendation[];
-  /** A short, interleaved plan for today drawn from the queues above. */
+  /** Interleaved suggestions drawn from the queues above, best first; `planDay` splits them into today and upcoming. */
   plan: Recommendation[];
 }
 
@@ -121,7 +122,7 @@ export const buildQueues = (graph: CourseGraph, progress: Map<string, ProgressSn
   next.sort(byPriority);
   cont.sort(byPriority);
 
-  const plan = interleave([review.slice(0, 2), challenge.slice(0, 1), cont.slice(0, 1), next.slice(0, 2)], 5);
+  const plan = interleave([review.slice(0, 4), challenge.slice(0, 2), cont.slice(0, 2), next.slice(0, 4)], 10);
 
   return {
     review: review.slice(0, limit),
@@ -145,4 +146,31 @@ const interleave = (lists: Recommendation[][], max: number) => {
       }
     }
   return out;
+};
+
+/** Problems a session for this suggestion asks for. */
+export const sessionItems = (kind: QueueKind) => ITEMS_PER_SESSION[kind === "review" ? "review" : kind === "challenge" ? "challenge" : "learn"];
+
+export interface DayPlan {
+  goal: number;
+  /** Problems solved today, from any practice. */
+  done: number;
+  complete: boolean;
+  /** Just enough sessions to cover what's left of the goal; empty once it's met. */
+  today: Recommendation[];
+  /** Everything after today's share, for learners who want to keep going. */
+  upcoming: Recommendation[];
+}
+
+/**
+ * Sizes today's plan to the daily goal. Once the goal is met nothing more is
+ * added, so the day has a clear end; the rest waits in `upcoming`. Lessons
+ * already practised today drop to the back unless nothing else is left.
+ */
+export const planDay = (suggestions: Recommendation[], goal: number, done: number, practisedToday: ReadonlySet<string> = new Set(), upcomingLimit = 6): DayPlan => {
+  const ordered = [...suggestions.filter((r) => !practisedToday.has(r.exerciseId)), ...suggestions.filter((r) => practisedToday.has(r.exerciseId))];
+  let left = Math.max(0, goal - done);
+  let take = 0;
+  while (left > 0 && take < ordered.length) left -= sessionItems(ordered[take++]!.kind);
+  return { goal, done, complete: done >= goal, today: ordered.slice(0, take), upcoming: ordered.slice(take, take + upcomingLimit) };
 };

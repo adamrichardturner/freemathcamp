@@ -66,7 +66,7 @@ After each session the home page rebuilds four queues, then interleaves them int
 - **New** — lessons not yet started (in Path mode, only unlocked ones), ranked by how ready the prerequisites are and how much later material they unlock.
 - **Keep going** — lessons already in progress.
 
-A streak and a daily goal (ten problems by default, adjustable in settings) sit alongside the plan.
+The plan is sized to a daily goal (ten problems by default, adjustable in settings): it holds just enough sessions to reach it, and once the goal is met it says the day is done and adds nothing more. Anything beyond that waits under **Upcoming**, for learners who want to keep going. A streak sits alongside.
 
 ## What a lesson contains
 
