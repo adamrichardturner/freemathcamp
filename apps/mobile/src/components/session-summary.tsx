@@ -27,7 +27,7 @@ const outcomeOf = (it: Item) => (it.revealed ? "shown" : it.wrongAttempts > 0 ? 
 /** The end of a session, as the web's summary: mastery before and after, stats, each problem and what next. */
 export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { summary: SessionSummary; onAgain: () => void; restarting: boolean; onExit: () => void }) {
   const { c } = useTheme();
-  const { wide } = useLayout();
+  const { medium } = useLayout();
   // Rounded first, so a change too small to show reads as +0% rather than a red "0%".
   const gained = Math.round((summary.mastery.after - summary.mastery.before) * 100);
   const openLesson = (id: string, mode?: string) => {
@@ -138,14 +138,14 @@ export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { s
       )}
 
       {/* Stacked on a phone; side by side on an iPad, where full-width buttons would be very long. */}
-      <View style={{ gap: 10, flexDirection: wide ? "row" : "column", alignItems: wide ? "center" : "stretch" }}>
-        <Button title="Back to lesson" size="lg" onPress={onExit} style={wide ? { flex: 1 } : undefined} />
-        <Button title={restarting ? "Starting…" : "Practice again"} variant="outline" icon="arrow.counterclockwise" loading={restarting} onPress={onAgain} style={wide ? { flex: 1 } : undefined} />
+      <View style={{ gap: 10, flexDirection: medium ? "row" : "column", alignItems: medium ? "center" : "stretch" }}>
+        <Button title="Back to lesson" size="lg" onPress={onExit} style={medium ? { flex: 1 } : undefined} />
+        <Button title={restarting ? "Starting…" : "Practice again"} variant="outline" icon="arrow.counterclockwise" loading={restarting} onPress={onAgain} style={medium ? { flex: 1 } : undefined} />
         <Button
           title="Dashboard"
           variant="ghost"
           iconRight="arrow.right"
-          style={wide ? { flex: 1 } : undefined}
+          style={medium ? { flex: 1 } : undefined}
           onPress={() => {
             router.dismissAll();
             router.navigate("/");

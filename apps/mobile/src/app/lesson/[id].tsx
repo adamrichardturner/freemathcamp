@@ -51,7 +51,7 @@ export default function LessonScreen() {
   }>();
   const ref = exerciseRef(id);
   const { c } = useTheme();
-  const { wide } = useLayout();
+  const { medium } = useLayout();
   const qc = useQueryClient();
   const { data: detail, isFetched: detailFetched } = useExerciseDetail(id);
   const { data: courseProgress } = useCourseProgress();
@@ -266,8 +266,8 @@ export default function LessonScreen() {
                     size="lg"
                     style={{
                       marginTop: 6,
-                      alignSelf: wide ? "center" : "stretch",
-                      minWidth: wide ? 320 : undefined,
+                      alignSelf: medium ? "center" : "stretch",
+                      minWidth: medium ? 320 : undefined,
                     }}
                     onPress={() => practise(progress?.status === "struggling" ? "challenge" : "learn")}
                   />

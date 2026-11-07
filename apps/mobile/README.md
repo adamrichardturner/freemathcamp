@@ -109,7 +109,7 @@ In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), the app
 The listing lives in the repo and is uploaded with EAS Metadata, using the App Store Connect key EAS already holds:
 
 - `store.config.json`: name, subtitle, promotional text, description and keywords (en-GB and en-US), URLs, categories, age rating, release settings and App Review notes.
-- `store/screenshots/iphone` (1320 × 2868, 6.9") and `store/screenshots/ipad` (2064 × 2752, 13").
+- `store/screenshots/iphone` (1320 × 2868, 6.9"), `store/screenshots/ipad` (2064 × 2752, 13") and `store/screenshots/duo` (2007 × 2853, the iPhone Duo's inner display). EAS Metadata doesn't know the iPhone Duo display type yet, so `store:push` uploads the iPhone and iPad sets; drag the Duo set into the **iPhone Duo** slot in App Store Connect (Media Manager) by hand.
 - `store.config.js` adds the App Review demo account from the environment, so the password never lands in git.
 
 The demo account is a normal account on production with a confirmed email. Its details are in the server's `.env` (`APP_REVIEW_EMAIL`, `APP_REVIEW_PASSWORD`). To upload the listing:
@@ -123,6 +123,34 @@ APP_REVIEW_PHONE="+44 …" pnpm store:push
 `APP_REVIEW_PHONE` is the number App Review can call; Apple won't save the review details without it. Without it, the push asks whether to continue and uploads everything else.
 
 App Privacy, pricing and availability, and the content rights question aren't part of the API EAS uses, so they're set once in App Store Connect (see the checklist below).
+
+### Making the screenshots
+
+The screenshots are the app itself, captured in the simulators against a local API with a seeded learner, then set on the landing page's gradients with a headline (`store/compose/`):
+
+1. A local database and API with "Alex", 26 days into a streak (never production):
+
+   ```bash
+   createdb -h 127.0.0.1 -p 5433 -U fmc fmc_shots   # or: docker exec … psql -c "create database fmc_shots"
+   cd apps/api
+   DATABASE_URL=postgres://…/fmc_shots pnpm migrate
+   SHOTS_PASSWORD=… DATABASE_URL=postgres://…/fmc_shots npx tsx scripts/seed-screenshot-learner.ts
+   DATABASE_URL=postgres://…/fmc_shots PORT=4199 pnpm dev
+   ```
+
+2. A Release build pointed at it (`EXPO_PUBLIC_API_URL=http://localhost:4199`, plus the Google ids from `eas.json`): `npx expo prebuild --platform ios --clean`, then `store/capture/capture.sh` builds and installs it as part of the test run.
+
+3. Capture each set on its own simulator: an iPhone 18 Pro Max (6.9"), an iPad Pro 13" and an iPhone Duo (iOS 27.1 runtime: `xcodebuild -downloadPlatform iOS -buildVersion 27.1`). The names after the udid are retaken in dark mode:
+
+   ```bash
+   SHOTS_PASSWORD=… store/capture/capture.sh iphone <udid> leagues
+   SHOTS_PASSWORD=… store/capture/capture.sh ipad <udid> leagues
+   SHOTS_PASSWORD=… store/capture/capture.sh duo <udid> progress
+   ```
+
+   `capture.sh` adds a UI-test target (`store/capture/ShotsUITests.swift`) to the generated project, signs in as the seeded learner, sets the status bar to 9:41 and saves each screen to `store/screenshots/raw/<set>/` (ignored by git).
+
+4. Compose them: `node store/compose/compose.mjs` (needs Google Chrome and Python's Pillow). Headlines, themes and order are at the top of `compose.mjs`.
 
 ## Ship a build to App Store Connect
 
@@ -150,7 +178,7 @@ Processing takes 5–30 minutes; the build then appears under **TestFlight**.
 
 On the app's version page in App Store Connect:
 
-- **Screenshots**: 6.9" iPhone (1320 × 2868) are required; 13" iPad too, since the app supports iPad. Take them in the iPhone 17 Pro Max and iPad Pro 13" simulators (⌘S saves one).
+- **Screenshots**: 6.9" iPhone (1320 × 2868) are required; 13" iPad too, since the app supports iPad; iPhone Duo (2007 × 2853) from April 2027 for builds on the iOS 27.1 SDK or later. See [Making the screenshots](#making-the-screenshots).
 - **Description, keywords, support URL** (`https://freemathcamp.app`), **privacy policy URL** (`https://freemathcamp.app/privacy`).
 - **App Privacy** (App Store Connect → App Privacy → Get Started), answering *Yes, we collect data*:
   - **Contact Info → Name** and **Email Address**: App Functionality; linked to the user; not used for tracking.
