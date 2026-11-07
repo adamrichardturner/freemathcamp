@@ -99,7 +99,7 @@ export default function Practice() {
   // iPadOS doesn't count the keyboard's shortcut bar, which would otherwise cover the Check bar.
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={["top", "bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={["top", "bottom", "left", "right"]}>
       {/* One readable column; on an iPad the problem doesn't stretch across the screen. */}
       <View style={{ flex: 1, width: "100%", maxWidth: widths.readable, alignSelf: "center" }}>
       {summary ? (

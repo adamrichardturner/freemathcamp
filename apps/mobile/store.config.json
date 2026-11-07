@@ -45,8 +45,10 @@
           "APP_IPAD_PRO_3GEN_129": [
             "./store/screenshots/ipad/01-learn.png",
             "./store/screenshots/ipad/02-lesson.png",
-            "./store/screenshots/ipad/03-progress.png",
-            "./store/screenshots/ipad/04-leagues.png"
+            "./store/screenshots/ipad/03-practice.png",
+            "./store/screenshots/ipad/04-progress.png",
+            "./store/screenshots/ipad/05-leagues.png",
+            "./store/screenshots/ipad/06-course.png"
           ]
         }
       },
@@ -83,8 +85,10 @@
           "APP_IPAD_PRO_3GEN_129": [
             "./store/screenshots/ipad/01-learn.png",
             "./store/screenshots/ipad/02-lesson.png",
-            "./store/screenshots/ipad/03-progress.png",
-            "./store/screenshots/ipad/04-leagues.png"
+            "./store/screenshots/ipad/03-practice.png",
+            "./store/screenshots/ipad/04-progress.png",
+            "./store/screenshots/ipad/05-leagues.png",
+            "./store/screenshots/ipad/06-course.png"
           ]
         }
       }

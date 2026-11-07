@@ -347,7 +347,7 @@ function Data({ user }: { user: User }) {
 
 function About() {
   const signOut = useSignOut();
-  const { wide } = useLayout();
+  const { medium } = useLayout();
   const open = (path: string) => void WebBrowser.openBrowserAsync(`${WEB_URL}${path}`, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
   return (
     <>
@@ -358,7 +358,7 @@ function About() {
         <Separator inset={58} />
         <Row leading={<IconChip name="envelope.fill" size={30} tone="muted" />} title="Help and support" onPress={() => open("/support")} />
       </Group>
-      <Button title="Sign out" variant="destructive" size="lg" loading={signOut.isPending} onPress={() => signOut.mutate()} style={wide ? { alignSelf: "center", minWidth: 320 } : undefined} />
+      <Button title="Sign out" variant="destructive" size="lg" loading={signOut.isPending} onPress={() => signOut.mutate()} style={medium ? { alignSelf: "center", minWidth: 320 } : undefined} />
       <Text variant="caption" muted style={{ textAlign: "center" }}>
         FreeMathCamp {Application.nativeApplicationVersion} ({Application.nativeBuildVersion})
       </Text>
