@@ -58,8 +58,8 @@ const fonts = {
   serifItalic: font("instrument-serif/400Regular_Italic/InstrumentSerif_400Regular_Italic.ttf"),
   sans: font("geist/400Regular/Geist_400Regular.ttf"),
   sansMedium: font("geist/500Medium/Geist_500Medium.ttf"),
+  sansSemibold: font("geist/600SemiBold/Geist_600SemiBold.ttf"),
 };
-const logo = pathToFileURL(join(mobile, "assets/images/logo-mark.png")).href;
 const template = readFileSync(join(here, "template.html"), "utf8");
 const escape = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 const headline = (t) => escape(t).replace(/\*(.+?)\*/g, "<em>$1</em>");
@@ -84,11 +84,11 @@ try {
         .replace("{{TITLE}}", headline(shot.title))
         .replace("{{SUB}}", escape(shot.sub))
         .replace("{{SCREEN}}", pathToFileURL(screen).href)
-        .replace("{{LOGO}}", logo)
         .replace("{{SERIF}}", fonts.serif)
         .replace("{{SERIF_ITALIC}}", fonts.serifItalic)
         .replace("{{SANS}}", fonts.sans)
-        .replace("{{SANS_MEDIUM}}", fonts.sansMedium);
+        .replace("{{SANS_MEDIUM}}", fonts.sansMedium)
+        .replace("{{SANS_SEMIBOLD}}", fonts.sansSemibold);
       const page = join(work, `${device}-${shot.name}.html`);
       const png = join(work, `${device}-${shot.name}.png`);
       writeFileSync(page, html);
