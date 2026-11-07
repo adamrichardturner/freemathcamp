@@ -1,7 +1,8 @@
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
-import { Children, forwardRef, type ComponentRef, type ReactNode } from "react";
+import { Children, forwardRef, useEffect, type ComponentRef, type ReactNode } from "react";
+import Reanimated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from "react-native-reanimated";
 import {
   ActivityIndicator,
   Pressable,
@@ -385,9 +386,15 @@ export function Empty({ icon, title, text, children }: { icon: SymbolName; title
   );
 }
 
+/** A placeholder block that gently pulses while content loads. */
 export function Skeleton({ height, width = "100%", style }: { height: number; width?: ViewStyle["width"]; style?: StyleProp<ViewStyle> }) {
   const { c } = useTheme();
-  return <View style={[{ height, width, borderRadius: radius.xl, backgroundColor: c.muted, opacity: 0.8 }, style]} />;
+  const pulse = useSharedValue(0.55);
+  useEffect(() => {
+    pulse.value = withRepeat(withTiming(1, { duration: 850, easing: Easing.inOut(Easing.ease) }), -1, true);
+  }, [pulse]);
+  const animated = useAnimatedStyle(() => ({ opacity: pulse.value }));
+  return <Reanimated.View style={[{ height, width, borderRadius: radius.xl, backgroundColor: c.muted }, animated, style]} />;
 }
 
 export function Loading() {

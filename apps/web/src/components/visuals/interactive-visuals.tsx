@@ -17,14 +17,27 @@ const ACCENT = "var(--chart-2)";
 const WARN = "var(--warning)";
 const MUTED = "var(--muted-foreground)";
 
+/**
+ * Gridline spacing for an axis: a 1, 2 or 5 × 10ⁿ step that gives at most
+ * about sixteen lines, so wide ranges (y from −30 to 20, say) stay readable
+ * instead of labelling every integer on top of each other.
+ */
+export function axisStep(span: number, maxLines = 16) {
+  const raw = Math.abs(span) / maxLines;
+  if (!(raw > 0) || raw <= 1) return 1;
+  const pow = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 5, 10].map((m) => m * pow).find((s) => s >= raw) ?? 10 * pow;
+}
+
 /** Signed term for equations: "+ 3" / "− 3". */
 const sgn = (x: number, dp = 2) => (x < 0 ? `- ${fmt(-x, dp)}` : `+ ${fmt(x, dp)}`);
 
 export function FunctionPlot({ functions, points = [], circles = [], viewBox, equalAspect }: V<"functionPlot">) {
+  const box = viewBox ?? { x: [-6, 6], y: [-6, 6] };
   return (
     <VisualFrame>
-      <Mafs height={HEIGHT} viewBox={viewBox ?? { x: [-6, 6], y: [-6, 6] }} preserveAspectRatio={equalAspect ? "contain" : false} zoom={false} pan={false}>
-        <Coordinates.Cartesian subdivisions={false} />
+      <Mafs height={HEIGHT} viewBox={box} preserveAspectRatio={equalAspect ? "contain" : false} zoom={false} pan={false}>
+        <Coordinates.Cartesian subdivisions={false} xAxis={{ lines: axisStep(box.x[1] - box.x[0]) }} yAxis={{ lines: axisStep(box.y[1] - box.y[0]) }} />
         {circles.map((c, i) => (
           <Circle key={`c${i}`} center={[c.x, c.y]} radius={c.r} color={tone(c.tone ?? "primary")} weight={3} fillOpacity={0.06} />
         ))}

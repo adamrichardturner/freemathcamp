@@ -10,14 +10,14 @@ import { useTheme } from "@/lib/theme";
  */
 const dom = { matchContents: true, scrollEnabled: false, style: { backgroundColor: "transparent" }, containerStyle: { backgroundColor: "transparent", width: "100%" } } as const;
 
-export function Lesson({ source }: { source: { kind: "lesson"; courseId: string; exerciseId: string } | { kind: "article"; slug: string } }) {
+export function Lesson({ source, onReady }: { source: { kind: "lesson"; courseId: string; exerciseId: string } | { kind: "article"; slug: string }; onReady?: () => void }) {
   const { scheme } = useTheme();
-  return <LessonContent source={source} scheme={scheme} dom={dom} />;
+  return <LessonContent source={source} scheme={scheme} dom={dom} onReady={onReady ? async () => onReady() : undefined} />;
 }
 
-export function Rich({ md, size, muted }: { md: string; size?: "sm" | "base" | "lg"; muted?: boolean }) {
+export function Rich({ md, size, muted, onReady }: { md: string; size?: "sm" | "base" | "lg"; muted?: boolean; onReady?: () => void }) {
   const { scheme } = useTheme();
-  return <RichText md={md} scheme={scheme} size={size} muted={muted} dom={dom} />;
+  return <RichText md={md} scheme={scheme} size={size} muted={muted} dom={dom} onReady={onReady ? async () => onReady() : undefined} />;
 }
 
 export { dom as domProps };

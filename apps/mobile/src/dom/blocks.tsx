@@ -19,6 +19,24 @@ export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Bool
  * The outermost element of every DOM component. Expo's root can lay out wider
  * than the web view, so this holds content to the screen's width.
  */
+/**
+ * Tells the native screen the content is on screen: once fonts are in and two
+ * frames have passed (one for layout, one for the size to reach the native
+ * view), so the screen can reveal it without anything jumping.
+ */
+export function useReady(onReady?: () => Promise<void>) {
+  useEffect(() => {
+    if (!onReady) return;
+    let cancelled = false;
+    const fonts = document.fonts?.ready ?? Promise.resolve();
+    void Promise.race([fonts, new Promise((r) => setTimeout(r, 1500))]).then(() => requestAnimationFrame(() => requestAnimationFrame(() => !cancelled && void onReady())));
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
 export const screenWidth = { width: "100vw", maxWidth: "100vw", boxSizing: "border-box", overflowX: "hidden" } as const;
 
 /** Matches the native theme, which the app passes in as a prop. */
