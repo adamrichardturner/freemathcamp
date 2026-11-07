@@ -1,4 +1,5 @@
 import { useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 /**
  * Widths for larger screens. On a phone every screen is full width; on an
@@ -30,6 +31,9 @@ export const MEDIUM_BREAKPOINT = 600;
  */
 export function useLayout() {
   const { width, height } = useWindowDimensions();
+  // Side insets: zero on most iPhones held upright, but the open iPhone Duo keeps
+  // its status bar and tab rail down one side, over the app.
+  const { left, right } = useSafeAreaInsets();
   const wide = width >= WIDE_BREAKPOINT;
   const medium = width >= MEDIUM_BREAKPOINT;
   /** The width the content may use before it's centred; roomier screens get a little more margin. */
@@ -43,8 +47,11 @@ export function useLayout() {
     medium,
     /** Wider than tall with little height to spare, as on the open iPhone Duo held sideways. */
     short: width > height && height < 760,
-    /** The horizontal padding that centres a column at most `max` wide, never less than `min`. */
-    gutter: (max: number, min = minGutter) => Math.max(min, Math.round((width - max) / 2)),
+    /** Side padding that centres a column at most `max` wide (never less than `min`), clear of the side insets: spread it into a style. */
+    sides: (max: number, min = minGutter) => {
+      const g = Math.max(min, Math.round((width - left - right - max) / 2));
+      return { paddingLeft: g + left, paddingRight: g + right };
+    },
     /** Columns for a grid of tiles: `phone` on a phone, `tablet` on an iPad, and `mid` (default `tablet`) in between. */
     columns: (phone: number, tablet: number, mid: number = tablet) => (wide ? tablet : medium ? mid : phone),
   };

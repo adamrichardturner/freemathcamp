@@ -67,14 +67,14 @@ export function Screen({
   ...props
 }: ScrollViewProps & { contentStyle?: StyleProp<ViewStyle>; width?: number; flush?: boolean; title?: string }) {
   const { c } = useTheme();
-  const { gutter, wide } = useLayout();
+  const { sides, wide } = useLayout();
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
       style={{ flex: 1, backgroundColor: c.background }}
-      contentContainerStyle={[{ paddingTop: 16, paddingHorizontal: flush ? gutter(width, 16) - 16 : gutter(width), paddingBottom: 48, gap: 20 }, contentStyle]}
+      contentContainerStyle={[{ paddingTop: 16, ...(flush ? flushSides(sides(width, 16)) : sides(width)), paddingBottom: 48, gap: 20 }, contentStyle]}
       {...props}
     >
       {/* On an iPad the tab's title sits in the column (see TabStack); phones show it in the large-title bar. */}
@@ -83,6 +83,9 @@ export function Screen({
     </ScrollView>
   );
 }
+
+/** Content that brings its own 16pt side padding (a lesson's web view) takes 16 less. */
+const flushSides = ({ paddingLeft, paddingRight }: { paddingLeft: number; paddingRight: number }) => ({ paddingLeft: paddingLeft - 16, paddingRight: paddingRight - 16 });
 
 /**
  * Children in rows of `columns`, each the same width. Pass a different count
