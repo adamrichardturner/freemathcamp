@@ -3,6 +3,7 @@ import * as A from "@fmc/web/components/visuals/animated-visuals";
 import * as I from "@fmc/web/components/visuals/interactive-visuals";
 import * as S from "@fmc/web/components/visuals/static-visuals";
 import { Tex } from "@fmc/web/components/math/tex";
+import { VisualDisplayProvider } from "@fmc/web/components/visuals/shared";
 import { ChevronRight, Info, Lightbulb, RotateCcw, Sparkles, TriangleAlert } from "lucide-react";
 import { AnimatePresence, motion, useInView } from "motion/react";
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
@@ -76,10 +77,21 @@ const VISUALS: Record<VisualSpec["type"], keyof typeof S | keyof typeof I | keyo
   pascalTriangle: "PascalTriangle",
 };
 
-export function Visual({ visual }: { visual: VisualSpec }) {
+/**
+ * A visual, with a button to open it full screen (to zoom in) when `onExpand`
+ * is given. Step-throughs are text, already full size, so they don't get one.
+ */
+export function Visual({ visual, onExpand }: { visual: VisualSpec; onExpand?: () => void }) {
   const name = VISUALS[visual.type];
   const Component = S[name] ?? I[name] ?? A[name];
-  return Component ? <Component {...visual} /> : null;
+  if (!Component) return null;
+  return onExpand && visual.type !== "stepThrough" ? (
+    <VisualDisplayProvider value={{ onExpand }}>
+      <Component {...visual} />
+    </VisualDisplayProvider>
+  ) : (
+    <Component {...visual} />
+  );
 }
 
 const calloutStyle = {
@@ -148,7 +160,7 @@ function PlayInView({ children }: { children: ReactNode }) {
   );
 }
 
-export function LessonBlock({ block }: { block: Block }) {
+export function LessonBlock({ block, onExpand }: { block: Block; onExpand?: () => void }) {
   switch (block.kind) {
     case "text":
       return <Md md={block.md} className="text-[1.02rem] text-foreground/90" />;
@@ -187,7 +199,7 @@ export function LessonBlock({ block }: { block: Block }) {
       return (
         <figure className="m-0 space-y-2">
           <PlayInView>
-            <Visual visual={block.visual} />
+            <Visual visual={block.visual} onExpand={onExpand} />
           </PlayInView>
           {block.caption && <Md md={block.caption} className="text-center text-sm text-muted-foreground" />}
         </figure>
@@ -195,12 +207,13 @@ export function LessonBlock({ block }: { block: Block }) {
   }
 }
 
-export function Blocks({ blocks }: { blocks: Block[] }) {
+/** A lesson's blocks; `onExpandVisual` opens the visual at that block index full screen. */
+export function Blocks({ blocks, onExpandVisual }: { blocks: Block[]; onExpandVisual?: (index: number) => void }) {
   return (
     <div className="space-y-6">
       {blocks.map((b, i) => (
         <motion.div key={i} initial={i < 3 ? false : { opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} transition={{ duration: 0.4 }}>
-          <LessonBlock block={b} />
+          <LessonBlock block={b} onExpand={onExpandVisual && b.kind === "visual" ? () => onExpandVisual(i) : undefined} />
         </motion.div>
       ))}
     </div>

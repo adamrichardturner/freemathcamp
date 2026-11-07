@@ -18,6 +18,11 @@ declare module "@fmc/web/components/visuals/interactive-visuals" {
   const visuals: Record<string, ComponentType<any>>;
   export = visuals;
 }
+declare module "@fmc/web/components/visuals/shared" {
+  import type { Provider } from "react";
+  export type VisualDisplay = { expanded?: boolean; graphHeight?: number; onExpand?: () => void };
+  export const VisualDisplayProvider: Provider<VisualDisplay>;
+}
 declare module "@fmc/web/components/math/tex" {
   import type { ComponentType } from "react";
   export const Tex: ComponentType<{ tex: string; display?: boolean; className?: string }>;

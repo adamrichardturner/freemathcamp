@@ -127,7 +127,8 @@ export function PascalTriangle({ rows, highlightRow }: V<"pascalTriangle">) {
       <div className="flex flex-col items-center gap-1.5 py-2" onMouseLeave={() => setHover(null)}>
         {Array.from({ length: rows }, (_, n) => (
           <div key={n} className="flex items-center gap-1.5">
-            <span className="mr-2 w-12 text-right text-[11px] text-muted-foreground tabular-nums">row {n}</span>
+            {/* Row labels, and the spacer balancing them, only where there's room: a phone needs the width for the numbers. */}
+            <span className="mr-2 hidden w-12 text-right text-xs text-muted-foreground tabular-nums sm:inline">row {n}</span>
             {Array.from({ length: n + 1 }, (_, k) => {
               const value = binomial(n, k);
               const hovered = hover?.[0] === n && hover[1] === k;
@@ -152,7 +153,7 @@ export function PascalTriangle({ rows, highlightRow }: V<"pascalTriangle">) {
                 </motion.button>
               );
             })}
-            <span className="ml-2 w-12" />
+            <span className="ml-2 hidden w-12 sm:inline" />
           </div>
         ))}
       </div>

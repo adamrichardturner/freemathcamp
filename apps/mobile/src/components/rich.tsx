@@ -1,5 +1,6 @@
 import LessonContent from "@/dom/lesson-content";
 import RichText from "@/dom/rich-text";
+import { useVisualViewer } from "@/components/visual-viewer";
 import { useTheme } from "@/lib/theme";
 
 /**
@@ -12,7 +13,19 @@ const dom = { matchContents: true, scrollEnabled: false, style: { backgroundColo
 
 export function Lesson({ source, onReady }: { source: { kind: "lesson"; courseId: string; exerciseId: string } | { kind: "article"; slug: string }; onReady?: () => void }) {
   const { scheme } = useTheme();
-  return <LessonContent source={source} scheme={scheme} dom={dom} onReady={onReady ? async () => onReady() : undefined} />;
+  const { open, viewer } = useVisualViewer();
+  return (
+    <>
+      <LessonContent
+        source={source}
+        scheme={scheme}
+        dom={dom}
+        onReady={onReady ? async () => onReady() : undefined}
+        onExpandVisual={async (index) => open({ ...source, index })}
+      />
+      {viewer}
+    </>
+  );
 }
 
 export function Rich({ md, size, muted, onReady }: { md: string; size?: "sm" | "base" | "lg"; muted?: boolean; onReady?: () => void }) {
