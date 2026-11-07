@@ -58,6 +58,7 @@ Run them in `apps/mobile` with `pnpm <script>` (or from the root with `pnpm --fi
 | `submit:ios` | Upload `build/FreeMathCamp.ipa` to App Store Connect |
 | `release:ios` | `build:ios` then `submit:ios` |
 | `archive:ios` | An App Store `.ipa` with Xcode alone (no EAS), via `scripts/archive-ios.sh` |
+| `store:push` | Upload the App Store listing (text, screenshots, age rating, review notes) from `store.config.json` |
 
 The local `build:*` scripts compile on your Mac, so they're free; EAS only manages signing credentials. They need an Expo account (`npx eas-cli@latest login`); the scripts run EAS CLI through `npx`, so nothing is installed globally.
 
@@ -103,6 +104,26 @@ npx eas-cli@latest init          # already done: the project is @adamrichardturn
 
 In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), the app **FreeMathCamp** with bundle id `com.freemathcamp.app` already exists. Its Apple ID, `6829382170`, is in `eas.json` → `submit.production.ios.ascAppId`, and EAS holds an App Store Connect API key for submitting, so `pnpm submit:ios` needs no Apple sign-in.
 
+## The App Store listing
+
+The listing lives in the repo and is uploaded with EAS Metadata, using the App Store Connect key EAS already holds:
+
+- `store.config.json`: name, subtitle, promotional text, description and keywords (en-GB and en-US), URLs, categories, age rating, release settings and App Review notes.
+- `store/screenshots/iphone` (1320 × 2868, 6.9") and `store/screenshots/ipad` (2064 × 2752, 13").
+- `store.config.js` adds the App Review demo account from the environment, so the password never lands in git.
+
+The demo account is a normal account on production with a confirmed email. Its details are in the server's `.env` (`APP_REVIEW_EMAIL`, `APP_REVIEW_PASSWORD`). To upload the listing:
+
+```bash
+cd apps/mobile
+eval "$(ssh freemathcamp 'grep -E "^APP_REVIEW_(EMAIL|PASSWORD)=" /var/www/freemathcamp/.env' | sed 's/^/export /')"
+APP_REVIEW_PHONE="+44 …" pnpm store:push
+```
+
+`APP_REVIEW_PHONE` is the number App Review can call; Apple won't save the review details without it. Without it, the push asks whether to continue and uploads everything else.
+
+App Privacy, pricing and availability, and the content rights question aren't part of the API EAS uses, so they're set once in App Store Connect (see the checklist below).
+
 ## Ship a build to App Store Connect
 
 ```bash
@@ -131,7 +152,16 @@ On the app's version page in App Store Connect:
 
 - **Screenshots**: 6.9" iPhone (1320 × 2868) are required; 13" iPad too, since the app supports iPad. Take them in the iPhone 17 Pro Max and iPad Pro 13" simulators (⌘S saves one).
 - **Description, keywords, support URL** (`https://freemathcamp.app`), **privacy policy URL** (`https://freemathcamp.app/privacy`).
-- **App Privacy**: the app collects email address and name (account), product interaction (learning progress), and a device token for push. None are used for tracking or advertising.
+- **App Privacy** (App Store Connect → App Privacy → Get Started), answering *Yes, we collect data*:
+  - **Contact Info → Name** and **Email Address**: App Functionality; linked to the user; not used for tracking.
+  - **User Content → Other User Content** (answers to practice problems): App Functionality; linked; not tracking.
+  - **Usage Data → Product Interaction** (lessons, practice history, time learning): App Functionality and Analytics; linked; not tracking.
+  - **Identifiers → User ID** (account id, Apple/Google sign-in ids) and **Device ID** (push token): App Functionality; linked; not tracking.
+  - Nothing else: no location, contacts, health, financial, browsing or diagnostics data, and no tracking.
+- **Pricing and Availability**: Free (price tier 0), all countries or the ones you choose.
+- **App Information → Content Rights**: *No, it does not contain, show, or access third-party content.*
+- **Age Rating** (App Information → Age Rating → Edit): answer *None* / *No* to every question, including the newer ones (social media, messaging, user-generated content, advertising, age assurance, parental controls, health topics). The result is 4+. EAS can't upload this yet because it doesn't send Apple's new social-media question.
+- **App Review contact**: your phone number (or set `APP_REVIEW_PHONE` and run `pnpm store:push`).
 - **Age rating**: 4+. **Category**: Education.
 - **Sign-in for review**: give App Review a demo account with a confirmed email (Settings → Account), since practice needs one.
 - The app offers Sign in with Apple alongside Google (guideline 4.8) and account deletion in Settings → Your data (guideline 5.1.1(v)). Deleting an account revokes its Sign in with Apple tokens once the `APPLE_*` key is set on the API.

@@ -1,0 +1,128 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "version": "1.0.0",
+    "copyright": "2026 Adam Richard Turner",
+    "categories": [
+      "EDUCATION",
+      "REFERENCE"
+    ],
+    "release": {
+      "automaticRelease": false,
+      "phasedRelease": false
+    },
+    "info": {
+      "en-GB": {
+        "title": "FreeMathCamp",
+        "subtitle": "Maths from basics to calculus",
+        "promoText": "Every lesson from place value to your first limits, with interactive visuals and practice that adapts as you go. Free, with no ads and no paywall.",
+        "description": "FreeMathCamp is a complete maths course for anyone heading towards calculus, whether you're starting from the basics, filling in gaps or getting ready for an exam. It's free, with no ads and nothing locked behind a subscription.\n\nThe Foundations course has 95 lessons in 15 units, running from number sense and fractions through algebra, functions and trigonometry to sequences, series and your first limits. Each lesson builds on the ones before it, and the app shows you exactly what a new topic depends on.\n\nLEARN BY SEEING IT\nLessons are short and visual. Drag points on a graph, step through a worked example, move along a number line or watch a function change as you adjust it. Every formula is properly typeset, so the maths reads the way it would in a good textbook.\n\nPRACTICE THAT ADAPTS TO YOU\nProblems are generated fresh for each session, so you never run out. Get two right in a row and the next one gets harder; struggle and it eases off. Hints are there when you need them, and every answer is checked straight away with a clear explanation.\n\nA PLAN FOR EVERY DAY\nToday's plan mixes three things: reviews that are due, topics you've found tricky, and new lessons you're ready for. Spaced repetition brings each idea back just before you'd forget it, and the gaps between reviews grow as it sticks.\n\nSEE HOW YOU'RE DOING\n• Mastery for every unit and lesson\n• Accuracy, time spent and problems solved\n• A streak and a daily goal you choose\n• Weekly leagues with promotion and demotion, if you want a bit of competition\n\nMADE FOR IPHONE AND IPAD\n• Sign in with Apple, Google or email\n• Your progress syncs with freemathcamp.app, so you can switch between phone and computer\n• Gentle reminders to practise, which you can turn off at any time\n• Light and dark mode\n\nFreeMathCamp is written and maintained by one person who thinks good maths teaching should be free. If something in a lesson isn't clear, get in touch through the website.",
+        "keywords": [
+          "algebra",
+          "trigonometry",
+          "geometry",
+          "precalculus",
+          "fractions",
+          "functions",
+          "logarithms",
+          "practice",
+          "revision",
+          "tutor"
+        ],
+        "releaseNotes": "The first release of FreeMathCamp for iPhone and iPad.",
+        "marketingUrl": "https://freemathcamp.app",
+        "supportUrl": "https://freemathcamp.app/support",
+        "privacyPolicyUrl": "https://freemathcamp.app/privacy",
+        "screenshots": {
+          "APP_IPHONE_67": [
+            "./store/screenshots/iphone/01-learn.png",
+            "./store/screenshots/iphone/02-lesson.png",
+            "./store/screenshots/iphone/03-practice.png",
+            "./store/screenshots/iphone/04-progress.png",
+            "./store/screenshots/iphone/05-leagues.png",
+            "./store/screenshots/iphone/06-course.png"
+          ],
+          "APP_IPAD_PRO_3GEN_129": [
+            "./store/screenshots/ipad/01-learn.png",
+            "./store/screenshots/ipad/02-lesson.png",
+            "./store/screenshots/ipad/03-progress.png",
+            "./store/screenshots/ipad/04-leagues.png"
+          ]
+        }
+      },
+      "en-US": {
+        "title": "FreeMathCamp",
+        "subtitle": "Math from basics to calculus",
+        "promoText": "Every lesson from place value to your first limits, with interactive visuals and practice that adapts as you go. Free, with no ads and no paywall.",
+        "description": "FreeMathCamp is a complete math course for anyone heading toward calculus, whether you're starting from the basics, filling in gaps or getting ready for an exam. It's free, with no ads and nothing locked behind a subscription.\n\nThe Foundations course has 95 lessons in 15 units, running from number sense and fractions through algebra, functions and trigonometry to sequences, series and your first limits. Each lesson builds on the ones before it, and the app shows you exactly what a new topic depends on.\n\nLEARN BY SEEING IT\nLessons are short and visual. Drag points on a graph, step through a worked example, move along a number line or watch a function change as you adjust it. Every formula is properly typeset, so the math reads the way it would in a good textbook.\n\nPRACTICE THAT ADAPTS TO YOU\nProblems are generated fresh for each session, so you never run out. Get two right in a row and the next one gets harder; struggle and it eases off. Hints are there when you need them, and every answer is checked right away with a clear explanation.\n\nA PLAN FOR EVERY DAY\nToday's plan mixes three things: reviews that are due, topics you've found tricky, and new lessons you're ready for. Spaced repetition brings each idea back just before you'd forget it, and the gaps between reviews grow as it sticks.\n\nSEE HOW YOU'RE DOING\n• Mastery for every unit and lesson\n• Accuracy, time spent and problems solved\n• A streak and a daily goal you choose\n• Weekly leagues with promotion and demotion, if you want a bit of competition\n\nMADE FOR IPHONE AND IPAD\n• Sign in with Apple, Google or email\n• Your progress syncs with freemathcamp.app, so you can switch between phone and computer\n• Gentle reminders to practice, which you can turn off at any time\n• Light and dark mode\n\nFreeMathCamp is written and maintained by one person who thinks good math teaching should be free. If something in a lesson isn't clear, get in touch through the website.",
+        "keywords": [
+          "algebra",
+          "trigonometry",
+          "geometry",
+          "precalculus",
+          "fractions",
+          "functions",
+          "logarithms",
+          "practice",
+          "homework",
+          "tutor"
+        ],
+        "releaseNotes": "The first release of FreeMathCamp for iPhone and iPad.",
+        "marketingUrl": "https://freemathcamp.app",
+        "supportUrl": "https://freemathcamp.app/support",
+        "privacyPolicyUrl": "https://freemathcamp.app/privacy",
+        "screenshots": {
+          "APP_IPHONE_67": [
+            "./store/screenshots/iphone/01-learn.png",
+            "./store/screenshots/iphone/02-lesson.png",
+            "./store/screenshots/iphone/03-practice.png",
+            "./store/screenshots/iphone/04-progress.png",
+            "./store/screenshots/iphone/05-leagues.png",
+            "./store/screenshots/iphone/06-course.png"
+          ],
+          "APP_IPAD_PRO_3GEN_129": [
+            "./store/screenshots/ipad/01-learn.png",
+            "./store/screenshots/ipad/02-lesson.png",
+            "./store/screenshots/ipad/03-progress.png",
+            "./store/screenshots/ipad/04-leagues.png"
+          ]
+        }
+      }
+    },
+    "advisory": {
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gambling": false,
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "kidsAgeBand": null,
+      "lootBox": false,
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "unrestrictedWebAccess": false,
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "advertising": false,
+      "ageAssurance": false,
+      "gunsOrOtherWeapons": "NONE",
+      "healthOrWellnessTopics": false,
+      "messagingAndChat": false,
+      "parentalControls": false,
+      "userGeneratedContent": false,
+      "ageRatingOverride": "NONE",
+      "koreaAgeRatingOverride": "NONE",
+      "ageRatingOverrideV2": "NONE"
+    },
+    "review": {
+      "firstName": "Adam",
+      "lastName": "Turner",
+      "email": "hello@adamrichardturner.dev",
+      "demoRequired": true,
+      "notes": "Sign in with the demo account above (Welcome screen > I already have an account). Its email address is already confirmed, so every feature is available, including practice.\n\nAfter signing in, the app asks how you'd like to learn (follow the plan, or learn then practise); either choice works. Learn shows today's plan, Course shows every unit and lesson, and practice is under any lesson. Leagues are optional and can be joined from the Leagues tab.\n\nSign in with Apple and Sign in with Google are also offered on the sign-in screen. Accounts can be deleted in Settings > Your data > Delete account, which also revokes Sign in with Apple access.\n\nThe app is free. There are no purchases, ads or tracking."
+    }
+  }
+}

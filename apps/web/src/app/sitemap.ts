@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...articleCategories.map((c) => ({ url: absoluteUrl(categoryPath(c)), changeFrequency: "monthly" as const, priority: 0.6 })),
     ...articles.map((a) => ({ url: absoluteUrl(`/articles/${a.slug}`), changeFrequency: "monthly" as const, priority: 0.7 })),
     { url: absoluteUrl("/register"), changeFrequency: "yearly", priority: 0.4 },
+    { url: absoluteUrl("/support"), changeFrequency: "monthly", priority: 0.4 },
     { url: absoluteUrl("/privacy"), changeFrequency: "yearly", priority: 0.3 },
     { url: absoluteUrl("/terms"), changeFrequency: "yearly", priority: 0.3 },
     { url: absoluteUrl("/llms.txt"), changeFrequency: "monthly", priority: 0.3 },

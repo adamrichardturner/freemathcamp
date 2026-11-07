@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowRight, BrainCircuit, CalendarClock, Check, ChevronDown, Gauge, Network, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, Bell, BrainCircuit, CalendarClock, Check, ChevronDown, Gauge, Network, RefreshCw, ShieldCheck, Smartphone, Sparkles, TrendingUp } from "lucide-react";
 import { motion } from "motion/react";
+import Image from "next/image";
 import Link from "next/link";
 import { ButtonLink } from "@/components/app/button-link";
 import { UnitIcon } from "@/components/app/unit-icon";
@@ -10,6 +11,7 @@ import { Visual } from "@/components/visuals/visual";
 import { useSession } from "@/hooks/queries";
 import { course, graph } from "@/lib/course";
 import { FAQS } from "@/lib/faq";
+import { IOS_APP } from "@/lib/site";
 
 const fadeUp = { initial: { opacity: 0, y: 24 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, margin: "-80px" }, transition: { duration: 0.5 } };
 
@@ -22,6 +24,7 @@ export function Landing() {
       <Features />
       <Curriculum />
       <Engine />
+      <MobileApp />
       <Faq />
       <FinalCta cta={cta} />
     </div>
@@ -208,6 +211,91 @@ function Engine() {
         ))}
       </div>
     </section>
+  );
+}
+
+const APP_POINTS = [
+  { icon: RefreshCw, title: "One account, everywhere", text: "Start a lesson on your laptop and finish it on the bus. Progress, reviews and streaks sync both ways." },
+  { icon: ShieldCheck, title: "Sign in your way", text: "Sign in with Apple, Google or email, and the session stays safely in your keychain." },
+  { icon: Bell, title: "Nudges, not nagging", text: "An optional reminder when a review is due or your streak needs a session. Turn it off any time." },
+];
+
+function MobileApp() {
+  return (
+    <section id="app" className="scroll-mt-20 border-y bg-muted/30" aria-labelledby="app-heading">
+      <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.1fr]">
+        <motion.div {...fadeUp}>
+          <span className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs font-medium">
+            <Smartphone className="size-3.5 text-primary" /> iPhone & iPad · {IOS_APP.available ? "Out now" : "Coming soon"}
+          </span>
+          <h2 id="app-heading" className="mt-4 font-display text-4xl sm:text-5xl">
+            The whole course, <em className="text-primary">in your pocket</em>.
+          </h2>
+          <p className="mt-4 max-w-lg text-muted-foreground">
+            The FreeMathCamp app for iPhone and iPad has every lesson, the same adaptive practice and your daily plan, built to feel at home on iOS. Ten minutes in a queue is ten minutes of maths.
+          </p>
+          <ul className="mt-8 space-y-5">
+            {APP_POINTS.map((p) => (
+              <li key={p.title} className="flex gap-3">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                  <p.icon className="size-4" />
+                </span>
+                <span>
+                  <span className="block font-semibold">{p.title}</span>
+                  <span className="block text-sm text-muted-foreground">{p.text}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-9 flex flex-wrap items-center gap-3">
+            <AppStoreBadge />
+            {!IOS_APP.available && (
+              <ButtonLink href="/register" variant="outline" size="lg" className="h-12 px-5">
+                Start on the web today <ArrowRight />
+              </ButtonLink>
+            )}
+          </div>
+          {!IOS_APP.available && <p className="mt-3 text-sm text-muted-foreground">Your progress will be waiting in the app when it lands.</p>}
+        </motion.div>
+        <motion.div {...fadeUp} transition={{ delay: 0.1, duration: 0.6 }} className="relative">
+          <div className="pointer-events-none absolute inset-x-10 top-10 bottom-0 rounded-full bg-primary/20 blur-3xl" />
+          <div className="relative flex items-end justify-center gap-3 sm:gap-5">
+            {IOS_APP.screenshots.map((shot, i) => (
+              <PhoneFrame key={shot.src} src={shot.src} alt={shot.alt} className={i === 1 ? "z-10 w-[38%] sm:w-[36%]" : "w-[30%] translate-y-6 opacity-95 sm:w-[29%]"} priority={i === 1} />
+            ))}
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function PhoneFrame({ src, alt, className, priority }: { src: string; alt: string; className: string; priority?: boolean }) {
+  return (
+    <div className={`rounded-[2rem] border border-black/10 bg-neutral-900 p-1.5 dark:border-white/15 shadow-2xl shadow-primary/15 sm:rounded-[2.4rem] sm:p-2 ${className}`}>
+      <Image src={src} alt={alt} width={660} height={1434} sizes="(min-width: 1024px) 220px, 34vw" priority={priority} className="aspect-[1320/2868] w-full rounded-[1.6rem] bg-muted object-cover sm:rounded-[2rem]" />
+    </div>
+  );
+}
+
+/** Apple's badge, drawn inline so it follows the theme; a link only once the app is live. */
+function AppStoreBadge() {
+  const badge = (
+    <span className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-foreground px-4 text-background">
+      <svg viewBox="0 0 384 512" className="size-6 fill-current" aria-hidden>
+        <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+      </svg>
+      <span className="text-left leading-none">
+        <span className="block text-[10px] font-medium opacity-80">{IOS_APP.available ? "Download on the" : "Coming soon to the"}</span>
+        <span className="block text-lg font-semibold tracking-tight">App Store</span>
+      </span>
+    </span>
+  );
+  if (!IOS_APP.available) return <span aria-label="Coming soon to the App Store">{badge}</span>;
+  return (
+    <a href={IOS_APP.appStoreUrl} target="_blank" rel="noopener noreferrer" aria-label="Download FreeMathCamp on the App Store" className="transition-opacity hover:opacity-85">
+      {badge}
+    </a>
   );
 }
 

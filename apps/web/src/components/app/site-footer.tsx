@@ -11,10 +11,12 @@ const PAGE_LINKS = [
   { href: "#features", label: "How it teaches" },
   { href: "#course", label: "The course" },
   { href: "#engine", label: "The engine" },
+  { href: "#app", label: "iPhone app" },
   { href: "#faq", label: "Questions" },
 ] as const;
 
 const LEGAL_LINKS = [
+  { href: "/support", label: "Support" },
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
   { href: "/privacy#united-states", label: "Do not sell or share" },
@@ -84,7 +86,7 @@ export function SiteFooter() {
           <div className={cn("grid gap-10 sm:grid-cols-2 lg:col-span-7", onHome && "sm:grid-cols-3")}>
             <FooterColumn label="Course" links={courseLinks} pathname={pathname} />
             {onHome ? <FooterColumn label="On this page" links={PAGE_LINKS} pathname={pathname} /> : null}
-            <FooterColumn label="Legal" links={LEGAL_LINKS} pathname={pathname} />
+            <FooterColumn label="Help and legal" links={LEGAL_LINKS} pathname={pathname} />
           </div>
         </div>
         <p className="mt-14 border-t pt-6 text-sm text-muted-foreground">Copyright © {AUTHOR.name}. All rights reserved.</p>

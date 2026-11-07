@@ -85,3 +85,19 @@ export const lessonDescription = (ref: ExerciseRef) => {
 };
 
 export const allCourses: Course[] = courses;
+
+/**
+ * The iOS app. While `available` is false the landing page says it's coming
+ * soon; set it to true once the App Store listing is live and the badge links
+ * to the store. The screenshots shown on the landing page live in
+ * public/app/ (see public/app/README.md for sizes).
+ */
+export const IOS_APP = {
+  available: false,
+  appStoreUrl: "https://apps.apple.com/app/id6829382170",
+  screenshots: [
+    { src: "/app/iphone-1.png", alt: "Today's plan in the FreeMathCamp app, with the daily goal, streak and the next lessons to practise" },
+    { src: "/app/iphone-2.png", alt: "A lesson in the FreeMathCamp app, with an interactive graph and typeset maths" },
+    { src: "/app/iphone-3.png", alt: "Progress in the FreeMathCamp app: problems solved, accuracy, streak and daily activity" },
+  ],
+} as const;

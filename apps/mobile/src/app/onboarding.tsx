@@ -58,7 +58,13 @@ export default function Onboarding() {
         ))}
       </View>
       <Animated.View key={step} entering={FadeIn.duration(300)} exiting={FadeOut.duration(150)} style={{ flex: 1, gap: 18 }}>
-        <Image source={current.image} contentFit="cover" style={{ width: "100%", aspectRatio: 16 / 10, borderRadius: radius["2xl"], borderWidth: 1, borderColor: c.border }} />
+        {/* Portrait crops of the app's own screens (4:5); capped so the text still fits on small phones. */}
+        <Image
+          source={current.image}
+          contentFit="cover"
+          contentPosition="top"
+          style={{ width: "100%", aspectRatio: 4 / 5, maxHeight: "52%", alignSelf: "center", borderRadius: radius["2xl"], borderWidth: 1, borderColor: c.border, backgroundColor: c.muted }}
+        />
         <Text variant="display" style={{ fontSize: 34, lineHeight: 38 }}>
           {current.title}
         </Text>

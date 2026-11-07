@@ -35,7 +35,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy policy"
-      updated="1 November 2026"
+      updated="7 November 2026"
       sections={SECTIONS}
       lede={
         <>
@@ -100,6 +100,10 @@ export default function PrivacyPage() {
         <p>
           Google sign-in is optional. If you use it, we ask Google for the openid, email and profile scopes. We receive Google’s user id, your name, a verified email address, and a picture link when Google sends one. An email Google has not verified is not used to create or link an account. The user id stays on the account, so a later change of email still signs you into the same account. We do not receive a password from Google. Google is a separate controller for its own service. Its notice is <LegalLink href="https://policies.google.com/privacy">Google’s privacy policy</LegalLink>.
         </p>
+        <LegalSubhead>Apple</LegalSubhead>
+        <p>
+          Sign in with Apple is optional, and offered in the iPhone and iPad app. We receive Apple’s user id for this app, an email address (your own, or a private relay address if you choose to hide yours), and your name the first time you sign in, if you share it. We also keep a token Apple issues for the sign-in, so that deleting your account can tell Apple to end the app’s access to your Apple ID. We do not receive a password from Apple. Apple is a separate controller for its own service. Its notice is <LegalLink href="https://www.apple.com/legal/privacy/">Apple’s privacy policy</LegalLink>.
+        </p>
         <LegalSubhead>Learning record</LegalSubhead>
         <p>Practice is generated for you. For each session we store the course, the lesson, the mode (learn, review or challenge), the problem seeds and difficulty, when it started and finished, and the mastery estimate before and after.</p>
         <p>For each problem we store your answer, whether it was right, how long it took, how many attempts were wrong, whether you used a hint or revealed the solution, a struggle score, and the mastery estimate after that problem. Across a lesson we store mastery, struggle, items seen, clean solves, review timing, and when you last opened the lesson.</p>
@@ -129,8 +133,8 @@ export default function PrivacyPage() {
         <p>
           Account details, sessions, the learning record, and the notices that make the course work are used to provide the lessons, the practice, the progress page, and the daily plan. The basis is contract, Article 6(1)(b). You ask for an account, and this is the data needed to provide it. The learning record evaluates how the maths is going. That is profiling in the data-protection sense, and it stays inside the course.
         </p>
-        <LegalSubhead>Google sign-in</LegalSubhead>
-        <p>When you use the Google button, we use the profile fields Google sends so we can open or link your account. The basis is the same contract, limited to that sign-in.</p>
+        <LegalSubhead>Google and Apple sign-in</LegalSubhead>
+        <p>When you use the Google or Apple button, we use the profile fields they send so we can open or link your account. The basis is the same contract, limited to that sign-in.</p>
         <LegalSubhead>Security and abuse</LegalSubhead>
         <p>
           We use the account, the session’s IP address and user agent, and short-lived host logs to keep the service up, protect accounts, tell you about a new sign-in, and stop misuse. The basis is legitimate interests, Article 6(1)(f). The interest is a free course that stays available, and an account that stays yours. You can object. We will stop unless we have a compelling reason to continue, such as investigating abuse of the service.
@@ -181,11 +185,14 @@ export default function PrivacyPage() {
             <span className="text-foreground">fmc:flash</span> in session storage. A one-line message after a full-page redirect, such as account deletion. It is read once and removed.
           </li>
         </ul>
+        <p>
+          In the iPhone and iPad app, the session token is kept in the iOS keychain instead of a cookie, and the app keeps your theme and sound choices on the device. The app has no advertising or analytics SDKs, and it does not track you across other companies’ apps or websites.
+        </p>
         <p>A push subscription, if you allow notifications, is stored on our server as described above. The browser or the phone keeps its own copy of that subscription.</p>
       </LegalSection>
 
       <LegalSection id="sharing" title="Who else handles it">
-        <p>We do not sell personal data. We do not share it for cross-context behavioural advertising. The organisations below handle it so the course can run. They are processors, except Google, which is a separate controller for Google sign-in, and the push service, which delivers a message you allowed.</p>
+        <p>We do not sell personal data. We do not share it for cross-context behavioural advertising. The organisations below handle it so the course can run. They are processors, except Google and Apple, which are separate controllers for their own sign-in, and the push service, which delivers a message you allowed.</p>
         <ul className={list}>
           <li>
             <span className="text-foreground">Vercel</span> hosts the website. It processes requests so pages load. Its notice is <LegalLink href="https://vercel.com/legal/privacy-policy">Vercel’s privacy policy</LegalLink>.
@@ -198,6 +205,9 @@ export default function PrivacyPage() {
           </li>
           <li>
             <span className="text-foreground">Google</span>, if you choose Google sign-in. A picture link is loaded by your browser from the site that hosts the picture, and that site sees the request.
+          </li>
+          <li>
+            <span className="text-foreground">Apple</span>, if you choose Sign in with Apple in the app. When you delete your account, we ask Apple to revoke the app’s access to your Apple ID.
           </li>
           <li>
             <span className="text-foreground">A push service</span>, if you allow notifications. That is the browser’s push service, or Apple Push Notification service on an iPhone. It sees the device address and the message it delivers. We do not give it your learning record as a profile.

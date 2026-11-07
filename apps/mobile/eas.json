@@ -49,7 +49,8 @@
   "submit": {
     "production": {
       "ios": {
-        "ascAppId": "6829382170"
+        "ascAppId": "6829382170",
+        "metadataPath": "./store.config.js"
       }
     }
   }

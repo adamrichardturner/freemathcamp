@@ -77,7 +77,8 @@
     "submit:ios": "npx eas-cli@latest submit --platform ios --profile production --path build/FreeMathCamp.ipa",
     "release:ios": "pnpm build:ios && pnpm submit:ios",
     "archive:ios": "bash scripts/archive-ios.sh",
-    "katex-css": "node scripts/katex-css.mjs"
+    "katex-css": "node scripts/katex-css.mjs",
+    "store:push": "npx eas-cli@latest metadata:push --profile production"
   },
   "private": true
 }
