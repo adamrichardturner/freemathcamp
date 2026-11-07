@@ -18,11 +18,14 @@ export default function LessonContent({
   source,
   scheme,
   onReady,
+  onExpandVisual,
 }: {
   source: { kind: "lesson"; courseId: string; exerciseId: string } | { kind: "article"; slug: string };
   scheme: "light" | "dark";
   /** Called once fonts are in and the content has laid out, so the screen can reveal it without a jump. */
   onReady?: () => Promise<void>;
+  /** Opens the visual at this block index full screen, where it can be zoomed. */
+  onExpandVisual?: (index: number) => Promise<void>;
   dom?: DOMProps;
 }) {
   useScheme(scheme);
@@ -31,7 +34,7 @@ export default function LessonContent({
   if (!blocks) return null;
   return (
     <div className="px-4 pt-1 pb-4" style={screenWidth}>
-      <Blocks blocks={blocks} />
+      <Blocks blocks={blocks} onExpandVisual={onExpandVisual ? (i) => void onExpandVisual(i) : undefined} />
     </div>
   );
 }

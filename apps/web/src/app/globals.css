@@ -180,6 +180,11 @@
   border-radius: var(--radius);
 }
 
+/* Mafs claims every touch on a graph; one that doesn't pan or zoom leaves swipes to scroll the page (its draggable points keep their own). */
+[data-graph="still"] .MafsView {
+  touch-action: pan-x pan-y;
+}
+
 .katex {
   font-size: 1.08em;
 }

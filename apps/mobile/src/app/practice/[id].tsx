@@ -8,6 +8,7 @@ import Animated, { FadeIn, FadeInDown, FadeInRight, FadeOutLeft, useAnimatedStyl
 import { SafeAreaView } from "react-native-safe-area-context";
 import { domProps } from "@/components/rich";
 import { SessionSummaryView } from "@/components/session-summary";
+import { useVisualViewer } from "@/components/visual-viewer";
 import { Button, Card, Icon, Input, Text } from "@/components/ui";
 import ProblemContent from "@/dom/problem-content";
 import { api, type AttemptResponse, type PracticeItem, type PracticeMode, type Resolution, type RevealResponse, type SessionSummary, type StartPracticeResponse } from "@/lib/api";
@@ -231,9 +232,11 @@ function ProblemCard({
     attempt.mutate(value);
   };
   const preview = !isChoice && answer.trim() ? evaluate(answer.replace(/%\s*$/, "")) : null;
+  const zoom = useVisualViewer();
 
   return (
     <View style={{ flex: 1 }}>
+      {zoom.viewer}
       <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 16 }}>
         <Animated.View style={shakeStyle}>
           <Card style={{ padding: 16, gap: 16 }}>
@@ -252,6 +255,7 @@ function ProblemCard({
                 void Haptics.selectionAsync();
                 setChoice(i);
               }}
+              onExpandVisual={async (solution) => zoom.open({ kind: "problem", courseId: COURSE_ID, exerciseId, seed: item.seed, level: item.level, solution })}
               dom={domProps}
             />
             {!isChoice && (
