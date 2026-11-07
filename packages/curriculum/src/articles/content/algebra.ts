@@ -74,7 +74,7 @@ export const algebra = [
       rule("Distributive property", r`a(b + c) = ab + ac`),
       heading("See it as area"),
       text("A rectangle $3$ wide and $5 + 2$ long can be measured all at once, $3 \\times 7$, or in two pieces, $3 \\times 5$ plus $3 \\times 2$. The area is the same either way."),
-      visual({ type: "areaModel", a: 23, b: 14 }, "Splitting both sides by place value: $23 \\times 14 = 200 + 30 + 80 + 12 = 322$."),
+      visual({ type: "areaModel", a: 23, b: 14 }, "Split both numbers by place value: each rectangle is one partial product, and together they make the whole."),
       text("This **area model** is the same picture used for long multiplication, and it carries straight over to algebra, where some of the side lengths are letters."),
       heading("Expanding brackets"),
       text("To expand a bracket, multiply the term outside by **every** term inside."),

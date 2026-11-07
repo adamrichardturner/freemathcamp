@@ -2,7 +2,8 @@
 /**
  * Turns raw simulator captures (store/screenshots/raw/<device>/<name>.png) into
  * App Store screenshots: the app in a device frame on the landing page's
- * gradients, under a headline set in the app's display serif.
+ * gradients, under a headline set in the app's display serif, with generated
+ * artwork (art.mjs) behind the headline and floating across the device.
  *
  *   node store/compose/compose.mjs            # every device
  *   node store/compose/compose.mjs duo        # one device
@@ -15,6 +16,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { backdrop, cards } from "./art.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const mobile = resolve(here, "../..");
@@ -83,6 +85,8 @@ try {
         .replace("{{THEME}}", shot.theme)
         .replace("{{TITLE}}", headline(shot.title))
         .replace("{{SUB}}", escape(shot.sub))
+        .replace("{{BACKDROP}}", backdrop(shot.name))
+        .replace("{{CARDS}}", cards(shot.name))
         .replace("{{SCREEN}}", pathToFileURL(screen).href)
         .replace("{{SERIF}}", fonts.serif)
         .replace("{{SERIF_ITALIC}}", fonts.serifItalic)

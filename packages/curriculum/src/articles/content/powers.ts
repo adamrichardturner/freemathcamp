@@ -21,7 +21,7 @@ export const powers = [
       text("We read $b^n$ as \"$b$ to the power $n$\" or \"$b$ to the $n$th\"."),
       heading("Squares and cubes"),
       text("Two powers have their own names, and the names come from geometry. A square with side $3$ is made of $3^2 = 9$ unit squares. A cube with side $3$ holds $3^3 = 27$ unit cubes."),
-      visual({ type: "exponentBlocks", base: 3, exponent: 3 }, "$3^1$ is a row, $3^2$ a square, $3^3$ a cube of $27$ blocks."),
+      visual({ type: "exponentBlocks", base: 3, exponent: 3 }, "$3^1$ is a row, $3^2$ a square, $3^3$ a cube."),
       heading("How fast powers grow"),
       text("Each extra power multiplies by the base again, so powers grow astonishingly fast. Doubling $1$ thirty times gives over a billion."),
       visual({ type: "sequenceBars", terms: [2, 4, 8, 16, 32, 64, 128] }, "Powers of two: $2^1$ to $2^7$. Each bar is double the last."),

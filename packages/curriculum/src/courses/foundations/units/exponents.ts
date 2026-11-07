@@ -30,7 +30,7 @@ export const exponents: Unit = {
       keyIdeas: ["$b^n$ multiplies $b$ by itself $n$ times.", "$(-2)^2 = 4$ but $-2^2 = -4$."],
       lesson: [
         text("An **exponent** tells you how many times to multiply the **base** by itself. $2^5 = 2\\times2\\times2\\times2\\times2 = 32$."),
-        visual({ type: "exponentBlocks", base: 3, exponent: 3 }, "$3^1$ is a row, $3^2$ a square, $3^3$ a cube: $27$ unit blocks."),
+        visual({ type: "exponentBlocks", base: 3, exponent: 3 }, "$3^1$ is a row, $3^2$ a square, $3^3$ a cube."),
         math(r`\underbrace{b \times b \times \cdots \times b}_{n \text{ times}} = b^n`),
         warn("Brackets matter: $(-3)^2 = 9$, but $-3^2 = -(3^2) = -9$. The exponent only touches what it's attached to."),
       ],
