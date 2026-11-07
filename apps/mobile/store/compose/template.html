@@ -12,6 +12,7 @@
   @font-face { font-family: "Instrument Serif"; font-style: italic; src: url("{{SERIF_ITALIC}}"); }
   @font-face { font-family: "Geist"; src: url("{{SANS}}"); }
   @font-face { font-family: "Geist"; font-weight: 500; src: url("{{SANS_MEDIUM}}"); }
+  @font-face { font-family: "Geist"; font-weight: 600; src: url("{{SANS_SEMIBOLD}}"); }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: {{W}}px; height: {{H}}px; overflow: hidden; }
@@ -47,19 +48,34 @@
 
   /* ---- Headline ---- */
   header { position: absolute; left: 0; right: 0; top: var(--top); display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 7vw; }
-  .chip { display: inline-flex; align-items: center; gap: 1.3vw; padding: 0.9vw 2.4vw 0.9vw 1vw; border-radius: 99vw; font-weight: 500; font-size: var(--chip); letter-spacing: 0.01em; }
-  .chip img { width: calc(var(--chip) * 1.7); height: calc(var(--chip) * 1.7); border-radius: 22%; }
+  /*
+   * The site header's logo (apps/web/src/components/app/logo.tsx): the mark, a
+   * rounded square from primary to chart-4 with the rising line, then the name in
+   * Geist semibold, tracking-tight, "Camp" in primary. It sits on a pill of the
+   * header's own glass so the colours read as they do on the site.
+   */
+  .chip { display: inline-flex; align-items: center; gap: calc(var(--chip) * 0.48); padding: calc(var(--chip) * 0.42) calc(var(--chip) * 1.05) calc(var(--chip) * 0.42) calc(var(--chip) * 0.42);
+    border-radius: 99vw; font-weight: 600; font-size: var(--chip); letter-spacing: -0.025em; line-height: 1;
+    --fg: oklch(0.21 0.03 272); --primary: oklch(0.52 0.22 277); --chart-4: oklch(0.64 0.2 15); --on-primary: oklch(0.985 0.01 270);
+    background: oklch(0.99 0.004 270 / 0.9); border: 0.12vw solid oklch(0.915 0.014 272); color: var(--fg);
+    box-shadow: 0 0.6vw 2vw rgba(18, 14, 70, 0.16); }
+  .chip .camp { color: var(--primary); }
+  .mark { display: grid; place-items: center; width: calc(var(--chip) * 1.9); height: calc(var(--chip) * 1.9); border-radius: calc(var(--chip) * 0.71);
+    background: linear-gradient(to bottom right, var(--primary), var(--chart-4)); color: var(--on-primary);
+    box-shadow: 0 calc(var(--chip) * 0.06) calc(var(--chip) * 0.12) color-mix(in oklch, var(--primary) 30%, transparent); }
+  .mark svg { width: 62.5%; height: 62.5%; }
+  /* Dark mode, as the site's .dark tokens. */
+  .night .chip { --fg: oklch(0.96 0.01 272); --primary: oklch(0.72 0.16 280); --chart-4: oklch(0.7 0.18 15); --on-primary: oklch(0.17 0.03 276);
+    background: oklch(0.155 0.02 276 / 0.78); border-color: oklch(1 0 0 / 0.12); box-shadow: 0 0.6vw 2vw rgba(0, 0, 0, 0.35); }
   h1 { max-width: var(--h1max, 86vw); margin-top: var(--gap); font-family: "Instrument Serif", serif; font-weight: 400; font-size: var(--h1); line-height: 1.02; letter-spacing: -0.015em; text-wrap: balance; }
   h1 em { font-style: italic; padding: 0 0.08em; margin: 0 -0.08em; -webkit-background-clip: text; background-clip: text; color: transparent; }
   p { margin-top: calc(var(--gap) * 0.8); font-size: var(--sub); line-height: 1.35; text-wrap: balance; }
 
   .indigo, .night { color: #fff; }
-  .indigo .chip, .night .chip { background: rgba(255, 255, 255, 0.14); border: 0.12vw solid rgba(255, 255, 255, 0.22); }
   .indigo h1 em { background-image: linear-gradient(90deg, #ffe08a, #ffb4c6); }
   .night h1 em { background-image: linear-gradient(90deg, #9296ff, #f9667a); }
   .indigo p, .night p { color: rgba(255, 255, 255, 0.8); }
   .aurora { color: #131726; }
-  .aurora .chip { background: rgba(255, 255, 255, 0.8); border: 0.12vw solid #dfe3ed; }
   .aurora h1 em { background-image: linear-gradient(90deg, #524ce3, #ec4764); }
   .aurora p { color: #5d6375; }
 
@@ -76,13 +92,13 @@
   .aurora .halo { background: rgba(82, 76, 227, 0.16); }
   .night .halo { background: rgba(146, 150, 255, 0.14); }
 
-  .phone { --h1max: 80vw; --top: 6.5vw; --chip: 2.8vw; --h1: 11vw; --sub: 3.7vw; --gap: 2.4vw; }
+  .phone { --h1max: 80vw; --top: 6.5vw; --chip: 3.4vw; --h1: 11vw; --sub: 3.7vw; --gap: 2.4vw; }
   .phone .device { width: 72.5vw; top: 54.5vw; --bezel: 1.7vw; --r: 10.6vw; }
 
-  .tablet { --top: 4.6vw; --chip: 1.7vw; --h1: 6.4vw; --sub: 2.3vw; --gap: 1.6vw; }
+  .tablet { --top: 4.6vw; --chip: 2vw; --h1: 6.4vw; --sub: 2.3vw; --gap: 1.6vw; }
   .tablet .device { width: 77vw; top: 28.5vw; --bezel: 1.5vw; --r: 3.6vw; }
 
-  .duo { --top: 6vw; --chip: 2.3vw; --h1: 8vw; --sub: 3vw; --gap: 2.2vw; }
+  .duo { --top: 6vw; --chip: 2.8vw; --h1: 8vw; --sub: 3vw; --gap: 2.2vw; }
   .duo .device { width: 70vw; top: 38vw; --bezel: 1.5vw; --r: 5.4vw; }
 
   .tablet .island, .duo .island { display: none; }
@@ -93,7 +109,7 @@
   <div class="dots"></div>
   <div class="halo"></div>
   <header>
-    <span class="chip"><img src="{{LOGO}}" alt="" />FreeMathCamp</span>
+    <span class="chip"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18 L10 6 L14 14 L20 4" /><circle cx="20" cy="4" r="2.3" fill="currentColor" stroke="none" /></svg></span><span>FreeMath<span class="camp">Camp</span></span></span>
     <h1>{{TITLE}}</h1>
     <p>{{SUB}}</p>
   </header>
