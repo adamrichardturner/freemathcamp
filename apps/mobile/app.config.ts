@@ -30,12 +30,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   backgroundColor: "#fbfcff",
   ios: {
     bundleIdentifier: BUNDLE_ID,
+    // A full-bleed 1024 square with no transparency (the App Store icon), plus the
+    // variants iOS shows when the home screen is set to dark or tinted icons.
+    icon: { light: "./assets/images/icon.png", dark: "./assets/images/icon-dark.png", tinted: "./assets/images/icon-tinted.png" },
     supportsTablet: true,
     usesAppleSignIn: true,
     appleTeamId: process.env.APPLE_TEAM_ID || undefined,
     config: { usesNonExemptEncryption: false },
     infoPlist: {
-      CFBundleDisplayName: "FreeMathCamp",
+      // The name under the icon on the home screen; the App Store name stays FreeMathCamp.
+      CFBundleDisplayName: "Math",
       UIBackgroundModes: ["remote-notification"],
     },
     privacyManifests: {
