@@ -1,0 +1,105 @@
+<!doctype html>
+<!--
+  One App Store screenshot, rendered by compose.mjs at {{W}}×{{H}}. Sizes are in
+  vw, so the same design scales to every device. Colours are the app's tokens
+  (src/lib/theme.ts) and the landing page's hero: indigo to rose, dots, glows.
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  @font-face { font-family: "Instrument Serif"; src: url("{{SERIF}}"); }
+  @font-face { font-family: "Instrument Serif"; font-style: italic; src: url("{{SERIF_ITALIC}}"); }
+  @font-face { font-family: "Geist"; src: url("{{SANS}}"); }
+  @font-face { font-family: "Geist"; font-weight: 500; src: url("{{SANS_MEDIUM}}"); }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: {{W}}px; height: {{H}}px; overflow: hidden; }
+  body { position: relative; font-family: "Geist", sans-serif; -webkit-font-smoothing: antialiased; }
+
+  /* ---- Backgrounds ---- */
+  .bg, .dots, .glow { position: absolute; inset: 0; }
+  .indigo .bg {
+    background:
+      radial-gradient(110vw 80vw at 12% -5%, #7466ff 0%, transparent 62%),
+      radial-gradient(100vw 90vw at 105% 108%, rgba(236, 71, 100, 0.85) 0%, transparent 60%),
+      radial-gradient(70vw 60vw at -10% 85%, rgba(0, 173, 157, 0.35) 0%, transparent 65%),
+      linear-gradient(165deg, #3a2fc6 0%, #524ce3 45%, #7445cf 100%);
+  }
+  .aurora .bg {
+    background:
+      radial-gradient(90vw 70vw at 8% -4%, rgba(82, 76, 227, 0.26) 0%, transparent 65%),
+      radial-gradient(70vw 70vw at 100% 22%, rgba(0, 173, 157, 0.16) 0%, transparent 65%),
+      radial-gradient(100vw 80vw at 60% 110%, rgba(236, 71, 100, 0.14) 0%, transparent 65%),
+      #fbfcff;
+  }
+  .night .bg {
+    background:
+      radial-gradient(100vw 80vw at 15% -5%, rgba(146, 150, 255, 0.36) 0%, transparent 62%),
+      radial-gradient(90vw 80vw at 105% 105%, rgba(249, 102, 122, 0.28) 0%, transparent 62%),
+      radial-gradient(60vw 50vw at -5% 70%, rgba(4, 197, 181, 0.16) 0%, transparent 65%),
+      #0a0b15;
+  }
+  .dots { background-size: 3.2vw 3.2vw; -webkit-mask-image: radial-gradient(ellipse 85% 45% at 50% 0%, #000 0%, transparent 100%); }
+  .indigo .dots { background-image: radial-gradient(rgba(255, 255, 255, 0.2) 0.16vw, transparent 0.19vw); }
+  .aurora .dots { background-image: radial-gradient(rgba(82, 76, 227, 0.16) 0.16vw, transparent 0.19vw); }
+  .night .dots { background-image: radial-gradient(rgba(255, 255, 255, 0.1) 0.16vw, transparent 0.19vw); }
+
+  /* ---- Headline ---- */
+  header { position: absolute; left: 0; right: 0; top: var(--top); display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 7vw; }
+  .chip { display: inline-flex; align-items: center; gap: 1.3vw; padding: 0.9vw 2.4vw 0.9vw 1vw; border-radius: 99vw; font-weight: 500; font-size: var(--chip); letter-spacing: 0.01em; }
+  .chip img { width: calc(var(--chip) * 1.7); height: calc(var(--chip) * 1.7); border-radius: 22%; }
+  h1 { max-width: var(--h1max, 86vw); margin-top: var(--gap); font-family: "Instrument Serif", serif; font-weight: 400; font-size: var(--h1); line-height: 1.02; letter-spacing: -0.015em; text-wrap: balance; }
+  h1 em { font-style: italic; padding: 0 0.08em; margin: 0 -0.08em; -webkit-background-clip: text; background-clip: text; color: transparent; }
+  p { margin-top: calc(var(--gap) * 0.8); font-size: var(--sub); line-height: 1.35; text-wrap: balance; }
+
+  .indigo, .night { color: #fff; }
+  .indigo .chip, .night .chip { background: rgba(255, 255, 255, 0.14); border: 0.12vw solid rgba(255, 255, 255, 0.22); }
+  .indigo h1 em { background-image: linear-gradient(90deg, #ffe08a, #ffb4c6); }
+  .night h1 em { background-image: linear-gradient(90deg, #9296ff, #f9667a); }
+  .indigo p, .night p { color: rgba(255, 255, 255, 0.8); }
+  .aurora { color: #131726; }
+  .aurora .chip { background: rgba(255, 255, 255, 0.8); border: 0.12vw solid #dfe3ed; }
+  .aurora h1 em { background-image: linear-gradient(90deg, #524ce3, #ec4764); }
+  .aurora p { color: #5d6375; }
+
+  /* ---- Devices ---- */
+  .device { position: absolute; left: 50%; transform: translateX(-50%); padding: var(--bezel); border-radius: var(--r);
+    background: linear-gradient(145deg, #3a3d4b 0%, #121319 22%, #0a0b10 60%, #2b2e3a 100%);
+    box-shadow: inset 0 0 0 0.18vw rgba(255, 255, 255, 0.14), 0 3vw 8vw rgba(18, 14, 70, 0.38), 0 1vw 2.4vw rgba(18, 14, 70, 0.22); }
+  .device img.screen { display: block; width: 100%; border-radius: calc(var(--r) - var(--bezel)); }
+  .night .device { box-shadow: inset 0 0 0 0.18vw rgba(255, 255, 255, 0.16), 0 3vw 10vw rgba(146, 150, 255, 0.22), 0 1vw 3vw rgba(0, 0, 0, 0.5); }
+  .island { position: absolute; left: 50%; transform: translateX(-50%); top: calc(var(--bezel) + 1.25%); width: 25%; height: 2.7%; border-radius: 99vw; background: #000; }
+  /* A glow behind each device, so it lifts off the background. */
+  .halo { position: absolute; left: 50%; transform: translateX(-50%); width: 110vw; height: 70vw; bottom: -20vw; border-radius: 50%; filter: blur(6vw); }
+  .indigo .halo { background: rgba(255, 255, 255, 0.18); }
+  .aurora .halo { background: rgba(82, 76, 227, 0.16); }
+  .night .halo { background: rgba(146, 150, 255, 0.14); }
+
+  .phone { --h1max: 80vw; --top: 6.5vw; --chip: 2.8vw; --h1: 11vw; --sub: 3.7vw; --gap: 2.4vw; }
+  .phone .device { width: 72.5vw; top: 54.5vw; --bezel: 1.7vw; --r: 10.6vw; }
+
+  .tablet { --top: 4.6vw; --chip: 1.7vw; --h1: 6.4vw; --sub: 2.3vw; --gap: 1.6vw; }
+  .tablet .device { width: 77vw; top: 28.5vw; --bezel: 1.5vw; --r: 3.6vw; }
+
+  .duo { --top: 6vw; --chip: 2.3vw; --h1: 8vw; --sub: 3vw; --gap: 2.2vw; }
+  .duo .device { width: 70vw; top: 38vw; --bezel: 1.5vw; --r: 5.4vw; }
+
+  .tablet .island, .duo .island { display: none; }
+</style>
+</head>
+<body class="{{FRAME}} {{THEME}}">
+  <div class="bg"></div>
+  <div class="dots"></div>
+  <div class="halo"></div>
+  <header>
+    <span class="chip"><img src="{{LOGO}}" alt="" />FreeMathCamp</span>
+    <h1>{{TITLE}}</h1>
+    <p>{{SUB}}</p>
+  </header>
+  <div class="device">
+    <img class="screen" src="{{SCREEN}}" alt="" />
+    <div class="island"></div>
+  </div>
+</body>
+</html>
