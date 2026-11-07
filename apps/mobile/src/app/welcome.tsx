@@ -8,15 +8,17 @@ import { SocialSignIn } from "@/components/social-sign-in";
 import { Button, Icon, Text } from "@/components/ui";
 import { course, graph } from "@/lib/course";
 import { alpha, fonts, useTheme } from "@/lib/theme";
+import { useLayout, widths } from "@/lib/layout";
 
 /** The landing page, phone-sized: what FreeMathCamp is, and the ways in. */
 export default function Welcome() {
   const { c } = useTheme();
+  const { wide } = useLayout();
   const points = [`${course.units.length} units`, `${graph.refs.length} lessons`, "Unlimited practice", "Free, no ads"];
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <LinearGradient colors={[alpha(c.primary, 0.22), alpha(c.chart2, 0.08), alpha(c.background, 0)]} locations={[0, 0.45, 1]} style={{ position: "absolute", top: 0, left: 0, right: 0, height: 520 }} />
-      <SafeAreaView style={{ flex: 1, paddingHorizontal: 24, justifyContent: "space-between" }}>
+      <SafeAreaView style={{ flex: 1, paddingHorizontal: 24, justifyContent: wide ? "center" : "space-between", gap: wide ? 48 : 0, width: "100%", maxWidth: widths.form + 80, alignSelf: "center" }}>
         <Animated.View entering={FadeInDown.duration(500)} style={{ gap: 18, paddingTop: 40 }}>
           <Image source={require("../../assets/images/logo-mark.png")} style={{ width: 64, height: 64 }} />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", borderRadius: 999, borderWidth: 1, borderColor: c.border, backgroundColor: alpha(c.card, 0.7), paddingHorizontal: 10, paddingVertical: 5 }}>

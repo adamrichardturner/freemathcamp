@@ -3,7 +3,7 @@ import * as Application from "expo-application";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState, type ReactNode } from "react";
-import { Alert, Appearance, Linking, Share, Switch, View, useColorScheme } from "react-native";
+import { Alert, Appearance, Linking, Platform, Share, Switch, View, useColorScheme } from "react-native";
 import { MODE_META, useSetLearningMode } from "@/components/learning-mode";
 import { Segmented } from "@/components/segmented";
 import { Button, Card, Field, Icon, IconChip, Input, Row, Screen, Separator, Text, type SymbolName } from "@/components/ui";
@@ -16,14 +16,18 @@ import { keys, useAccountSettings, useApplyUser, useInvalidateLearner, useLeague
 import { loadAppearance } from "@/lib/appearance";
 import { alpha, useTheme } from "@/lib/theme";
 import { toast } from "@/lib/toast";
+import { useLayout } from "@/lib/layout";
 
 /** The web's settings page, grouped the iOS way. */
+/** What to call the device in settings copy. */
+const DEVICE = Platform.OS === "ios" && Platform.isPad ? "iPad" : "iPhone";
+
 export default function Settings() {
   const { user } = useSession();
   const settings = useAccountSettings();
   if (!user) return null;
   return (
-    <Screen>
+    <Screen title="Settings">
       <Profile user={user} />
       <Course user={user} />
       <AppearanceGroup />
@@ -159,7 +163,7 @@ function AppearanceGroup() {
   const [pref, setPref] = useState<AppearancePref>("system");
   useEffect(() => void loadAppearance().then((s) => setPref(s ?? "system")), []);
   return (
-    <Group title="Appearance" footer={pref === "system" ? `Following your iPhone (${system === "dark" ? "dark" : "light"} now).` : undefined}>
+    <Group title="Appearance" footer={pref === "system" ? `Following your ${DEVICE} (${system === "dark" ? "dark" : "light"} now).` : undefined}>
       <View style={{ padding: 12 }}>
         <Segmented
           value={pref}
@@ -204,7 +208,7 @@ function Notifications({ user }: { user: User }) {
   };
   return (
     <Group title="Notifications" footer="Account and security notices are always sent. Reminders arrive at most once a day, between 9am and 8pm your time.">
-      <ToggleRow icon="bell.badge.fill" title="Push on this iPhone" value={!!push} onChange={(on) => void togglePush(on)} disabled={push === null} />
+      <ToggleRow icon="bell.badge.fill" title={`Push on this ${DEVICE}`} value={!!push} onChange={(on) => void togglePush(on)} disabled={push === null} />
       <Separator inset={58} />
       <ToggleRow icon="star.fill" title="Progress and milestones" subtitle="Lessons mastered, streaks, daily goal" value={value("progress")} onChange={(on) => prefs.mutate({ notifyProgress: on })} />
       <Separator inset={58} />
@@ -343,6 +347,7 @@ function Data({ user }: { user: User }) {
 
 function About() {
   const signOut = useSignOut();
+  const { wide } = useLayout();
   const open = (path: string) => void WebBrowser.openBrowserAsync(`${WEB_URL}${path}`, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
   return (
     <>
@@ -351,9 +356,9 @@ function About() {
         <Separator inset={58} />
         <Row leading={<IconChip name="doc.text.fill" size={30} tone="muted" />} title="Terms of use" onPress={() => open("/terms")} />
         <Separator inset={58} />
-        <Row leading={<IconChip name="envelope.fill" size={30} tone="muted" />} title="Contact us" onPress={() => void Linking.openURL("mailto:hello@freemathcamp.app")} />
+        <Row leading={<IconChip name="envelope.fill" size={30} tone="muted" />} title="Help and support" onPress={() => open("/support")} />
       </Group>
-      <Button title="Sign out" variant="destructive" size="lg" loading={signOut.isPending} onPress={() => signOut.mutate()} />
+      <Button title="Sign out" variant="destructive" size="lg" loading={signOut.isPending} onPress={() => signOut.mutate()} style={wide ? { alignSelf: "center", minWidth: 320 } : undefined} />
       <Text variant="caption" muted style={{ textAlign: "center" }}>
         FreeMathCamp {Application.nativeApplicationVersion} ({Application.nativeBuildVersion})
       </Text>

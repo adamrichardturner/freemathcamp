@@ -8,6 +8,7 @@ import { relative } from "@/lib/format";
 import { appHref } from "@/lib/links";
 import { useNotificationActions, useNotifications } from "@/lib/queries";
 import { alpha, useTheme, type Tone } from "@/lib/theme";
+import { useLayout, widths } from "@/lib/layout";
 
 const CATEGORY: Record<AppNotification["category"], { icon: SymbolName; tone: Tone }> = {
   account: { icon: "lock.shield.fill", tone: "info" },
@@ -18,6 +19,7 @@ const CATEGORY: Record<AppNotification["category"], { icon: SymbolName; tone: To
 /** The web's notification centre: all, unread and kept, with keep and dismiss on each. */
 export default function Notifications() {
   const { c } = useTheme();
+  const { gutter } = useLayout();
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const list = useNotifications(filter);
   const actions = useNotificationActions();
@@ -50,7 +52,7 @@ export default function Notifications() {
             ) : null,
         }}
       />
-      <View style={{ padding: 16, paddingBottom: 8 }}>
+      <View style={{ paddingTop: 16, paddingHorizontal: gutter(widths.readable), paddingBottom: 8 }}>
         <Segmented
           value={filter}
           onChange={setFilter}
@@ -64,7 +66,7 @@ export default function Notifications() {
       <FlatList
         data={items}
         keyExtractor={(n) => n.id}
-        contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingTop: 16, paddingHorizontal: gutter(widths.readable), gap: 10, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
         onEndReached={() => list.hasNextPage && !list.isFetchingNextPage && list.fetchNextPage()}
         ListEmptyComponent={

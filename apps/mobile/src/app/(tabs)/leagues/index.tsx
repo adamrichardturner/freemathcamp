@@ -11,13 +11,13 @@ export default function Leagues() {
   const { data, isLoading, refetch, isRefetching } = useLeague();
   if (isLoading || !data)
     return (
-      <Screen>
+      <Screen title="Leagues">
         <Skeleton height={180} />
         <Skeleton height={320} />
       </Screen>
     );
   return (
-    <Screen refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
+    <Screen title="Leagues" refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
       <Text muted>Weekly tables of learners at your level. Solve problems, earn XP, move up.</Text>
       {data.lastWeek && <LastWeek last={data.lastWeek} />}
       {data.optedIn ? <Standing league={data} /> : <Join league={data} />}

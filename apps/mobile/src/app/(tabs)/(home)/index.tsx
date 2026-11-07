@@ -7,13 +7,14 @@ import { LeagueCard } from "@/components/league";
 import { useOpenLesson } from "@/components/lesson-link";
 import { Segmented } from "@/components/segmented";
 import { queueMeta, unitSymbol } from "@/components/status";
-import { Card, CardHeader, Empty, Icon, MasteryRing, Pill, ProgressBar, Row, Screen, SectionTitle, Separator, Skeleton, Text, type SymbolName } from "@/components/ui";
+import { Card, CardHeader, Empty, Grid, Icon, MasteryRing, Pill, ProgressBar, Row, Screen, SectionTitle, Separator, Skeleton, Text, type SymbolName } from "@/components/ui";
 import { WeekBars } from "@/components/week-bars";
 import type { QueueKind, Recommendation } from "@/lib/api";
 import { course, exerciseRef } from "@/lib/course";
 import { greeting, minutes, shortMinutes } from "@/lib/format";
 import { plain } from "@/lib/plain";
 import { useCourseProgress, useDashboard, useNotificationCounts, useSession } from "@/lib/queries";
+import { useLayout, widths } from "@/lib/layout";
 import { alpha, radius, useTheme, type Tone } from "@/lib/theme";
 
 /** The web's dashboard (/learn): greeting, streak, stats, today's plan, queues, league and progress. */
@@ -23,6 +24,7 @@ export default function Home() {
   const { data: progress } = useCourseProgress();
   const counts = useNotificationCounts();
   const { c } = useTheme();
+  const { columns } = useLayout();
 
   // The welcome tour, once, as on the web after confirming the email.
   useEffect(() => {
@@ -60,7 +62,7 @@ export default function Home() {
   const isNew = stats.exercisesStarted === 0;
 
   return (
-    <Screen refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
+    <Screen width={widths.wide} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
       {header}
       <Animated.View entering={FadeInDown.duration(400)} style={{ gap: 4 }}>
         <Text variant="small" muted>
@@ -78,7 +80,7 @@ export default function Home() {
 
       <StreakBadge current={stats.streak.current} longest={stats.streak.longest} activeToday={stats.streak.activeToday} />
 
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+      <Grid columns={columns(2, 4)}>
         <StatCard icon="graduationcap.fill" tone="success" label="Mastered" value={`${stats.exercisesMastered}`} sub={`of ${stats.exercisesTotal} lessons`} />
         <StatCard icon="sparkles" tone="primary" label="Started" value={`${stats.exercisesStarted}`} sub="in progress or done" />
         <StatCard icon="calendar.badge.checkmark" tone="warning" label="Reviews due" value={`${stats.reviewsDue}`} sub="spaced for memory" />
@@ -90,30 +92,33 @@ export default function Home() {
           sub={stats.today.problems >= goal ? "Daily goal reached 🎉" : "toward your daily goal"}
           progress={Math.min(1, stats.today.problems / goal)}
         />
-      </View>
+      </Grid>
 
       <View style={{ gap: 12 }}>
         <SectionTitle title="Today's plan" />
         <Text variant="caption" muted style={{ marginTop: -8 }}>
           Mixed for you: review, repair and new ideas
         </Text>
-        {queues.plan.map((r, i) => (
-          <PlanCard key={r.exerciseId} rec={r} index={i} featured={i === 0} />
-        ))}
+        <Grid columns={columns(1, 2)}>
+          {queues.plan.map((r, i) => (
+            <PlanCard key={r.exerciseId} rec={r} index={i} featured={i === 0} />
+          ))}
+        </Grid>
       </View>
 
       <Queues queues={queues} />
 
       <LeagueCard />
 
-      <Card>
+      <Grid columns={columns(1, 2)}>
+      <Card style={{ flex: 1 }}>
         <CardHeader title="This week" subtitle="Problems per day" />
         <View style={{ padding: 16 }}>
           <WeekBars days={stats.week.map((d) => ({ day: d.day, value: d.problems }))} />
         </View>
       </Card>
 
-      <Card>
+      <Card style={{ flex: 1 }}>
         <CardHeader title="Time learning" icon="hourglass" iconTone="chart2" right={<Text variant="small" tone="primary" weight="medium" onPress={() => router.navigate("/progress")}>See trends</Text>} />
         <View style={{ padding: 16, gap: 16 }}>
           <View style={{ flexDirection: "row", gap: 28 }}>
@@ -133,6 +138,7 @@ export default function Home() {
           <WeekBars days={stats.time.week.map((d) => ({ day: d.day, value: d.minutes }))} format={shortMinutes} gradient={[c.chart2, c.chart1]} min={10} />
         </View>
       </Card>
+      </Grid>
 
       <Card>
         <CardHeader title="Course progress" right={<Text variant="small" tone="primary" weight="medium" onPress={() => router.navigate("/course")}>Open map</Text>} />
@@ -191,7 +197,7 @@ function StreakBadge({ current, longest, activeToday }: { current: number; longe
 
 function StatCard({ icon, tone, label, value, sub, progress }: { icon: SymbolName; tone: Tone; label: string; value: string; sub: string; progress?: number }) {
   return (
-    <Card style={{ flexBasis: "47%", flexGrow: 1, padding: 14, gap: 2 }}>
+    <Card style={{ flex: 1, padding: 14, gap: 2 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <Icon name={icon} size={14} tone={tone} />
         <Text variant="caption" muted weight="medium">
@@ -220,9 +226,9 @@ function PlanCard({ rec, index, featured }: { rec: Recommendation; index: number
   const m = queueMeta[rec.kind];
   const locked = isLocked(rec.exerciseId);
   return (
-    <Animated.View entering={FadeInDown.delay(index * 70).duration(400)}>
-      <Pressable onPress={() => open(rec.exerciseId, m.mode)} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }], opacity: locked ? 0.6 : 1 })}>
-        <Card featured={featured} style={{ padding: 16, gap: 4 }}>
+    <Animated.View entering={FadeInDown.delay(index * 70).duration(400)} style={{ flex: 1 }}>
+      <Pressable onPress={() => open(rec.exerciseId, m.mode)} style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.985 : 1 }], opacity: locked ? 0.6 : 1 })}>
+        <Card featured={featured} style={{ flex: 1, padding: 16, gap: 4 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
             <Pill label={m.label} tone={m.tone} icon={m.icon} />
             {rec.kind !== "next" && <MasteryRing value={rec.effectiveMastery} size={36} stroke={3.5} />}
@@ -241,7 +247,7 @@ function PlanCard({ rec, index, featured }: { rec: Recommendation; index: number
               Brush up: {rec.brushUp.map((id) => exerciseRef(id)?.exercise.title).join(", ")}
             </Text>
           )}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 10 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: "auto", paddingTop: 10 }}>
             <Text variant="caption" muted>
               ~{ref.exercise.estimatedMinutes} min
             </Text>

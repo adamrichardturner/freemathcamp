@@ -8,6 +8,7 @@ import { ApiError, api, type User } from "@/lib/api";
 import { keys, useApplyUser, useSession, useSignOut } from "@/lib/queries";
 import { useTheme } from "@/lib/theme";
 import { toast } from "@/lib/toast";
+import { widths } from "@/lib/layout";
 
 /**
  * Between sign-in and the app: confirm the email (practice needs it), then pick
@@ -20,7 +21,7 @@ export default function Setup() {
   return (
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: c.background }}>
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24, gap: 20 }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24, gap: 20, width: "100%", maxWidth: widths.form + 48, alignSelf: "center" }} keyboardShouldPersistTaps="handled">
           {!user.emailVerified ? <VerifyEmail user={user} /> : <ChooseUsername user={user} />}
         </ScrollView>
       </SafeAreaView>

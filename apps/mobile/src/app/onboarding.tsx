@@ -10,6 +10,7 @@ import { api, type User } from "@/lib/api";
 import { registerPush } from "@/lib/push";
 import { useApplyUser, useLeagueOptIn, useSession } from "@/lib/queries";
 import { radius, useTheme } from "@/lib/theme";
+import { widths } from "@/lib/layout";
 
 /** The web's three-step welcome tour, plus asking for notifications at the end. */
 const STEPS = [
@@ -51,7 +52,8 @@ export default function Onboarding() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.background, padding: 24, gap: 20 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.background }}>
+      <View style={{ flex: 1, padding: 24, gap: 20, width: "100%", maxWidth: widths.form + 48, alignSelf: "center" }}>
       <View style={{ flexDirection: "row", gap: 6, justifyContent: "center" }}>
         {STEPS.map((s, i) => (
           <View key={s.title} style={{ height: 6, width: i === step ? 28 : 6, borderRadius: 3, backgroundColor: i === step ? c.primary : c.muted }} />
@@ -74,6 +76,7 @@ export default function Onboarding() {
       <View style={{ flexDirection: "row", gap: 10 }}>
         {step > 0 && <Button title="Back" variant="outline" size="lg" style={{ flex: 1 }} onPress={() => setStep(step - 1)} />}
         <Button title={last ? "Start learning" : "Next"} iconRight={last ? undefined : "arrow.right"} size="lg" style={{ flex: 2 }} loading={finish.isPending} onPress={() => (last ? finish.mutate() : setStep(step + 1))} />
+      </View>
       </View>
     </SafeAreaView>
   );

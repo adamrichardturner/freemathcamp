@@ -1,9 +1,16 @@
 import { Stack } from "expo-router";
+import { useLayout } from "@/lib/layout";
 import { fonts, useTheme } from "@/lib/theme";
 
-/** Each tab's own stack, with an iOS large title set in the web's display serif. iOS draws the bar's glass itself. */
+/**
+ * Each tab's own stack, with an iOS large title set in the web's display serif.
+ * iOS draws the bar's glass itself. On an iPad the content is a centred column,
+ * so the left-aligned large title would sit outside it; there the bar keeps only
+ * its buttons and the screen draws the title in its column (Screen's `title`).
+ */
 export function TabStack({ title }: { title: string }) {
   const { c } = useTheme();
+  const { wide } = useLayout();
   return (
     <Stack
       screenOptions={{
@@ -17,7 +24,7 @@ export function TabStack({ title }: { title: string }) {
         contentStyle: { backgroundColor: c.background },
       }}
     >
-      <Stack.Screen name="index" options={{ title }} />
+      <Stack.Screen name="index" options={wide ? { title: "", headerLargeTitle: false } : { title }} />
     </Stack>
   );
 }

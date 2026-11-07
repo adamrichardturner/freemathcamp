@@ -15,6 +15,7 @@ import { pct, relative } from "@/lib/format";
 import { plain } from "@/lib/plain";
 import { keys, useCourseProgress, useExerciseDetail } from "@/lib/queries";
 import { alpha, radius, useTheme } from "@/lib/theme";
+import { useLayout } from "@/lib/layout";
 
 const MODES: { mode: PracticeMode; icon: SymbolName; title: string; text: string }[] = [
   { mode: "learn", icon: "sparkles", title: "Learn", text: "Six problems that start at your level and adapt as you go." },
@@ -27,6 +28,7 @@ export default function LessonScreen() {
   const { id, mode } = useLocalSearchParams<{ id: string; mode?: PracticeMode }>();
   const ref = exerciseRef(id);
   const { c } = useTheme();
+  const { wide } = useLayout();
   const qc = useQueryClient();
   const { data: detail } = useExerciseDetail(id);
   const { data: courseProgress } = useCourseProgress();
@@ -71,7 +73,7 @@ export default function LessonScreen() {
     .slice(0, 8);
 
   return (
-    <Screen contentStyle={{ paddingHorizontal: 0 }}>
+    <Screen flush>
       <Animated.View entering={FadeInDown.duration(350)} style={{ paddingHorizontal: 16, gap: 8 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Icon name={unitSymbol(unit.icon)} size={13} tone="muted" />
@@ -161,7 +163,7 @@ export default function LessonScreen() {
               <Text variant="small" muted style={{ textAlign: "center" }}>
                 Problems adapt to you as you go — no two sessions are the same.
               </Text>
-              <Button title="Start practising" iconRight="arrow.right" size="lg" style={{ marginTop: 6, alignSelf: "stretch" }} onPress={() => practise(progress?.status === "struggling" ? "challenge" : "learn")} />
+              <Button title="Start practising" iconRight="arrow.right" size="lg" style={{ marginTop: 6, alignSelf: wide ? "center" : "stretch", minWidth: wide ? 320 : undefined }} onPress={() => practise(progress?.status === "struggling" ? "challenge" : "learn")} />
             </Card>
 
             <View style={{ gap: 10 }}>

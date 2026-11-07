@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { SymbolView, type SymbolViewProps } from "expo-symbols";
-import { forwardRef, type ComponentRef, type ReactNode } from "react";
+import { Children, forwardRef, type ComponentRef, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -20,6 +20,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+import { useLayout, widths } from "@/lib/layout";
 import { alpha, fonts, radius, toneColor, useTheme, type Tone } from "@/lib/theme";
 
 /**
@@ -51,19 +52,60 @@ export function Icon({ name, size = 18, color, tone, weight = "medium", style }:
   return <SymbolView name={name} size={size} weight={weight} tintColor={color ?? (tone ? toneColor(c, tone) : c.foreground)} style={[{ width: size, height: size }, style]} />;
 }
 
-export function Screen({ children, contentStyle, ...props }: ScrollViewProps & { contentStyle?: StyleProp<ViewStyle> }) {
+/**
+ * A scrolling screen. On an iPad the content is a centred column `width` wide
+ * (see lib/layout); `flush` drops the side padding for content that brings its
+ * own, such as lessons rendered in a web view.
+ */
+export function Screen({
+  children,
+  contentStyle,
+  width = widths.readable,
+  flush,
+  title,
+  ...props
+}: ScrollViewProps & { contentStyle?: StyleProp<ViewStyle>; width?: number; flush?: boolean; title?: string }) {
   const { c } = useTheme();
+  const { gutter, wide } = useLayout();
   return (
     <ScrollView
       contentInsetAdjustmentBehavior="automatic"
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
       style={{ flex: 1, backgroundColor: c.background }}
-      contentContainerStyle={[{ padding: 16, paddingBottom: 48, gap: 20 }, contentStyle]}
+      contentContainerStyle={[{ paddingTop: 16, paddingHorizontal: flush ? gutter(width, 16) - 16 : gutter(width), paddingBottom: 48, gap: 20 }, contentStyle]}
       {...props}
     >
+      {/* On an iPad the tab's title sits in the column (see TabStack); phones show it in the large-title bar. */}
+      {wide && title ? <Text variant="display" style={{ fontSize: 40, lineHeight: 44, paddingHorizontal: flush ? 16 : 0 }}>{title}</Text> : null}
       {children}
     </ScrollView>
+  );
+}
+
+/**
+ * Children in rows of `columns`, each the same width. Pass a different count
+ * for phones and iPads with useLayout().columns(phone, tablet).
+ */
+export function Grid({ columns, gap = 12, children }: { columns: number; gap?: number; children: ReactNode }) {
+  const items = Children.toArray(children).filter(Boolean);
+  const rows: ReactNode[][] = [];
+  for (let i = 0; i < items.length; i += columns) rows.push(items.slice(i, i + columns));
+  return (
+    <View style={{ gap }}>
+      {rows.map((row, r) => (
+        <View key={r} style={{ flexDirection: "row", gap, alignItems: "stretch" }}>
+          {row.map((item, i) => (
+            <View key={i} style={{ flex: 1, minWidth: 0 }}>
+              {item}
+            </View>
+          ))}
+          {Array.from({ length: columns - row.length }, (_, i) => (
+            <View key={`pad${i}`} style={{ flex: 1 }} />
+          ))}
+        </View>
+      ))}
+    </View>
   );
 }
 

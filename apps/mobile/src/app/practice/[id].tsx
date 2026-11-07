@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import Animated, { FadeIn, FadeInDown, FadeInRight, FadeOutLeft, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, ZoomIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { domProps } from "@/components/rich";
@@ -17,6 +17,7 @@ import { useInvalidateLearner } from "@/lib/queries";
 import { playSound, preloadSounds } from "@/lib/sound";
 import { alpha, radius, useTheme } from "@/lib/theme";
 import { toast } from "@/lib/toast";
+import { widths } from "@/lib/layout";
 
 type ItemState = { phase: "answering" } | { phase: "resolved"; correct: boolean; resolution: Resolution; revealedAnswer?: string };
 interface ItemResult {
@@ -94,9 +95,12 @@ export default function Practice() {
   };
 
   const exit = () => router.back();
+  // iPadOS doesn't count the keyboard's shortcut bar, which would otherwise cover the Check bar.
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={["top", "bottom"]}>
+      {/* One readable column; on an iPad the problem doesn't stretch across the screen. */}
+      <View style={{ flex: 1, width: "100%", maxWidth: widths.readable, alignSelf: "center" }}>
       {summary ? (
         <SessionSummaryView summary={summary} restarting={start.isPending} onAgain={() => !start.isPending && start.mutate()} onExit={exit} />
       ) : !session || !item || !problem ? (
@@ -104,13 +108,14 @@ export default function Practice() {
           <ActivityIndicator color={c.mutedForeground} />
         </View>
       ) : (
-        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={Platform.OS === "ios" && Platform.isPad ? 56 : 0} style={{ flex: 1 }}>
           <SessionHeader total={session.targetItems} results={results} current={item.index} level={item.level} mastery={mastery} mode={mode} onExit={exit} />
           <Animated.View key={item.seed} entering={FadeInRight.duration(250)} exiting={FadeOutLeft.duration(150)} style={{ flex: 1 }}>
             <ProblemCard sessionId={session.sessionId} exerciseId={id} item={item} problem={problem} state={state} onResolved={onResolved} onNext={next} finishing={complete.isPending} />
           </Animated.View>
         </KeyboardAvoidingView>
       )}
+      </View>
     </SafeAreaView>
   );
 }

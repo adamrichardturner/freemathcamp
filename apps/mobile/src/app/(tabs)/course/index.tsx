@@ -23,7 +23,7 @@ export default function CourseMap() {
   const overall = progress ? progress.units.reduce((a, u) => a + u.mastery * u.total, 0) / total : 0;
 
   return (
-    <Screen refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
+    <Screen title="Foundations" refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
       <View style={{ borderRadius: radius["3xl"], borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: c.border }}>
         <LinearGradient colors={[alpha(c.primary, 0.16), c.card, alpha(c.chart2, 0.1)]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 20, gap: 8 }}>
           <Text variant="label" tone="primary">

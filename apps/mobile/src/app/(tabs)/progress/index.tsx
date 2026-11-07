@@ -4,18 +4,20 @@ import { RefreshControl, View } from "react-native";
 import { useOpenLesson } from "@/components/lesson-link";
 import { Segmented } from "@/components/segmented";
 import { statusMeta } from "@/components/status";
-import { Card, CardHeader, Empty, Icon, MasteryRing, ProgressBar, Row, Screen, Separator, Skeleton, Text, type SymbolName } from "@/components/ui";
+import { Card, CardHeader, Empty, Grid, Icon, MasteryRing, ProgressBar, Row, Screen, Separator, Skeleton, Text, type SymbolName } from "@/components/ui";
 import type { Analytics } from "@/lib/api";
 import { duration, minutes, pct, relative } from "@/lib/format";
 import { useAnalytics } from "@/lib/queries";
+import { useLayout, widths } from "@/lib/layout";
 import { alpha, useTheme, type Tone } from "@/lib/theme";
 
 /** The web's progress page: totals, activity, time, mastery by unit, difficulty, strengths and weak spots. */
 export default function Progress() {
   const { data, isLoading, refetch, isRefetching } = useAnalytics();
+  const { columns } = useLayout();
   if (isLoading || !data)
     return (
-      <Screen>
+      <Screen title="Progress">
         <Skeleton height={220} />
         <Skeleton height={180} />
       </Screen>
@@ -23,27 +25,31 @@ export default function Progress() {
   const t = data.totals;
   if (t.problems === 0)
     return (
-      <Screen>
+      <Screen title="Progress">
         <Empty icon="chart.bar.xaxis" title="Your progress fills in here" text="Solve a few problems and this page shows your activity, accuracy, time spent, and mastery across the course." />
       </Screen>
     );
   return (
-    <Screen refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+    <Screen title="Progress" width={widths.wide} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
+      <Grid columns={columns(2, 3)}>
         <Stat icon="checkmark.seal.fill" tone="success" label="Problems solved" value={t.problems.toLocaleString()} />
         <Stat icon="target" tone="primary" label="First-try accuracy" value={pct(t.accuracy)} />
         <Stat icon="clock.fill" tone="chart2" label="Time practising" value={duration(t.timeMs)} />
         <Stat icon="flame.fill" tone="chart4" label="Streak" value={`${t.streak.current} days`} sub={`best ${t.streak.longest}`} />
         <Stat icon="graduationcap.fill" tone="success" label="Mastered" value={`${t.exercisesMastered}/${t.exercisesTotal}`} />
         <Stat icon="lightbulb.fill" tone="warning" label="Hints · reveals" value={`${t.hintsUsed} · ${t.reveals}`} />
-      </View>
+      </Grid>
       <Heatmap daily={data.daily} />
       <Activity daily={data.daily} />
-      <TimeCard time={data.time} />
+      <Grid columns={columns(1, 2)}>
+        <TimeCard time={data.time} />
+        <Levels levels={data.levels} />
+      </Grid>
       <Units units={data.units} />
-      <Levels levels={data.levels} />
-      <Lessons title="Strengths" icon="star.fill" tone="success" items={data.strongest} empty="Keep practising: your strongest lessons appear here." />
-      <Lessons title="Weak spots" icon="exclamationmark.triangle.fill" tone="warning" items={data.weakest} empty="Nothing tricky yet. Lessons you struggle with appear here." />
+      <Grid columns={columns(1, 2)}>
+        <Lessons title="Strengths" icon="star.fill" tone="success" items={data.strongest} empty="Keep practising: your strongest lessons appear here." />
+        <Lessons title="Weak spots" icon="exclamationmark.triangle.fill" tone="warning" items={data.weakest} empty="Nothing tricky yet. Lessons you struggle with appear here." />
+      </Grid>
       <Recent sessions={data.recentSessions} />
     </Screen>
   );
@@ -51,7 +57,7 @@ export default function Progress() {
 
 function Stat({ icon, tone, label, value, sub }: { icon: SymbolName; tone: Tone; label: string; value: string; sub?: string }) {
   return (
-    <Card style={{ flexBasis: "47%", flexGrow: 1, padding: 14, gap: 2 }}>
+    <Card style={{ flex: 1, padding: 14, gap: 2 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <Icon name={icon} size={13} tone={tone} />
         <Text variant="caption" muted weight="medium" numberOfLines={1}>
@@ -105,7 +111,7 @@ function Activity({ daily }: { daily: Analytics["daily"] }) {
   const [metric, setMetric] = useState<"problems" | "accuracy" | "minutes">("problems");
   const days = daily.slice(-14);
   return (
-    <Card>
+    <Card style={{ flex: 1 }}>
       <CardHeader title="Last two weeks" />
       <View style={{ padding: 16, gap: 14 }}>
         <Segmented
@@ -136,7 +142,7 @@ function TimeCard({ time }: { time: Analytics["time"] }) {
   const { c } = useTheme();
   const weeks = time.weekly.slice(-8);
   return (
-    <Card>
+    <Card style={{ flex: 1 }}>
       <CardHeader title="Time learning" icon="hourglass" iconTone="chart2" />
       <View style={{ padding: 16, gap: 14 }}>
         <View style={{ flexDirection: "row", gap: 24 }}>
@@ -166,7 +172,7 @@ function TimeCard({ time }: { time: Analytics["time"] }) {
 function Units({ units }: { units: Analytics["units"] }) {
   const { c } = useTheme();
   return (
-    <Card>
+    <Card style={{ flex: 1 }}>
       <CardHeader title="Mastery by unit" />
       <View style={{ padding: 16, gap: 12 }}>
         {units.map((u) => (
@@ -190,7 +196,7 @@ function Units({ units }: { units: Analytics["units"] }) {
 function Levels({ levels }: { levels: Analytics["levels"] }) {
   const label = { 1: "Warm-up", 2: "Core", 3: "Stretch" } as Record<number, string>;
   return (
-    <Card>
+    <Card style={{ flex: 1 }}>
       <CardHeader title="By difficulty" />
       <View style={{ flexDirection: "row", padding: 16, gap: 12 }}>
         {levels.map((l) => (
@@ -217,7 +223,7 @@ function Lessons({ title, icon, tone, items, empty }: { title: string; icon: Sym
   const { open } = useOpenLesson();
   const { c } = useTheme();
   return (
-    <Card>
+    <Card style={{ flex: 1 }}>
       <CardHeader title={title} icon={icon} iconTone={tone} />
       {items.length === 0 ? (
         <Text variant="small" muted style={{ padding: 16 }}>

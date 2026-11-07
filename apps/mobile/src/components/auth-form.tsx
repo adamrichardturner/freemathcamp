@@ -7,6 +7,7 @@ import { useTheme } from "@/lib/theme";
 import { SocialSignIn } from "./social-sign-in";
 import { Button, Field, Input, Text } from "./ui";
 import { UsernameField, useUsernameCheck } from "./username-field";
+import { widths } from "@/lib/layout";
 
 /** Email sign-in and sign-up, as on the web, with Apple and Google above. */
 export function AuthForm({ mode, onSwitch }: { mode: "login" | "register"; onSwitch: () => void }) {
@@ -36,7 +37,7 @@ export function AuthForm({ mode, onSwitch }: { mode: "login" | "register"; onSwi
 
   return (
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: c.background }}>
-      <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 36, gap: 20 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 36, gap: 20, width: "100%", maxWidth: widths.form + 48, alignSelf: "center" }} keyboardShouldPersistTaps="handled">
         <View style={{ alignItems: "center", gap: 6 }}>
           <Text variant="display">{mode === "login" ? "Welcome back" : "Start learning"}</Text>
           <Text variant="small" muted>

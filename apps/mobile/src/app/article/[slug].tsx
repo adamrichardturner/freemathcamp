@@ -14,7 +14,7 @@ export default function Article() {
   if (!article) return null;
   const category = articleCategories.find((c) => c.id === article.category);
   return (
-    <Screen contentStyle={{ paddingHorizontal: 0 }}>
+    <Screen flush>
       <Stack.Screen
         options={{
           headerRight: () => (
