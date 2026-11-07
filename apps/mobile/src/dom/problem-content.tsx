@@ -32,6 +32,7 @@ export default function ProblemContent({
   hints = 0,
   disabled = false,
   onChoose,
+  onExpandVisual,
 }: {
   courseId: string;
   exerciseId: string;
@@ -45,6 +46,8 @@ export default function ProblemContent({
   hints?: number;
   disabled?: boolean;
   onChoose?: (index: number) => Promise<void>;
+  /** Opens the visual shown (the solution's, once resolved) full screen, where it can be zoomed. */
+  onExpandVisual?: (solution: boolean) => Promise<void>;
   dom?: DOMProps;
 }) {
   useScheme(scheme);
@@ -72,7 +75,8 @@ export default function ProblemContent({
     );
 
   const correctIdx = problem.answer.kind === "choice" ? problem.answer.correct : -1;
-  const visual = resolved && problem.solutionVisual ? problem.solutionVisual : problem.visual;
+  const showSolution = resolved && !!problem.solutionVisual;
+  const visual = showSolution ? problem.solutionVisual : problem.visual;
   return (
     <div className="space-y-5 px-0.5 pb-1" style={screenWidth}>
       <Md md={problem.prompt} className="text-lg font-medium" />
@@ -82,7 +86,7 @@ export default function ProblemContent({
         </div>
       )}
       {/* The question's visual never shows the answer; once resolved, the solution's version (if any) takes its place. */}
-      {visual && <Visual key={resolved && problem.solutionVisual ? "solution" : "question"} visual={visual} />}
+      {visual && <Visual key={showSolution ? "solution" : "question"} visual={visual} onExpand={onExpandVisual ? () => void onExpandVisual(showSolution) : undefined} />}
       {problem.choices && (
         <div className="grid gap-2.5">
           {problem.choices.map((c, i) => {

@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { Tex } from "@/components/math/tex";
 import { cn } from "@/lib/utils";
-import { fmt, LabeledSlider, tone, VisualFrame } from "./shared";
+import { fmt, LabeledSlider, tone, useWidth, VisualFrame } from "./shared";
 
 type V<T extends Visual["type"]> = Extract<Visual, { type: T }>;
 
@@ -14,11 +14,13 @@ const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : Math.abs(a));
 /* ---------------- Number line ---------------- */
 
 export function NumberLine({ min, max, step = 1, points = [], jumps = [], highlight }: V<"numberLine">) {
-  const W = 640, pad = 28, y = 70;
+  // Drawn at the width it is shown at, so its labels keep their size on a phone
+  // instead of shrinking with the whole drawing.
+  const [ref, measured] = useWidth<SVGSVGElement>();
+  const W = Math.round(measured) || 640, pad = 28, y = 70;
   const x = (v: number) => pad + ((v - min) / (max - min)) * (W - 2 * pad);
   const count = Math.round((max - min) / step);
   const ticks = Array.from({ length: count + 1 }, (_, i) => min + i * step);
-  const labelEvery = Math.ceil(count / 20);
   const denom = Math.round(1 / step);
   const fractional = step < 1 && Math.abs(1 / step - denom) < 1e-9 && max - min <= 2;
   const label = (v: number) => {
@@ -26,9 +28,13 @@ export function NumberLine({ min, max, step = 1, points = [], jumps = [], highli
     const n = Math.round(v * denom), g = gcd(n, denom);
     return `${n / g}/${denom / g}`;
   };
+  // Label as many ticks as there's room for (about 8px a character, plus a gap), at a round interval.
+  const widest = Math.max(...ticks.map((t) => label(t).length));
+  const fit = Math.ceil((widest * 8 + 10) / ((W - 2 * pad) / Math.max(count, 1)));
+  const labelEvery = [1, 2, 4, 5, 10, 20, 25, 50, 100].find((n) => n >= fit) ?? fit;
   return (
     <VisualFrame>
-      <svg viewBox={`0 0 ${W} 110`} className="w-full" role="img" aria-label={`Number line from ${min} to ${max}`}>
+      <svg ref={ref} viewBox={`0 0 ${W} 110`} className="w-full" role="img" aria-label={`Number line from ${min} to ${max}`}>
         <defs>
           <marker id="nl-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
@@ -57,7 +63,7 @@ export function NumberLine({ min, max, step = 1, points = [], jumps = [], highli
           <g key={i}>
             <line x1={x(t)} x2={x(t)} y1={y - (t === 0 ? 9 : 6)} y2={y + (t === 0 ? 9 : 6)} stroke="currentColor" strokeWidth={t === 0 ? 2 : 1} className="text-foreground/60" />
             {i % labelEvery === 0 && (
-              <text x={x(t)} y={y + 26} textAnchor="middle" className="fill-muted-foreground text-[12px] tabular-nums">
+              <text x={x(t)} y={y + 26} textAnchor="middle" className="fill-muted-foreground text-[13px] tabular-nums">
                 {label(t)}
               </text>
             )}
@@ -78,7 +84,7 @@ export function NumberLine({ min, max, step = 1, points = [], jumps = [], highli
                 transition={{ duration: 0.9, delay: 0.2 + i * 0.3 }}
               />
               {j.label && (
-                <text x={(x1 + x2) / 2} y={y - h * 0.85 - 6} textAnchor="middle" fill="currentColor" className="text-[13px] font-semibold">
+                <text x={(x1 + x2) / 2} y={y - h * 0.85 - 6} textAnchor="middle" fill="currentColor" className="text-[14px] font-semibold">
                   {j.label}
                 </text>
               )}
@@ -89,7 +95,7 @@ export function NumberLine({ min, max, step = 1, points = [], jumps = [], highli
           <motion.g key={i} style={{ color: tone(p.tone) }} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.1 * i, type: "spring" }}>
             <circle cx={x(p.value)} cy={y} r={6.5} fill="currentColor" stroke="var(--card)" strokeWidth={2} />
             {p.label && (
-              <text x={x(p.value)} y={y - 14} textAnchor="middle" fill="currentColor" className="text-[13px] font-semibold">
+              <text x={x(p.value)} y={y - 14} textAnchor="middle" fill="currentColor" className="text-[14px] font-semibold">
                 {p.label}
               </text>
             )}
@@ -201,7 +207,10 @@ const fitSizes = (parts: number[], total: number, min: number) => {
 
 export function AreaModel({ a, b, conceal }: V<"areaModel">) {
   const A = splitPlace(a), B = splitPlace(b);
-  const W = 520, H = 300, pad = 46;
+  // Drawn at the width it is shown at (up to 520), so the numbers stay full size on a phone.
+  const [ref, measured] = useWidth<SVGSVGElement>();
+  const W = measured ? Math.round(Math.min(520, Math.max(280, measured))) : 520;
+  const H = Math.round(Math.max(220, W * 0.58)), pad = 46;
   const colors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-5)"];
   const widths = fitSizes(A, W - pad - 8, 44);
   const xStarts = widths.map((_, i) => pad + widths.slice(0, i).reduce((s, w) => s + w, 0));
@@ -209,7 +218,7 @@ export function AreaModel({ a, b, conceal }: V<"areaModel">) {
   const yStarts = heights.map((_, j) => pad + heights.slice(0, j).reduce((s, h) => s + h, 0));
   return (
     <VisualFrame>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Area model of ${a} times ${b}`}>
+      <svg ref={ref} viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`Area model of ${a} times ${b}`}>
         {A.map((pa, i) => {
           const x0 = xStarts[i]!, w = widths[i]!;
           return (
@@ -309,8 +318,8 @@ export function PlaceValue({ value, highlight, conceal }: V<"placeValue">) {
               <span className={cn("font-mono text-2xl font-semibold sm:text-3xl", on && "text-primary")}>{d}</span>
               {!conceal && (
                 <>
-                  <span className="mt-1 text-center text-[9px] leading-tight text-muted-foreground sm:text-[10px]">{names[place]}</span>
-                  <span className="text-[10px] tabular-nums text-muted-foreground/70">×{(10 ** place).toLocaleString()}</span>
+                  <span className="mt-1 text-center text-[10px] leading-tight text-muted-foreground sm:text-[11px]">{names[place]}</span>
+                  <span className="text-[11px] tabular-nums text-muted-foreground/70">×{(10 ** place).toLocaleString()}</span>
                 </>
               )}
             </motion.div>
@@ -428,12 +437,13 @@ export function FactorTree({ value }: V<"factorTree">) {
   const minX = Math.min(...nodes.map((n) => n.x)) - 40;
   return (
     <VisualFrame>
-      <svg viewBox={`${minX} 0 ${maxX - minX} ${maxY}`} className="mx-auto max-h-80 w-full max-w-lg" role="img" aria-label={`Factor tree of ${value}`}>
+      {/* At its natural size, shrinking only on a narrower screen, so the numbers stay readable. */}
+      <svg viewBox={`${minX} 0 ${maxX - minX} ${maxY}`} className="mx-auto block" style={{ width: maxX - minX, maxWidth: "100%" }} role="img" aria-label={`Factor tree of ${value}`}>
         {nodes.map((n, i) => n.px !== undefined && <motion.line key={`l${i}`} x1={n.px} y1={n.py! + 16} x2={n.x} y2={n.y - 16} stroke="var(--muted-foreground)" strokeOpacity={0.45} strokeWidth={2} initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: i * 0.08 }} />)}
         {nodes.map((n, i) => (
           <motion.g key={i} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-            <circle cx={n.x} cy={n.y} r={19} fill={n.prime ? "var(--primary)" : "var(--card)"} stroke={n.prime ? "var(--primary)" : "var(--border)"} strokeWidth={2} />
-            <text x={n.x} y={n.y + 5} textAnchor="middle" className={cn("text-[13px] font-semibold tabular-nums", n.prime ? "fill-primary-foreground" : "fill-foreground")}>
+            <circle cx={n.x} cy={n.y} r={20} fill={n.prime ? "var(--primary)" : "var(--card)"} stroke={n.prime ? "var(--primary)" : "var(--border)"} strokeWidth={2} />
+            <text x={n.x} y={n.y + 5} textAnchor="middle" className={cn("text-[15px] font-semibold tabular-nums", n.prime ? "fill-primary-foreground" : "fill-foreground")}>
               {n.value}
             </text>
           </motion.g>
@@ -513,7 +523,7 @@ export function TriangleAngles({ angles, hidden }: V<"triangleAngles">) {
       <svg viewBox="0 0 380 230" className="mx-auto w-full max-w-md" role="img" aria-label="Triangle with angles">
         <motion.polygon points={P.map((p) => p.join(",")).join(" ")} fill="var(--primary)" fillOpacity={0.1} stroke="var(--primary)" strokeWidth={2.5} strokeLinejoin="round" initial={{ opacity: 0 }} animate={{ opacity: 1 }} />
         {P.map((p, i) => (
-          <text key={i} x={p[0] + offsets[i]![0]} y={p[1] + offsets[i]![1]} textAnchor="middle" className={cn("text-[15px] font-semibold", i === hidden ? "fill-warning" : "fill-foreground")}>
+          <text key={i} x={p[0] + offsets[i]![0]} y={p[1] + offsets[i]![1]} textAnchor="middle" className={cn("text-[17px] font-semibold", i === hidden ? "fill-warning" : "fill-foreground")}>
             {labels[i]}
           </text>
         ))}
@@ -601,7 +611,7 @@ export function CircleExplorer({ r: r0 = 2 }: V<"circleExplorer">) {
           <motion.circle r={px} animate={{ r: px }} fill="var(--primary)" fillOpacity={0.15} stroke="var(--primary)" strokeWidth={3} />
           <motion.line x1={0} y1={0} animate={{ x2: px }} y2={0} stroke="var(--warning)" strokeWidth={2.5} />
           <circle r={3} fill="var(--foreground)" />
-          <text x={px / 2} y={-6} textAnchor="middle" className="fill-warning text-[11px] font-semibold">r = {r}</text>
+          <text x={px / 2} y={-6} textAnchor="middle" className="fill-warning text-[14px] font-semibold">r = {r}</text>
         </svg>
         <div className="space-y-2 text-sm">
           <Tex tex={`C = 2\\pi r = ${fmt(2 * r)}\\pi \\approx ${fmt(2 * Math.PI * r)}`} display />
