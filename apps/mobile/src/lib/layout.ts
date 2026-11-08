@@ -52,6 +52,12 @@ export function useLayout() {
       const g = Math.max(min, Math.round((width - left - right - max) / 2));
       return { paddingLeft: g + left, paddingRight: g + right };
     },
+    /**
+     * A call to action's own width: full width on a phone, but on the open iPhone
+     * Duo and iPad a centred button sized to its label (at least `min` wide), so a
+     * single button never stretches across a wide card or column. Spread it into a style.
+     */
+    fit: (min = 300) => (medium ? ({ alignSelf: "center", minWidth: min } as const) : ({ alignSelf: "stretch" } as const)),
     /** Columns for a grid of tiles: `phone` on a phone, `tablet` on an iPad, and `mid` (default `tablet`) in between. */
     columns: (phone: number, tablet: number, mid: number = tablet) => (wide ? tablet : medium ? mid : phone),
   };

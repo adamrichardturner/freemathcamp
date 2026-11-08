@@ -64,6 +64,7 @@ function ToggleRow({ icon, title, subtitle, value, onChange, disabled }: { icon:
 }
 
 function Profile({ user }: { user: User }) {
+  const { fit } = useLayout();
   const { c } = useTheme();
   const applyUser = useApplyUser();
   const [name, setName] = useState(user.displayName);
@@ -114,7 +115,7 @@ function Profile({ user }: { user: User }) {
           </View>
         </Field>
         <UsernameField value={username} onChange={setUsername} check={check} serverError={saveUsername.error instanceof ApiError ? saveUsername.error.message : null} />
-        {check.status === "available" && <Button title="Save username" loading={saveUsername.isPending} onPress={() => saveUsername.mutate()} />}
+        {check.status === "available" && <Button title="Save username" loading={saveUsername.isPending} style={fit(220)} onPress={() => saveUsername.mutate()} />}
       </View>
     </Group>
   );
@@ -229,6 +230,7 @@ function Leagues({ user }: { user: User }) {
 }
 
 function Security({ user, linked, otherSessions }: { user: User; linked: string[]; otherSessions: number }) {
+  const { fit } = useLayout();
   const qc = useQueryClient();
   const applyUser = useApplyUser();
   const [form, setForm] = useState({ current: "", next: "" });
@@ -258,13 +260,13 @@ function Security({ user, linked, otherSessions }: { user: User; linked: string[
         <View style={{ padding: 16, paddingTop: 4, gap: 12 }}>
           {user.hasPassword && (
             <Field label="Current password">
-              <Input secureTextEntry value={form.current} onChangeText={(v) => setForm({ ...form, current: v })} textContentType="password" autoComplete="current-password" />
+              <Input secureTextEntry value={form.current} onChangeText={(v) => setForm((f) => ({ ...f, current: v }))} textContentType="password" autoComplete="current-password" />
             </Field>
           )}
           <Field label="New password" error={pwError} hint="At least 10 characters, with letters and a number or symbol.">
-            <Input secureTextEntry value={form.next} onChangeText={(v) => setForm({ ...form, next: v })} textContentType="newPassword" autoComplete="new-password" />
+            <Input secureTextEntry value={form.next} onChangeText={(v) => setForm((f) => ({ ...f, next: v }))} textContentType="newPassword" autoComplete="new-password" />
           </Field>
-          <Button title={user.hasPassword ? "Change password" : "Add password"} loading={password.isPending} disabled={!form.next || (user.hasPassword && !form.current)} onPress={() => password.mutate()} />
+          <Button title={user.hasPassword ? "Change password" : "Add password"} loading={password.isPending} disabled={!form.next || (user.hasPassword && !form.current)} style={fit(220)} onPress={() => password.mutate()} />
         </View>
       )}
       <Separator inset={58} />
@@ -284,6 +286,7 @@ function Security({ user, linked, otherSessions }: { user: User; linked: string[
 }
 
 function Data({ user }: { user: User }) {
+  const { fit } = useLayout();
   const invalidate = useInvalidateLearner();
   const signOut = useSignOut();
   const [deleting, setDeleting] = useState(false);
@@ -331,14 +334,14 @@ function Data({ user }: { user: User }) {
           <Text variant="small" muted>
             This deletes your account, progress and notifications for good. Type your email{user.hasPassword ? " and password" : ""} to confirm.
           </Text>
-          <Input placeholder={user.email} value={confirm.email} onChangeText={(v) => setConfirm({ ...confirm, email: v })} autoCapitalize="none" keyboardType="email-address" />
-          {user.hasPassword && <Input placeholder="Password" secureTextEntry value={confirm.password} onChangeText={(v) => setConfirm({ ...confirm, password: v })} />}
+          <Input placeholder={user.email} value={confirm.email} onChangeText={(v) => setConfirm((f) => ({ ...f, email: v }))} autoCapitalize="none" keyboardType="email-address" />
+          {user.hasPassword && <Input placeholder="Password" secureTextEntry value={confirm.password} onChangeText={(v) => setConfirm((f) => ({ ...f, password: v }))} />}
           {removeError && (
             <Text variant="caption" tone="danger">
               {removeError}
             </Text>
           )}
-          <Button title="Delete my account" variant="destructive" loading={remove.isPending} disabled={confirm.email.trim().toLowerCase() !== user.email.toLowerCase()} onPress={() => remove.mutate()} />
+          <Button title="Delete my account" variant="destructive" loading={remove.isPending} disabled={confirm.email.trim().toLowerCase() !== user.email.toLowerCase()} style={fit(220)} onPress={() => remove.mutate()} />
         </View>
       )}
     </Group>
@@ -347,7 +350,7 @@ function Data({ user }: { user: User }) {
 
 function About() {
   const signOut = useSignOut();
-  const { medium } = useLayout();
+  const { fit } = useLayout();
   const open = (path: string) => void WebBrowser.openBrowserAsync(`${WEB_URL}${path}`, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
   return (
     <>
@@ -358,7 +361,7 @@ function About() {
         <Separator inset={58} />
         <Row leading={<IconChip name="envelope.fill" size={30} tone="muted" />} title="Help and support" onPress={() => open("/support")} />
       </Group>
-      <Button title="Sign out" variant="destructive" size="lg" loading={signOut.isPending} onPress={() => signOut.mutate()} style={medium ? { alignSelf: "center", minWidth: 320 } : undefined} />
+      <Button title="Sign out" variant="destructive" size="lg" loading={signOut.isPending} onPress={() => signOut.mutate()} style={fit(320)} />
       <Text variant="caption" muted style={{ textAlign: "center" }}>
         FreeMathCamp {Application.nativeApplicationVersion} ({Application.nativeBuildVersion})
       </Text>

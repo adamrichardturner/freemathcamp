@@ -4,6 +4,7 @@ import { Reveal } from "@/components/reveal";
 import { standing, TierBadge, tierColour, useTimeLeft, ZonePill } from "@/components/league";
 import { Button, Card, CardHeader, Icon, Screen, Separator, Skeleton, Text } from "@/components/ui";
 import type { League } from "@/lib/api";
+import { useLayout } from "@/lib/layout";
 import { useLeague, useLeagueOptIn } from "@/lib/queries";
 import { alpha, useTheme } from "@/lib/theme";
 
@@ -89,6 +90,7 @@ function Standing({ league }: { league: League }) {
 
 function Join({ league }: { league: League }) {
   const optIn = useLeagueOptIn();
+  const { fit } = useLayout();
   return (
     <Card featured style={{ padding: 16, gap: 10 }}>
       <Icon name="trophy.fill" size={28} tone="chart4" />
@@ -103,7 +105,7 @@ function Join({ league }: { league: League }) {
       <Text variant="caption" muted>
         You have {league.lifetimeXp.toLocaleString()} XP so far, and this week's counts as soon as you join.
       </Text>
-      <Button title="Join this week's league" icon="trophy" loading={optIn.isPending} disabled={!league.username} onPress={() => optIn.mutate(true)} />
+      <Button title="Join this week's league" icon="trophy" loading={optIn.isPending} disabled={!league.username} style={fit()} onPress={() => optIn.mutate(true)} />
     </Card>
   );
 }

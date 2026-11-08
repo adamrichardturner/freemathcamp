@@ -54,7 +54,7 @@ export default function LessonScreen() {
   }>();
   const ref = exerciseRef(id);
   const { c } = useTheme();
-  const { medium } = useLayout();
+  const { medium, fit } = useLayout();
   const qc = useQueryClient();
   const { data: detail, isFetched: detailFetched } = useExerciseDetail(id);
   const { data: courseProgress } = useCourseProgress();
@@ -205,6 +205,7 @@ export default function LessonScreen() {
                   <Button
                     title={`Go to ${lockedBy(id)!.title}`}
                     iconRight="arrow.right"
+                    style={fit(260)}
                     onPress={() =>
                       router.replace({
                         pathname: "/lesson/[id]",

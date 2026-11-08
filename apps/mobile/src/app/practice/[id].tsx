@@ -19,7 +19,7 @@ import { useInvalidateLearner } from "@/lib/queries";
 import { playSound, preloadSounds } from "@/lib/sound";
 import { alpha, radius, useTheme } from "@/lib/theme";
 import { toast } from "@/lib/toast";
-import { widths } from "@/lib/layout";
+import { useLayout, widths } from "@/lib/layout";
 
 type ItemState = { phase: "answering" } | { phase: "resolved"; correct: boolean; resolution: Resolution; revealedAnswer?: string };
 interface ItemResult {
@@ -187,6 +187,7 @@ function ProblemCard({
   finishing: boolean;
 }) {
   const { c, scheme } = useTheme();
+  const { medium } = useLayout();
   const [answer, setAnswer] = useState("");
   const [choice, setChoice] = useState<number | null>(null);
   const [hints, setHints] = useState(0);
@@ -312,7 +313,7 @@ function ProblemCard({
             <Button title="Check" icon="checkmark" style={{ marginLeft: "auto", paddingHorizontal: 22 }} loading={attempt.isPending} disabled={busy || (isChoice ? choice === null : !answer.trim())} onPress={submit} />
           </>
         ) : (
-          <Button title={state.resolution.done ? "See results" : "Next problem"} iconRight="arrow.right" style={{ flex: 1 }} size="lg" loading={finishing} onPress={onNext} />
+          <Button title={state.resolution.done ? "See results" : "Next problem"} iconRight="arrow.right" style={medium ? { marginLeft: "auto", minWidth: 260 } : { flex: 1 }} size="lg" loading={finishing} onPress={onNext} />
         )}
       </View>
     </View>

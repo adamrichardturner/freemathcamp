@@ -17,6 +17,9 @@ import { useCourseProgress, useDashboard, useNotificationCounts, useSession } fr
 import { widths } from "@/lib/layout";
 import { alpha, radius, toneColor, useTheme, type Tone } from "@/lib/theme";
 
+/** Accounts the welcome tour has been opened for since launch. */
+const toured = new Set<string>();
+
 /** The web's dashboard (/learn): greeting, streak, stats, today's plan, queues, league and progress. */
 export default function Home() {
   const { user } = useSession();
@@ -25,10 +28,17 @@ export default function Home() {
   const counts = useNotificationCounts();
   const { c } = useTheme();
 
-  // The welcome tour, once, as on the web after confirming the email.
+  // The welcome tour, once, as on the web after confirming the email. The user
+  // object is replaced whenever it changes (the tour's own league switch and mode
+  // cards, the timezone sync), so this keys on the account, not the object, and
+  // opens the tour at most once per account per launch.
+  const userId = user?.id;
+  const needsTour = !!user && !user.onboarded;
   useEffect(() => {
-    if (user && !user.onboarded) router.push("/onboarding");
-  }, [user]);
+    if (!userId || !needsTour || toured.has(userId)) return;
+    toured.add(userId);
+    router.push("/onboarding");
+  }, [userId, needsTour]);
 
   const header = (
     <Stack.Screen
