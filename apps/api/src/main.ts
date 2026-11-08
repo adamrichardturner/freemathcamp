@@ -5,7 +5,7 @@ import { makeRuntime, type AppServices } from "./http/runtime";
 import { hostname } from "node:os";
 import { deliverPendingEmail, deliverPendingPush, pruneNotifications, runReminders, withLease } from "./application/jobs";
 import { settleFinishedWeeks } from "./application/leagues";
-import { SessionRepository } from "./application/ports";
+import { PasswordResetTokenRepository, SessionRepository } from "./application/ports";
 import { createMigrator } from "./infrastructure/db/database";
 import { Database } from "./infrastructure/db/database";
 
@@ -42,8 +42,9 @@ const main = Effect.gen(function* () {
   };
   const holder = `${hostname()}:${process.pid}`;
   const timers = [
-    // Hourly: expired sessions, and dismissed or long-read notifications.
+    // Hourly: expired sessions and reset links, and dismissed or long-read notifications.
     every(3_600_000, Effect.flatMap(SessionRepository, (s) => s.deleteExpired())),
+    every(3_600_000, Effect.flatMap(PasswordResetTokenRepository, (t) => t.deleteExpired())),
     every(3_600_000, withLease("prune-notifications", holder, 10 * 60_000, pruneNotifications)),
     ...(config.jobsEnabled
       ? [

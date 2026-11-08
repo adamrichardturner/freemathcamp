@@ -122,6 +122,7 @@ function App() {
           <Stack.Screen name="welcome" options={{ headerShown: false }} />
           <Stack.Screen name="sign-in" options={{ presentation: "modal", headerShown: false }} />
           <Stack.Screen name="sign-up" options={{ presentation: "modal", headerShown: false }} />
+          <Stack.Screen name="forgot-password" options={{ presentation: "modal", headerShown: false }} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && !learner}>
           <Stack.Screen name="setup" options={{ headerShown: false }} />

@@ -76,6 +76,8 @@ export interface SessionRepositoryShape {
   countActive(userId: string): Db<number>;
   /** Signs out every other device, keeping the given session. Returns how many were removed. */
   deleteOthers(userId: string, keepId: string): Db<number>;
+  /** Signs a user out everywhere. Returns how many sessions ended. */
+  deleteAll(userId: string): Db<number>;
 }
 export class SessionRepository extends Context.Tag("SessionRepository")<SessionRepository, SessionRepositoryShape>() {}
 
@@ -86,6 +88,20 @@ export interface EmailTokenRepositoryShape {
   countSince(userId: string, since: Date): Db<number>;
 }
 export class EmailTokenRepository extends Context.Tag("EmailTokenRepository")<EmailTokenRepository, EmailTokenRepositoryShape>() {}
+
+export interface PasswordResetTokenRepositoryShape {
+  create(input: { id: string; userId: string; expiresAt: Date }): Db<void>;
+  /** Owner and expiry of a token, without using it up. */
+  find(id: string): Db<{ userId: string; expiresAt: Date } | undefined>;
+  /** Deletes and returns the owner of an unexpired token, so each link works once. */
+  consume(id: string): Db<string | undefined>;
+  countSince(userId: string, since: Date): Db<number>;
+  /** Invalidates every outstanding link for a user. */
+  deleteForUser(userId: string): Db<void>;
+  /** Clears tokens that expired more than a day ago (kept that long so an old link says "expired", not "invalid"). */
+  deleteExpired(): Db<number>;
+}
+export class PasswordResetTokenRepository extends Context.Tag("PasswordResetTokenRepository")<PasswordResetTokenRepository, PasswordResetTokenRepositoryShape>() {}
 
 export interface AccountRepositoryShape {
   recordEvent(userId: string, kind: AccountEventKind): Db<void>;

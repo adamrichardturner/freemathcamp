@@ -155,7 +155,19 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
           <Field id="email" label="Email" error={fieldErrors.email}>
             <Input id="email" type="email" autoComplete="email" value={form.email} onChange={set("email")} required />
           </Field>
-          <Field id="password" label="Password" error={fieldErrors.password} hint={mode === "register" ? "At least 10 characters, with letters and a number or symbol." : undefined}>
+          <Field
+            id="password"
+            label="Password"
+            error={fieldErrors.password}
+            hint={mode === "register" ? "At least 10 characters, with letters and a number or symbol." : undefined}
+            action={
+              mode === "login" ? (
+                <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              ) : undefined
+            }
+          >
             <Input id="password" type="password" autoComplete={mode === "login" ? "current-password" : "new-password"} value={form.password} onChange={set("password")} maxLength={128} required />
           </Field>
           <Button type="submit" className="h-11 w-full" disabled={busy} aria-busy={signingIn}>
@@ -175,10 +187,17 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
   );
 }
 
-function Field({ id, label, error, hint, children }: { id: string; label: string; error?: string; hint?: string; children: React.ReactNode }) {
+function Field({ id, label, error, hint, action, children }: { id: string; label: string; error?: string; hint?: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
+      {action ? (
+        <div className="flex items-baseline justify-between gap-3">
+          <Label htmlFor={id}>{label}</Label>
+          {action}
+        </div>
+      ) : (
+        <Label htmlFor={id}>{label}</Label>
+      )}
       {children}
       {error ? <p className="text-xs text-danger">{error}</p> : hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>

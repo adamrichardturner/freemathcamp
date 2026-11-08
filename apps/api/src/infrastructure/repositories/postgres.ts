@@ -7,6 +7,7 @@ import {
   LeagueRepository,
   type LeagueMembership,
   EmailTokenRepository,
+  PasswordResetTokenRepository,
   JobLeaseRepository,
   NotificationRepository,
   PushSubscriptionRepository,
@@ -182,6 +183,33 @@ export const EmailTokenRepositoryLive = repo(EmailTokenRepository, (run) => ({
     ).pipe(Effect.map((r) => Number(r.n))),
 }));
 
+export const PasswordResetTokenRepositoryLive = repo(PasswordResetTokenRepository, (run) => ({
+  create: ({ id, userId, expiresAt }) =>
+    run((db) => db.insertInto("password_reset_tokens").values({ id, user_id: userId, expires_at: expiresAt }).execute()).pipe(Effect.asVoid),
+  find: (id) =>
+    run((db) => db.selectFrom("password_reset_tokens").select(["user_id", "expires_at"]).where("id", "=", id).executeTakeFirst()).pipe(
+      Effect.map((r) => r && { userId: r.user_id, expiresAt: r.expires_at }),
+    ),
+  consume: (id) =>
+    run((db) => db.deleteFrom("password_reset_tokens").where("id", "=", id).where("expires_at", ">", new Date()).returning("user_id").executeTakeFirst()).pipe(
+      Effect.map((r) => r?.user_id),
+    ),
+  countSince: (userId, since) =>
+    run((db) =>
+      db
+        .selectFrom("password_reset_tokens")
+        .select((eb) => eb.fn.countAll<string>().as("n"))
+        .where("user_id", "=", userId)
+        .where("created_at", ">=", since)
+        .executeTakeFirstOrThrow(),
+    ).pipe(Effect.map((r) => Number(r.n))),
+  deleteForUser: (userId) => run((db) => db.deleteFrom("password_reset_tokens").where("user_id", "=", userId).execute()).pipe(Effect.asVoid),
+  deleteExpired: () =>
+    run((db) => db.deleteFrom("password_reset_tokens").where("expires_at", "<", new Date(Date.now() - 86_400_000)).executeTakeFirst()).pipe(
+      Effect.map((r) => Number(r.numDeletedRows)),
+    ),
+}));
+
 export const SessionRepositoryLive = repo(SessionRepository, (run) => ({
   create: ({ id, userId, expiresAt, userAgent, ip }) =>
     run((db) => db.insertInto("sessions").values({ id, user_id: userId, expires_at: expiresAt, user_agent: userAgent, ip }).execute()).pipe(Effect.asVoid),
@@ -212,6 +240,8 @@ export const SessionRepositoryLive = repo(SessionRepository, (run) => ({
     run((db) => db.deleteFrom("sessions").where("user_id", "=", userId).where("id", "!=", keepId).executeTakeFirst()).pipe(
       Effect.map((r) => Number(r.numDeletedRows)),
     ),
+  deleteAll: (userId) =>
+    run((db) => db.deleteFrom("sessions").where("user_id", "=", userId).executeTakeFirst()).pipe(Effect.map((r) => Number(r.numDeletedRows))),
 }));
 
 export const AccountRepositoryLive = repo(AccountRepository, (run) => ({
@@ -1102,6 +1132,7 @@ export const RepositoriesLive = Layer.mergeAll(
   UserRepositoryLive,
   AccountRepositoryLive,
   EmailTokenRepositoryLive,
+  PasswordResetTokenRepositoryLive,
   SessionRepositoryLive,
   ProgressRepositoryLive,
   PracticeRepositoryLive,
