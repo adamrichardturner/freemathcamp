@@ -2,14 +2,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { LeagueCard } from "@/components/league";
 import { useOpenLesson } from "@/components/lesson-link";
 import { Segmented } from "@/components/segmented";
+import { Reveal } from "@/components/reveal";
 import { queueMeta, unitSymbol } from "@/components/status";
 import { Card, CardHeader, Empty, Grid, Icon, MasteryRing, Pill, ProgressBar, Row, Screen, SectionTitle, Separator, Skeleton, Text, type SymbolName } from "@/components/ui";
 import { WeekBars } from "@/components/week-bars";
-import type { CompletedToday, DayPlan, QueueKind, Recommendation } from "@/lib/api";
+import type { CompletedToday, CourseProgress, Dashboard, DayPlan, QueueKind, Recommendation } from "@/lib/api";
 import { course, exerciseRef } from "@/lib/course";
 import { greeting, minutes, shortMinutes } from "@/lib/format";
 import { plain } from "@/lib/plain";
@@ -20,11 +20,10 @@ import { alpha, radius, useTheme, type Tone } from "@/lib/theme";
 /** The web's dashboard (/learn): greeting, streak, stats, today's plan, queues, league and progress. */
 export default function Home() {
   const { user } = useSession();
-  const { data, isLoading, refetch, isRefetching } = useDashboard();
-  const { data: progress } = useCourseProgress();
+  const { data, refetch, isRefetching } = useDashboard();
+  const { data: progress, isFetched: progressFetched } = useCourseProgress();
   const counts = useNotificationCounts();
   const { c } = useTheme();
-  const { columns } = useLayout();
 
   // The welcome tour, once, as on the web after confirming the email.
   useEffect(() => {
@@ -43,27 +42,28 @@ export default function Home() {
     />
   );
 
-  if (isLoading || !data)
-    return (
-      <Screen>
-        {header}
-        <Skeleton height={80} width={240} />
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <Skeleton height={110} style={{ flex: 1 }} />
-          <Skeleton height={110} style={{ flex: 1 }} />
-        </View>
-        <Skeleton height={200} />
-      </Screen>
-    );
+  // Course progress fills the unit bars, so it lands with the rest rather than after.
+  return (
+    <Screen width={widths.wide} refreshControl={data ? <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} /> : undefined}>
+      {header}
+      <Reveal ready={!!data && progressFetched} gap={20} skeleton={<HomeSkeleton />}>
+        {data && <HomeBody data={data} progress={progress} />}
+      </Reveal>
+    </Screen>
+  );
+}
 
+function HomeBody({ data, progress }: { data: Dashboard; progress?: CourseProgress }) {
+  const { user } = useSession();
+  const { c } = useTheme();
+  const { columns } = useLayout();
   const { queues, stats, day } = data;
   const firstName = user?.displayName.split(" ")[0] ?? "there";
   const isNew = stats.exercisesStarted === 0;
 
   return (
-    <Screen width={widths.wide} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
-      {header}
-      <Animated.View entering={FadeInDown.duration(400)} style={{ gap: 4 }}>
+    <>
+      <View style={{ gap: 4 }}>
         <Text variant="small" muted>
           {greeting()},
         </Text>
@@ -77,7 +77,7 @@ export default function Home() {
               ? `You have ${stats.reviewsDue} review${stats.reviewsDue > 1 ? "s" : ""} due — a quick refresh keeps them locked in.`
               : "Here's your plan for today, tuned to how you've been doing."}
         </Text>
-      </Animated.View>
+      </View>
 
       <StreakBadge current={stats.streak.current} longest={stats.streak.longest} activeToday={stats.streak.activeToday} />
 
@@ -157,7 +157,29 @@ export default function Home() {
           })}
         </View>
       </Card>
-    </Screen>
+    </>
+  );
+}
+
+/** The greeting, streak, stats and plan, pulsing, while the dashboard loads. */
+function HomeSkeleton() {
+  const { columns } = useLayout();
+  return (
+    <>
+      <View style={{ gap: 8 }}>
+        <Skeleton height={16} width={110} />
+        <Skeleton height={38} width={200} />
+        <Skeleton height={18} width="90%" />
+      </View>
+      <Skeleton height={76} />
+      <Grid columns={columns(2, 4)}>
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} height={110} />
+        ))}
+      </Grid>
+      <Skeleton height={200} />
+      <Skeleton height={260} />
+    </>
   );
 }
 
@@ -238,8 +260,8 @@ function TodayPlan({ day }: { day: DayPlan }) {
             Then
           </Text>
           <Grid columns={columns(1, 2)}>
-            {then.map((r, i) => (
-              <PlanCard key={r.exerciseId} rec={r} index={i + 1} />
+            {then.map((r) => (
+              <PlanCard key={r.exerciseId} rec={r} />
             ))}
           </Grid>
         </View>
@@ -253,8 +275,8 @@ function TodayPlan({ day }: { day: DayPlan }) {
             </Text>
           </View>
           <Grid columns={columns(1, 2)}>
-            {upcoming.map((r, i) => (
-              <PlanCard key={r.exerciseId} rec={r} index={i} />
+            {upcoming.map((r) => (
+              <PlanCard key={r.exerciseId} rec={r} />
             ))}
           </Grid>
         </View>
@@ -299,7 +321,7 @@ function UpNextCard({ rec, optional }: { rec: Recommendation; optional?: boolean
   const locked = isLocked(rec.exerciseId);
   const action = locked ? "Locked" : rec.kind === "review" ? "Start review" : rec.kind === "next" ? "Start lesson" : "Start practice";
   return (
-    <Animated.View entering={FadeInDown.duration(400)}>
+    <View>
       <Pressable onPress={() => open(rec.exerciseId, m.mode)} accessibilityRole="button" accessibilityLabel={`Up next: ${ref.exercise.title}. ${action}`} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }], opacity: locked ? 0.6 : 1 })}>
         <View style={{ borderRadius: radius["2xl"], borderCurve: "continuous", borderWidth: 1.5, borderColor: alpha(c.primary, 0.4), overflow: "hidden", backgroundColor: c.card, boxShadow: `0 8px 24px ${alpha(c.primary, 0.14)}` }}>
           <LinearGradient colors={[alpha(c.primary, 0.18), alpha(c.primary, 0.06), alpha(c.chart2, 0.1)]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 18, gap: 14 }}>
@@ -337,18 +359,18 @@ function UpNextCard({ rec, optional }: { rec: Recommendation; optional?: boolean
           </LinearGradient>
         </View>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 }
 
-function PlanCard({ rec, index }: { rec: Recommendation; index: number }) {
+function PlanCard({ rec }: { rec: Recommendation }) {
   const { open, isLocked } = useOpenLesson();
   const ref = exerciseRef(rec.exerciseId);
   if (!ref) return null;
   const m = queueMeta[rec.kind];
   const locked = isLocked(rec.exerciseId);
   return (
-    <Animated.View entering={FadeInDown.delay(index * 70).duration(400)} style={{ flex: 1 }}>
+    <View style={{ flex: 1 }}>
       <Pressable onPress={() => open(rec.exerciseId, m.mode)} style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.985 : 1 }], opacity: locked ? 0.6 : 1 })}>
         <Card style={{ flex: 1, padding: 16, gap: 4 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -382,7 +404,7 @@ function PlanCard({ rec, index }: { rec: Recommendation; index: number }) {
           </View>
         </Card>
       </Pressable>
-    </Animated.View>
+    </View>
   );
 }
 

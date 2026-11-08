@@ -2,11 +2,10 @@ import { courses, getCourse } from "@fmc/curriculum";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { CourseMap } from "@/components/course/course-map";
+import { CourseMap, CourseMapSkeleton } from "@/components/course/course-map";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ogImagePath, shareImage, SITE_IMAGE_ALT } from "@/lib/og";
 import { breadcrumbs, courseSchema, graph } from "@/lib/structured-data";
-import { Skeleton } from "@/components/ui/skeleton";
 
 type Props = PageProps<"/courses/[courseId]">;
 
@@ -46,7 +45,7 @@ async function Course({ params }: Pick<Props, "params">) {
 
 export default function CoursePage({ params }: Props) {
   return (
-    <Suspense fallback={<Skeleton className="h-72 rounded-3xl" />}>
+    <Suspense fallback={<CourseMapSkeleton />}>
       <Course params={params} />
     </Suspense>
   );

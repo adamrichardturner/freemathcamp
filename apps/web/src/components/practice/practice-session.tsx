@@ -10,6 +10,8 @@ import { Md } from "@/components/math/md";
 import { Tex } from "@/components/math/tex";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Reveal } from "@/components/ui/reveal";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Visual } from "@/components/visuals/visual";
 import { useInvalidateLearner } from "@/hooks/queries";
 import { api, ApiError, type AttemptResponse, type PracticeItem, type PracticeMode, type Resolution, type RevealResponse, type SessionSummary, type StartPracticeResponse } from "@/lib/api";
@@ -94,29 +96,54 @@ export function PracticeSession({ exerciseId, mode, onExit }: { exerciseId: stri
 
   if (summary) return <SessionSummaryView summary={summary} onAgain={() => !start.isPending && start.mutate()} restarting={start.isPending} />;
 
-  if (!session || !item || !problem)
-    return (
-      <div className="grid min-h-80 place-items-center rounded-2xl border bg-card">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+  // The first problem waits under a skeleton until it (and any lazy visual) has laid out;
+  // later problems swap in with their own slide.
+  return (
+    <Reveal ready={!!(session && item && problem)} skeleton={<PracticeSkeleton />}>
+      {session && item && problem && (
+        <div className="space-y-4">
+          <SessionHeader total={session.targetItems} results={results} current={item.index} level={item.level} mastery={mastery} mode={mode} onExit={onExit} />
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div key={item.seed} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.25 }}>
+              <ProblemCard
+                sessionId={session.sessionId}
+                item={item}
+                problem={problem}
+                state={state}
+                onResolved={onResolved}
+                onNext={next}
+                finishing={complete.isPending}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
+    </Reveal>
+  );
+}
 
+/** The session header and a problem card, pulsing, while the first problem is dealt. */
+function PracticeSkeleton() {
   return (
     <div className="space-y-4">
-      <SessionHeader total={session.targetItems} results={results} current={item.index} level={item.level} mastery={mastery} mode={mode} onExit={onExit} />
-      <AnimatePresence mode="wait">
-        <motion.div key={item.seed} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.25 }}>
-          <ProblemCard
-            sessionId={session.sessionId}
-            item={item}
-            problem={problem}
-            state={state}
-            onResolved={onResolved}
-            onNext={next}
-            finishing={complete.isPending}
-          />
-        </motion.div>
-      </AnimatePresence>
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-2 flex-1 rounded-full" />
+        <Skeleton className="h-6 w-28 rounded-full" />
+        <Skeleton className="size-7 rounded-md" />
+      </div>
+      <div className="overflow-hidden rounded-2xl border bg-card">
+        <div className="space-y-5 p-5 sm:p-7">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-24 rounded-xl" />
+          <Skeleton className="h-12 rounded-xl" />
+          <Skeleton className="h-4 w-64 max-w-full" />
+        </div>
+        <div className="flex items-center gap-2 border-t bg-muted/30 px-5 py-3 sm:px-7">
+          <Skeleton className="h-8 w-20" />
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="ml-auto h-10 w-24" />
+        </div>
+      </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { VerifyEmailCard } from "@/components/app/verify-email-card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Reveal } from "@/components/ui/reveal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLeague, useLeagueOptIn, useSession } from "@/hooks/queries";
 import type { League } from "@/lib/api";
@@ -18,10 +19,16 @@ const weekLabel = (start: string) => new Date(`${start}T00:00:00Z`).toLocaleDate
 
 export function LeaguesView() {
   const { user, ready, verified } = useSession();
-  const { data, isLoading } = useLeague(verified);
+  const { data } = useLeague(verified);
   if (ready && user && !verified) return <VerifyEmailCard user={user} />;
-  if (isLoading || !data) return <LeaguesSkeleton />;
+  return (
+    <Reveal ready={!!data} skeleton={<LeaguesSkeleton />}>
+      {data && <LeaguesBody data={data} />}
+    </Reveal>
+  );
+}
 
+function LeaguesBody({ data }: { data: League }) {
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -328,7 +335,13 @@ function LeaveCard() {
 function LeaguesSkeleton() {
   return (
     <div className="space-y-6">
-      <Skeleton className="h-16 w-72" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-12 w-48" />
+          <Skeleton className="h-5 w-96 max-w-full" />
+        </div>
+        <Skeleton className="h-5 w-52" />
+      </div>
       <Skeleton className="h-40 rounded-xl" />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Skeleton className="h-96 rounded-xl" />

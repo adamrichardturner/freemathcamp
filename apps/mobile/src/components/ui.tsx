@@ -23,6 +23,7 @@ import {
 import Svg, { Circle } from "react-native-svg";
 import { useLayout, widths } from "@/lib/layout";
 import { alpha, fonts, radius, toneColor, useTheme, type Tone } from "@/lib/theme";
+import { useRevealPending } from "./reveal";
 
 /**
  * The app's building blocks, styled after the web app's shadcn/ui components
@@ -392,6 +393,8 @@ export function Empty({ icon, title, text, children }: { icon: SymbolName; title
 /** A placeholder block that gently pulses while content loads. */
 export function Skeleton({ height, width = "100%", style }: { height: number; width?: ViewStyle["width"]; style?: StyleProp<ViewStyle> }) {
   const { c } = useTheme();
+  // A skeleton still showing inside revealing content is a piece that hasn't arrived yet.
+  useRevealPending();
   const pulse = useSharedValue(0.55);
   useEffect(() => {
     pulse.value = withRepeat(withTiming(1, { duration: 850, easing: Easing.inOut(Easing.ease) }), -1, true);

@@ -9,6 +9,7 @@ import { MasteryRing, statusMeta } from "@/components/app/status";
 import { TimeChart, UNIT_WINDOW, UnitToggle, useTimeUnit } from "@/components/app/time-chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { Reveal } from "@/components/ui/reveal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { VerifyEmailCard } from "@/components/app/verify-email-card";
 import { LessonLink } from "@/components/course/lesson-link";
@@ -22,9 +23,38 @@ const isoDay = (t: number) => new Date(t).toISOString().slice(0, 10);
 
 export function AnalyticsView() {
   const { user, ready, verified } = useSession();
-  const { data, isLoading } = useAnalytics(verified);
+  const { data } = useAnalytics(verified);
   if (ready && user && !verified) return <VerifyEmailCard user={user} />;
-  if (isLoading || !data) return <Skeleton className="h-[80vh] rounded-2xl" />;
+  return (
+    <Reveal ready={!!data} skeleton={<AnalyticsSkeleton />}>
+      {data && <AnalyticsBody data={data} />}
+    </Reveal>
+  );
+}
+
+/** The page header, KPI row and chart cards, pulsing, while the analytics load. */
+function AnalyticsSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-12 w-64" />
+        <Skeleton className="h-5 w-96 max-w-full" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-28 rounded-xl" />
+        ))}
+      </div>
+      <Skeleton className="h-80 rounded-xl" />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Skeleton className="h-72 rounded-xl" />
+        <Skeleton className="h-72 rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsBody({ data }: { data: Analytics }) {
   const t = data.totals;
 
   if (t.problems === 0)

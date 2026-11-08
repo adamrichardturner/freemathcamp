@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
+import { Reveal } from "@/components/reveal";
 import { standing, TierBadge, tierColour, useTimeLeft, ZonePill } from "@/components/league";
 import { Button, Card, CardHeader, Icon, Screen, Separator, Skeleton, Text } from "@/components/ui";
 import type { League } from "@/lib/api";
@@ -8,22 +9,30 @@ import { alpha, useTheme } from "@/lib/theme";
 
 /** The web's /leagues page: this week's table, last week's result, the tiers and how XP works. */
 export default function Leagues() {
-  const { data, isLoading, refetch, isRefetching } = useLeague();
-  if (isLoading || !data)
-    return (
-      <Screen title="Leagues">
-        <Skeleton height={180} />
-        <Skeleton height={320} />
-      </Screen>
-    );
+  const { data, refetch, isRefetching } = useLeague();
   return (
-    <Screen title="Leagues" refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
+    <Screen title="Leagues" refreshControl={data ? <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} /> : undefined}>
       <Text muted>Weekly tables of learners at your level. Solve problems, earn XP, move up.</Text>
-      {data.lastWeek && <LastWeek last={data.lastWeek} />}
-      {data.optedIn ? <Standing league={data} /> : <Join league={data} />}
-      {data.optedIn && data.cohort && <Table cohort={data.cohort} />}
-      <Tiers league={data} />
-      <HowItWorks />
+      <Reveal
+        ready={!!data}
+        gap={20}
+        skeleton={
+          <>
+            <Skeleton height={180} />
+            <Skeleton height={320} />
+          </>
+        }
+      >
+        {data && (
+          <>
+            {data.lastWeek && <LastWeek last={data.lastWeek} />}
+            {data.optedIn ? <Standing league={data} /> : <Join league={data} />}
+            {data.optedIn && data.cohort && <Table cohort={data.cohort} />}
+            <Tiers league={data} />
+            <HowItWorks />
+          </>
+        )}
+      </Reveal>
     </Screen>
   );
 }
