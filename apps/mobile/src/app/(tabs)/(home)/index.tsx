@@ -1,21 +1,21 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, RefreshControl, View } from "react-native";
+import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { ChipTabs } from "@/components/chip-tabs";
 import { LeagueCard } from "@/components/league";
 import { useOpenLesson } from "@/components/lesson-link";
-import { Segmented } from "@/components/segmented";
 import { Reveal } from "@/components/reveal";
 import { queueMeta, unitSymbol } from "@/components/status";
-import { Card, CardHeader, Empty, Grid, Icon, MasteryRing, Pill, ProgressBar, Row, Screen, SectionTitle, Separator, Skeleton, Text, type SymbolName } from "@/components/ui";
+import { Card, CardHeader, Empty, Icon, MasteryRing, Pill, ProgressBar, Row, Screen, SectionTitle, Separator, Skeleton, Text, type SymbolName } from "@/components/ui";
 import { WeekBars } from "@/components/week-bars";
 import type { CompletedToday, CourseProgress, Dashboard, DayPlan, QueueKind, Recommendation } from "@/lib/api";
 import { course, exerciseRef } from "@/lib/course";
 import { greeting, minutes, shortMinutes } from "@/lib/format";
 import { plain } from "@/lib/plain";
 import { useCourseProgress, useDashboard, useNotificationCounts, useSession } from "@/lib/queries";
-import { useLayout, widths } from "@/lib/layout";
-import { alpha, radius, useTheme, type Tone } from "@/lib/theme";
+import { widths } from "@/lib/layout";
+import { alpha, radius, toneColor, useTheme, type Tone } from "@/lib/theme";
 
 /** The web's dashboard (/learn): greeting, streak, stats, today's plan, queues, league and progress. */
 export default function Home() {
@@ -55,191 +55,147 @@ export default function Home() {
 
 function HomeBody({ data, progress }: { data: Dashboard; progress?: CourseProgress }) {
   const { user } = useSession();
-  const { c } = useTheme();
-  const { columns } = useLayout();
   const { queues, stats, day } = data;
   const firstName = user?.displayName.split(" ")[0] ?? "there";
   const isNew = stats.exercisesStarted === 0;
 
   return (
     <>
-      <View style={{ gap: 4 }}>
+      <View style={{ gap: 2 }}>
         <Text variant="small" muted>
           {greeting()},
         </Text>
-        <Text variant="display">{firstName}</Text>
-        <Text muted style={{ marginTop: 4 }}>
+        <Text variant="display" style={{ fontSize: 34, lineHeight: 38 }}>
+          {firstName}
+        </Text>
+        <Text variant="small" muted style={{ marginTop: 6 }}>
           {isNew
             ? "Welcome to Foundations. We've lined up the perfect place to start."
             : day.complete
               ? "You've met today's goal. Anything more today is a bonus."
               : stats.reviewsDue > 0
-              ? `You have ${stats.reviewsDue} review${stats.reviewsDue > 1 ? "s" : ""} due — a quick refresh keeps them locked in.`
-              : "Here's your plan for today, tuned to how you've been doing."}
+                ? `You have ${stats.reviewsDue} review${stats.reviewsDue > 1 ? "s" : ""} due — a quick refresh keeps them locked in.`
+                : "Here's your plan for today, tuned to how you've been doing."}
         </Text>
       </View>
 
-      <StreakBadge current={stats.streak.current} longest={stats.streak.longest} activeToday={stats.streak.activeToday} />
+      <TodayCard stats={stats} day={day} />
 
-      <Grid columns={columns(2, 4)}>
-        <StatCard icon="graduationcap.fill" tone="success" label="Mastered" value={`${stats.exercisesMastered}`} sub={`of ${stats.exercisesTotal} lessons`} />
-        <StatCard icon="sparkles" tone="primary" label="Started" value={`${stats.exercisesStarted}`} sub="in progress or done" />
-        <StatCard icon="calendar.badge.checkmark" tone="warning" label="Reviews due" value={`${stats.reviewsDue}`} sub="spaced for memory" />
-        <StatCard
-          icon="target"
-          tone="info"
-          label="Today"
-          value={`${day.done}/${day.goal}`}
-          sub={day.complete ? "Daily goal reached 🎉" : "toward your daily goal"}
-          progress={Math.min(1, day.done / day.goal)}
-        />
-      </Grid>
-
-      <TodayPlan day={data.day} />
+      <TodayPlan day={day} />
 
       <Queues queues={queues} />
 
       <LeagueCard />
 
-      <Grid columns={columns(1, 2)}>
-      <Card style={{ flex: 1 }}>
-        <CardHeader title="This week" subtitle="Problems per day" />
-        <View style={{ padding: 16 }}>
-          <WeekBars days={stats.week.map((d) => ({ day: d.day, value: d.problems }))} />
-        </View>
-      </Card>
+      <WeekCard stats={stats} />
 
-      <Card style={{ flex: 1 }}>
-        <CardHeader title="Time learning" icon="hourglass" iconTone="chart2" right={<Text variant="small" tone="primary" weight="medium" onPress={() => router.navigate("/progress")}>See trends</Text>} />
-        <View style={{ padding: 16, gap: 16 }}>
-          <View style={{ flexDirection: "row", gap: 28 }}>
-            <View>
-              <Text variant="title">{minutes(stats.time.todayMinutes)}</Text>
-              <Text variant="caption" muted>
-                today
-              </Text>
-            </View>
-            <View>
-              <Text variant="title">{minutes(stats.time.weekMinutes)}</Text>
-              <Text variant="caption" muted>
-                last 7 days
-              </Text>
-            </View>
-          </View>
-          <WeekBars days={stats.time.week.map((d) => ({ day: d.day, value: d.minutes }))} format={shortMinutes} gradient={[c.chart2, c.chart1]} min={10} />
-        </View>
-      </Card>
-      </Grid>
-
-      <Card>
-        <CardHeader title="Course progress" right={<Text variant="small" tone="primary" weight="medium" onPress={() => router.navigate("/course")}>Open map</Text>} />
-        <View style={{ padding: 16, gap: 12 }}>
-          {course.units.map((u) => {
-            const p = progress?.units.find((x) => x.unitId === u.id);
-            return (
-              <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: c.muted, alignItems: "center", justifyContent: "center" }}>
-                  <Icon name={unitSymbol(u.icon)} size={14} color={c.mutedForeground} />
-                </View>
-                <View style={{ flex: 1, gap: 5 }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-                    <Text variant="caption" weight="medium" numberOfLines={1} style={{ flexShrink: 1 }}>
-                      {u.title}
-                    </Text>
-                    <Text variant="caption" muted>
-                      {p?.mastered ?? 0}/{u.exercises.length}
-                    </Text>
-                  </View>
-                  <ProgressBar value={p?.mastery ?? 0} gradient={[c.primary, c.chart2]} />
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      </Card>
+      <CourseProgressCard progress={progress} />
     </>
   );
 }
 
-/** The greeting, streak, stats and plan, pulsing, while the dashboard loads. */
+/** The greeting, summary, plan and queues, pulsing, while the dashboard loads. */
 function HomeSkeleton() {
-  const { columns } = useLayout();
   return (
     <>
       <View style={{ gap: 8 }}>
         <Skeleton height={16} width={110} />
-        <Skeleton height={38} width={200} />
-        <Skeleton height={18} width="90%" />
+        <Skeleton height={34} width={180} />
+        <Skeleton height={16} width="90%" />
       </View>
-      <Skeleton height={76} />
-      <Grid columns={columns(2, 4)}>
-        {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} height={110} />
-        ))}
-      </Grid>
-      <Skeleton height={200} />
+      <Skeleton height={172} />
+      <Skeleton height={24} width={150} />
+      <Skeleton height={210} />
       <Skeleton height={260} />
     </>
   );
 }
 
-function StreakBadge({ current, longest, activeToday }: { current: number; longest: number; activeToday: boolean }) {
+/**
+ * Streak, today's goal and the headline numbers in one card, so the plan (the
+ * thing to press) starts on the first screen instead of below four stat tiles.
+ */
+function TodayCard({ stats, day }: { stats: Dashboard["stats"]; day: DayPlan }) {
   const { c } = useTheme();
+  const { current, longest, activeToday } = stats.streak;
+  const goal = Math.min(1, day.done / Math.max(1, day.goal));
   return (
-    <Card style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 14 }}>
-      {current > 0 ? (
-        <LinearGradient colors={[c.chart3, c.chart4]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 46, height: 46, borderRadius: 13, alignItems: "center", justifyContent: "center", boxShadow: `0 4px 10px ${alpha(c.chart4, 0.3)}` }}>
-          <Icon name="flame.fill" size={24} color="#fff" />
-        </LinearGradient>
-      ) : (
-        <View style={{ width: 46, height: 46, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: c.muted }}>
-          <Icon name="flame" size={24} color={c.mutedForeground} />
+    <Card>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
+        {current > 0 ? (
+          <LinearGradient colors={[c.chart3, c.chart4]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 46, height: 46, borderRadius: 13, alignItems: "center", justifyContent: "center", boxShadow: `0 4px 10px ${alpha(c.chart4, 0.3)}` }}>
+            <Icon name="flame.fill" size={24} color="#fff" />
+          </LinearGradient>
+        ) : (
+          <View style={{ width: 46, height: 46, borderRadius: 13, alignItems: "center", justifyContent: "center", backgroundColor: c.muted }}>
+            <Icon name="flame" size={24} color={c.mutedForeground} />
+          </View>
+        )}
+        <View style={{ flex: 1, gap: 1 }}>
+          <Text variant="title">
+            {current} <Text variant="small" muted>day streak</Text>
+          </Text>
+          <Text variant="caption" muted numberOfLines={2}>
+            {activeToday ? "Done for today ✓" : current > 0 ? "Practise today to keep it" : "Solve a problem to start one"} · best {longest}
+          </Text>
         </View>
-      )}
-      <View style={{ flex: 1 }}>
-        <Text variant="title">
-          {current} <Text variant="small" muted>day streak</Text>
-        </Text>
-        <Text variant="caption" muted>
-          {activeToday ? "Done for today ✓" : current > 0 ? "Practise today to keep it" : "Solve a problem to start one"} · best {longest}
-        </Text>
+        <View style={{ alignItems: "center", gap: 3 }} accessible accessibilityLabel={`Daily goal: ${day.done} of ${day.goal} problems`}>
+          <MasteryRing value={goal} size={50} stroke={5} color={day.complete ? c.success : c.info}>
+            {day.complete ? (
+              <Icon name="checkmark" size={18} color={c.success} weight="bold" />
+            ) : (
+              <Text variant="caption" weight="semibold">
+                {day.done}/{day.goal}
+              </Text>
+            )}
+          </MasteryRing>
+          <Text variant="caption" muted style={{ fontSize: 11 }}>
+            Today
+          </Text>
+        </View>
+      </View>
+      <Separator />
+      <View style={{ flexDirection: "row", paddingVertical: 14 }}>
+        <Stat icon="graduationcap.fill" tone="success" label="Mastered" value={stats.exercisesMastered} sub={`of ${stats.exercisesTotal}`} />
+        <View style={{ width: StyleSheet.hairlineWidth, backgroundColor: c.border }} />
+        <Stat icon="sparkles" tone="primary" label="Started" value={stats.exercisesStarted} sub="lessons" />
+        <View style={{ width: StyleSheet.hairlineWidth, backgroundColor: c.border }} />
+        <Stat icon="calendar.badge.checkmark" tone="warning" label="Reviews" value={stats.reviewsDue} sub="due" />
       </View>
     </Card>
   );
 }
 
-function StatCard({ icon, tone, label, value, sub, progress }: { icon: SymbolName; tone: Tone; label: string; value: string; sub: string; progress?: number }) {
+function Stat({ icon, tone, label, value, sub }: { icon: SymbolName; tone: Tone; label: string; value: number; sub: string }) {
   return (
-    <Card style={{ flex: 1, padding: 14, gap: 2 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <Icon name={icon} size={14} tone={tone} />
+    <View style={{ flex: 1, alignItems: "center", gap: 2, paddingHorizontal: 6 }} accessible accessibilityLabel={`${label}: ${value} ${sub}`}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+        <Icon name={icon} size={12} tone={tone} />
         <Text variant="caption" muted weight="medium">
           {label}
         </Text>
       </View>
-      <Text style={{ fontSize: 28, lineHeight: 34 }} weight="semibold">
+      <Text style={{ fontSize: 24, lineHeight: 30 }} weight="semibold">
         {value}
       </Text>
-      <Text variant="caption" muted numberOfLines={1}>
+      <Text variant="caption" muted>
         {sub}
       </Text>
-      {progress !== undefined && (
-        <View style={{ marginTop: 6 }}>
-          <ProgressBar value={progress} tone="info" />
-        </View>
-      )}
-    </Card>
+    </View>
   );
 }
 
+const UPCOMING_SHOWN = 3;
+
 /** Today's share of the plan, as the web's: the next session up front, the rest after it, then what's upcoming. */
 function TodayPlan({ day }: { day: DayPlan }) {
-  const { columns } = useLayout();
+  const [allUpcoming, setAllUpcoming] = useState(false);
   const left = Math.max(0, day.goal - day.done);
   // Once the goal is met, the first upcoming session becomes the next step.
   const upNext = day.complete ? day.upcoming[0] : day.today[0];
   const then = day.complete ? [] : day.today.slice(1);
   const upcoming = day.complete ? day.upcoming.slice(1) : day.upcoming;
+  const shownUpcoming = allUpcoming ? upcoming : upcoming.slice(0, UPCOMING_SHOWN);
   return (
     <View style={{ gap: 12 }}>
       <View style={{ gap: 2 }}>
@@ -249,37 +205,15 @@ function TodayPlan({ day }: { day: DayPlan }) {
         </Text>
       </View>
       {day.completed.length > 0 && <CompletedList items={day.completed} />}
-      {upNext ? (
-        <UpNextCard rec={upNext} optional={day.complete} />
-      ) : (
-        <Empty icon="map" title="Nothing lined up" text="Open the course to pick a lesson." />
-      )}
-      {then.length > 0 && (
-        <View style={{ gap: 8 }}>
-          <Text variant="label" muted>
-            Then
-          </Text>
-          <Grid columns={columns(1, 2)}>
-            {then.map((r) => (
-              <PlanCard key={r.exerciseId} rec={r} />
-            ))}
-          </Grid>
-        </View>
-      )}
+      {upNext ? <UpNextCard rec={upNext} optional={day.complete} /> : <Empty icon="map" title="Nothing lined up" text="Open the course to pick a lesson." />}
+      {then.length > 0 && <PlanList title="Then" items={then} />}
       {upcoming.length > 0 && (
-        <View style={{ gap: 8, marginTop: 4 }}>
-          <View style={{ gap: 2 }}>
-            <SectionTitle title="Upcoming" />
-            <Text variant="caption" muted>
-              {day.complete ? "Optional. A head start on what's next." : "Lined up after today's plan"}
-            </Text>
-          </View>
-          <Grid columns={columns(1, 2)}>
-            {upcoming.map((r) => (
-              <PlanCard key={r.exerciseId} rec={r} />
-            ))}
-          </Grid>
-        </View>
+        <PlanList
+          title="Upcoming"
+          caption={day.complete ? "Optional. A head start on what's next." : "Lined up after today's plan"}
+          items={shownUpcoming}
+          more={upcoming.length > UPCOMING_SHOWN ? { expanded: allUpcoming, hidden: upcoming.length - UPCOMING_SHOWN, toggle: () => setAllUpcoming((v) => !v) } : undefined}
+        />
       )}
     </View>
   );
@@ -308,6 +242,86 @@ function CompletedList({ items }: { items: CompletedToday[] }) {
         );
       })}
     </View>
+  );
+}
+
+/** The rest of the plan as compact rows in one card, rather than a tall card each. */
+function PlanList({ title, caption, items, more }: { title: string; caption?: string; items: Recommendation[]; more?: { expanded: boolean; hidden: number; toggle: () => void } }) {
+  return (
+    <View style={{ gap: 8, marginTop: 4 }}>
+      <View style={{ gap: 1 }}>
+        <Text variant="label" muted>
+          {title}
+        </Text>
+        {caption && (
+          <Text variant="caption" muted>
+            {caption}
+          </Text>
+        )}
+      </View>
+      <Card>
+        {items.map((r, i) => (
+          <View key={r.exerciseId}>
+            {i > 0 && <Separator inset={64} />}
+            <PlanRow rec={r} />
+          </View>
+        ))}
+        {more && (
+          <>
+            <Separator />
+            <ShowMore expanded={more.expanded} label={`Show ${more.hidden} more`} onPress={more.toggle} />
+          </>
+        )}
+      </Card>
+    </View>
+  );
+}
+
+/** One session: its progress (or unit, if new), title, kind, unit, length and why it's suggested. */
+function PlanRow({ rec }: { rec: Recommendation }) {
+  const { c } = useTheme();
+  const { open, isLocked } = useOpenLesson();
+  const ref = exerciseRef(rec.exerciseId);
+  if (!ref) return null;
+  const m = queueMeta[rec.kind];
+  const locked = isLocked(rec.exerciseId);
+  const tone = toneColor(c, m.tone);
+  return (
+    <Pressable
+      onPress={() => open(rec.exerciseId, m.mode)}
+      accessibilityRole="button"
+      accessibilityLabel={`${m.label}: ${ref.exercise.title}, ${ref.unit.title}, about ${ref.exercise.estimatedMinutes} minutes${locked ? ", locked" : ""}`}
+      style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: pressed ? c.muted : "transparent", opacity: locked ? 0.6 : 1 })}
+    >
+      {rec.kind === "next" ? (
+        <View style={{ width: 36, height: 36, borderRadius: radius.md, backgroundColor: alpha(c.primary, 0.1), alignItems: "center", justifyContent: "center" }}>
+          <Icon name={unitSymbol(ref.unit.icon)} size={16} tone="primary" />
+        </View>
+      ) : (
+        <MasteryRing value={rec.effectiveMastery} size={36} stroke={3.5} />
+      )}
+      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+        <Text weight="semibold" numberOfLines={1}>
+          {ref.exercise.title}
+        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+          <Icon name={m.icon} size={11} color={tone} weight="semibold" />
+          <Text variant="caption" numberOfLines={1} style={{ flexShrink: 1 }}>
+            <Text variant="caption" weight="semibold" style={{ color: tone }}>
+              {m.label}
+            </Text>
+            <Text variant="caption" muted>
+              {" "}
+              · {ref.unit.title} · ~{ref.exercise.estimatedMinutes} min
+            </Text>
+          </Text>
+        </View>
+        <Text variant="caption" muted numberOfLines={1}>
+          {plain(rec.reason)}
+        </Text>
+      </View>
+      <Icon name={locked ? "lock.fill" : "chevron.right"} size={13} color={c.mutedForeground} weight="semibold" />
+    </Pressable>
   );
 }
 
@@ -363,51 +377,6 @@ function UpNextCard({ rec, optional }: { rec: Recommendation; optional?: boolean
   );
 }
 
-function PlanCard({ rec }: { rec: Recommendation }) {
-  const { open, isLocked } = useOpenLesson();
-  const ref = exerciseRef(rec.exerciseId);
-  if (!ref) return null;
-  const m = queueMeta[rec.kind];
-  const locked = isLocked(rec.exerciseId);
-  return (
-    <View style={{ flex: 1 }}>
-      <Pressable onPress={() => open(rec.exerciseId, m.mode)} style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.985 : 1 }], opacity: locked ? 0.6 : 1 })}>
-        <Card style={{ flex: 1, padding: 16, gap: 4 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <Pill label={m.label} tone={m.tone} icon={m.icon} />
-            {rec.kind !== "next" && <MasteryRing value={rec.effectiveMastery} size={36} stroke={3.5} />}
-          </View>
-          <Text variant="caption" muted style={{ marginTop: 6 }}>
-            {ref.unit.title}
-          </Text>
-          <Text variant="heading" style={{ fontSize: 18 }}>
-            {ref.exercise.title}
-          </Text>
-          <Text variant="small" muted>
-            {rec.reason}
-          </Text>
-          {rec.brushUp && rec.brushUp.length > 0 && (
-            <Text variant="caption" muted style={{ marginTop: 4 }}>
-              Brush up: {rec.brushUp.map((id) => exerciseRef(id)?.exercise.title).join(", ")}
-            </Text>
-          )}
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: "auto", paddingTop: 10 }}>
-            <Text variant="caption" muted>
-              ~{ref.exercise.estimatedMinutes} min
-            </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Text variant="caption" weight="semibold" tone="primary">
-                {locked ? "Locked" : "Start"}
-              </Text>
-              <Icon name={locked ? "lock.fill" : "arrow.right"} size={12} tone="primary" />
-            </View>
-          </View>
-        </Card>
-      </Pressable>
-    </View>
-  );
-}
-
 const EMPTY: Record<QueueKind, string> = {
   review: "Nothing due — your memory is in great shape. Reviews appear here as they fall due.",
   challenge: "No weak spots right now. Topics you find tricky will show up here with targeted practice.",
@@ -415,28 +384,38 @@ const EMPTY: Record<QueueKind, string> = {
   continue: "Nothing in progress. Start something new from Today's plan.",
 };
 
+const QUEUE_ORDER: QueueKind[] = ["review", "challenge", "next", "continue"];
+const QUEUE_SHOWN = 5;
+
 function Queues({ queues }: { queues: Record<QueueKind, Recommendation[]> }) {
   const [kind, setKind] = useState<QueueKind>(queues.review.length ? "review" : queues.challenge.length ? "challenge" : "next");
+  const [all, setAll] = useState(false);
   const { open } = useOpenLesson();
   const { c } = useTheme();
-  const items = queues[kind];
+  const items = all ? queues[kind] : queues[kind].slice(0, QUEUE_SHOWN);
+  const hidden = queues[kind].length - QUEUE_SHOWN;
   const m = queueMeta[kind];
   return (
     <Card>
       <CardHeader title="Your learning queues" />
-      <View style={{ padding: 16, paddingBottom: 8 }}>
-        <Segmented
-          value={kind}
-          onChange={setKind}
-          options={(["review", "challenge", "next", "continue"] as QueueKind[]).map((k) => ({ value: k, label: `${queueMeta[k].label} ${queues[k].length}` }))}
-        />
-      </View>
+      {/* Full labels in pills that scroll sideways: four segments squeezed into one row cut the names off. */}
+      <ChipTabs
+        label="Learning queues"
+        value={kind}
+        onChange={(k) => {
+          setKind(k);
+          setAll(false);
+        }}
+        inset={16}
+        style={{ marginTop: 12, marginBottom: 4 }}
+        options={QUEUE_ORDER.map((k) => ({ value: k, label: queueMeta[k].label, icon: queueMeta[k].icon, count: queues[k].length }))}
+      />
       {items.length === 0 ? (
-        <View style={{ padding: 16, paddingTop: 4 }}>
+        <View style={{ padding: 16, paddingTop: 8 }}>
           <Empty icon={m.icon} title={`No ${m.label.toLowerCase()} items`} text={EMPTY[kind]} />
         </View>
       ) : (
-        <View style={{ paddingBottom: 8 }}>
+        <View style={{ paddingTop: 4, paddingBottom: 6 }}>
           {items.map((r, i) => {
             const ref = exerciseRef(r.exerciseId)!;
             return (
@@ -459,8 +438,132 @@ function Queues({ queues }: { queues: Record<QueueKind, Recommendation[]> }) {
               </View>
             );
           })}
+          {hidden > 0 && (
+            <>
+              <Separator />
+              <ShowMore expanded={all} label={`Show ${hidden} more`} onPress={() => setAll((v) => !v)} />
+            </>
+          )}
         </View>
       )}
     </Card>
+  );
+}
+
+type WeekMetric = "problems" | "minutes";
+
+/** Problems and time over the last seven days in one card, switched with a toggle, instead of two charts. */
+function WeekCard({ stats }: { stats: Dashboard["stats"] }) {
+  const { c } = useTheme();
+  const [metric, setMetric] = useState<WeekMetric>("problems");
+  const problemsWeek = stats.week.reduce((n, d) => n + d.problems, 0);
+  const summary =
+    metric === "problems"
+      ? [
+          { value: `${stats.today.problems}`, label: "today" },
+          { value: `${problemsWeek}`, label: "last 7 days" },
+        ]
+      : [
+          { value: minutes(stats.time.todayMinutes), label: "today" },
+          { value: minutes(stats.time.weekMinutes), label: "last 7 days" },
+        ];
+  return (
+    <Card>
+      <CardHeader title="This week" icon="chart.bar.fill" right={<Text variant="small" tone="primary" weight="medium" onPress={() => router.navigate("/progress")}>See trends</Text>} />
+      <ChipTabs
+        label="Weekly chart"
+        value={metric}
+        onChange={setMetric}
+        inset={16}
+        style={{ marginTop: 12 }}
+        options={[
+          { value: "problems", label: "Problems", icon: "checkmark.circle" },
+          { value: "minutes", label: "Time", icon: "hourglass" },
+        ]}
+      />
+      <View style={{ padding: 16, gap: 14 }}>
+        <View style={{ flexDirection: "row", gap: 28 }}>
+          {summary.map((s) => (
+            <View key={s.label}>
+              <Text variant="title">{s.value}</Text>
+              <Text variant="caption" muted>
+                {s.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+        {metric === "problems" ? (
+          <WeekBars days={stats.week.map((d) => ({ day: d.day, value: d.problems }))} />
+        ) : (
+          <WeekBars days={stats.time.week.map((d) => ({ day: d.day, value: d.minutes }))} format={shortMinutes} gradient={[c.chart2, c.chart1]} min={10} />
+        )}
+      </View>
+    </Card>
+  );
+}
+
+const UNITS_SHOWN = 4;
+
+/** Units under way (and the next one to start), with the full list a tap away. */
+function CourseProgressCard({ progress }: { progress?: CourseProgress }) {
+  const { c } = useTheme();
+  const [all, setAll] = useState(false);
+  const rows = course.units.map((u) => ({ unit: u, p: progress?.units.find((x) => x.unitId === u.id) }));
+  const started = rows.filter((r) => (r.p?.mastery ?? 0) > 0);
+  const nextUp = rows.find((r) => (r.p?.mastery ?? 0) === 0);
+  const focus = [...started, ...(nextUp ? [nextUp] : [])].slice(0, Math.max(UNITS_SHOWN, started.length + 1));
+  const shown = all ? rows : focus.length ? focus : rows.slice(0, UNITS_SHOWN);
+  const hidden = rows.length - shown.length;
+  return (
+    <Card>
+      <CardHeader
+        title="Course progress"
+        subtitle={`${started.length} of ${rows.length} units started`}
+        right={
+          <Text variant="small" tone="primary" weight="medium" onPress={() => router.navigate("/course")}>
+            Open map
+          </Text>
+        }
+      />
+      <View style={{ padding: 16, gap: 12 }}>
+        {shown.map(({ unit: u, p }) => (
+          <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: c.muted, alignItems: "center", justifyContent: "center" }}>
+              <Icon name={unitSymbol(u.icon)} size={14} color={c.mutedForeground} />
+            </View>
+            <View style={{ flex: 1, gap: 5 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                <Text variant="caption" weight="medium" numberOfLines={1} style={{ flexShrink: 1 }}>
+                  {u.title}
+                </Text>
+                <Text variant="caption" muted>
+                  {p?.mastered ?? 0}/{u.exercises.length} mastered
+                </Text>
+              </View>
+              <ProgressBar value={p?.mastery ?? 0} gradient={[c.primary, c.chart2]} />
+            </View>
+          </View>
+        ))}
+      </View>
+      {(hidden > 0 || all) && (
+        <>
+          <Separator />
+          <ShowMore expanded={all} label={`Show all ${rows.length} units`} onPress={() => setAll((v) => !v)} />
+        </>
+      )}
+    </Card>
+  );
+}
+
+/** The footer row that expands a card's list, or folds it back. */
+function ShowMore({ expanded, label, onPress }: { expanded: boolean; label: string; onPress: () => void }) {
+  const { c } = useTheme();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ expanded }} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 13, backgroundColor: pressed ? c.muted : "transparent" })}>
+      <Text variant="small" weight="semibold" tone="primary">
+        {expanded ? "Show fewer" : label}
+      </Text>
+      <Icon name={expanded ? "chevron.up" : "chevron.down"} size={12} tone="primary" weight="semibold" />
+    </Pressable>
   );
 }

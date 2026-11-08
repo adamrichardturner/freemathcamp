@@ -1,7 +1,8 @@
 import { router, Stack } from "expo-router";
+import { useHeaderHeight } from "expo-router/react-navigation";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from "react-native";
-import { Segmented } from "@/components/segmented";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { ChipTabs } from "@/components/chip-tabs";
 import { Empty, Icon, IconChip, Text, type SymbolName } from "@/components/ui";
 import type { AppNotification, NotificationFilter } from "@/lib/api";
 import { relative } from "@/lib/format";
@@ -38,8 +39,30 @@ export default function Notifications() {
     }
   };
 
+  const pad = sides(widths.readable);
+  // iOS draws this sheet's navigation bar over the content. The list used to
+  // inset itself below the bar while the tabs above it didn't, so the two
+  // overlapped. Lay the whole screen out below the bar instead, and turn the
+  // list's automatic inset off so nothing is offset twice.
+  const headerHeight = useHeaderHeight();
+  const tabs = (
+    <View style={{ paddingTop: 12, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border, backgroundColor: c.background }}>
+      <ChipTabs
+        label="Filter notifications"
+        value={filter}
+        onChange={setFilter}
+        inset={pad.paddingLeft}
+        options={[
+          { value: "all", label: "All" },
+          { value: "unread", label: "Unread", count: counts?.unread || undefined },
+          { value: "kept", label: "Kept", icon: "bookmark.fill", count: counts?.kept || undefined },
+        ]}
+      />
+    </View>
+  );
+
   return (
-    <View style={{ flex: 1, backgroundColor: c.background }}>
+    <View style={{ flex: 1, paddingTop: headerHeight, backgroundColor: c.background }}>
       <Stack.Screen
         options={{
           headerRight: () =>
@@ -52,21 +75,13 @@ export default function Notifications() {
             ) : null,
         }}
       />
-      <View style={{ paddingTop: 20, ...sides(widths.readable), paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: c.border, backgroundColor: c.background, zIndex: 1 }}>
-        <Segmented
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: "all", label: "All" },
-            { value: "unread", label: `Unread${counts?.unread ? ` ${counts.unread}` : ""}` },
-            { value: "kept", label: `Kept${counts?.kept ? ` ${counts.kept}` : ""}` },
-          ]}
-        />
-      </View>
+      {tabs}
       <FlatList
         data={items}
         keyExtractor={(n) => n.id}
-        contentContainerStyle={{ paddingTop: 20, ...sides(widths.readable), gap: 10, paddingBottom: 40 }}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
+        contentContainerStyle={{ paddingTop: 16, ...pad, gap: 10, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
         onEndReached={() => list.hasNextPage && !list.isFetchingNextPage && list.fetchNextPage()}
         ListEmptyComponent={
