@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { View, type StyleProp, type ViewStyle } from "react-native";
-import Reanimated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Reanimated, { FadeIn, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { Button, Empty } from "@/components/ui";
 import { useTheme } from "@/lib/theme";
 
 /** How long the content must hold its size before we call it painted. */
@@ -46,7 +47,24 @@ export function useRevealPending() {
  * the reveal waits for every web view inside to report it has rendered, every nested
  * skeleton to resolve, and the content's size to stop changing.
  */
-export function Reveal({ ready, skeleton, children, gap, style }: { ready: boolean; skeleton: ReactNode; children: ReactNode; gap?: number; style?: StyleProp<ViewStyle> }) {
+export function Reveal({
+  error,
+  onRetry,
+  ...props
+}: { ready: boolean; skeleton: ReactNode; children: ReactNode; gap?: number; style?: StyleProp<ViewStyle>; error?: boolean; onRetry?: () => void }) {
+  // A load that failed for good says so, rather than leaving a skeleton pulsing forever.
+  if (error && !props.ready)
+    return (
+      <Reanimated.View entering={FadeIn.duration(250)}>
+        <Empty icon="icloud.slash" title="We couldn't load this" text="Something went wrong on our side or the connection dropped. Your progress is safe.">
+          {onRetry && <Button title="Try again" icon="arrow.clockwise" variant="outline" size="sm" onPress={onRetry} style={{ marginTop: 4 }} />}
+        </Empty>
+      </Reanimated.View>
+    );
+  return <RevealContent {...props} />;
+}
+
+function RevealContent({ ready, skeleton, children, gap, style }: { ready: boolean; skeleton: ReactNode; children: ReactNode; gap?: number; style?: StyleProp<ViewStyle> }) {
   const { c } = useTheme();
   const [holds, setHolds] = useState(0);
   const [painted, setPainted] = useState(false);

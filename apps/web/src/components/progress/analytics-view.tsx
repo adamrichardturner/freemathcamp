@@ -23,10 +23,10 @@ const isoDay = (t: number) => new Date(t).toISOString().slice(0, 10);
 
 export function AnalyticsView() {
   const { user, ready, verified } = useSession();
-  const { data } = useAnalytics(verified);
+  const { data, isError, refetch } = useAnalytics(verified);
   if (ready && user && !verified) return <VerifyEmailCard user={user} />;
   return (
-    <Reveal ready={!!data} skeleton={<AnalyticsSkeleton />}>
+    <Reveal ready={!!data} error={isError} onRetry={() => void refetch()} skeleton={<AnalyticsSkeleton />}>
       {data && <AnalyticsBody data={data} />}
     </Reveal>
   );

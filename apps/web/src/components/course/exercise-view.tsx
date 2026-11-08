@@ -3,7 +3,7 @@
 import type { ConceptEntry } from "@fmc/curriculum";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, BookOpen, ChevronRight, Clock, Dumbbell, Dices, Lock, LockKeyhole, Repeat, Sparkles, Waypoints } from "lucide-react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -19,14 +19,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { keys, useCourseProgress, useExerciseDetail, useLessonAccess, useSession } from "@/hooks/queries";
-import { api, type ExerciseStatus, type PracticeMode } from "@/lib/api";
+import { api, type ExerciseStatus, type PracticeMode, type ProgressView } from "@/lib/api";
 import { COURSE_ID, exerciseRef, graph, lessonHref } from "@/lib/course";
 import { pct, relative } from "@/lib/format";
+import { nextStep } from "@/lib/next-step";
 import { Reveal } from "@/components/ui/reveal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { LearningModeSwitch } from "./learning-mode";
 import { LessonLink } from "./lesson-link";
+import { DueChip, LessonFirstHint, PracticeDueBanner, StepMarker } from "./next-step";
 
 export function ExerciseView({ exerciseId, reading = [] }: { exerciseId: string; reading?: ConceptEntry[] }) {
   const ref = exerciseRef(exerciseId)!;
@@ -40,9 +42,14 @@ export function ExerciseView({ exerciseId, reading = [] }: { exerciseId: string;
   const access = useLessonAccess();
   const locked = access.isLocked(exerciseId);
   const requestedMode = params.get("mode") as PracticeMode | null;
-  const [tab, setTab] = useState(requestedMode ? "practice" : "lesson");
-  // Arriving from a recommendation (?mode=…) drops straight into practice.
-  const [practising, setPractising] = useState<PracticeMode | null>(requestedMode);
+  // Every visit opens on the lesson. A recommendation (?mode=…) or a review falling due
+  // doesn't skip it: it raises a call to practise above the lesson instead.
+  const [tab, setTab] = useState("lesson");
+  const [practising, setPractising] = useState<PracticeMode | null>(null);
+  const [now] = useState(() => Date.now());
+  // When the lesson was viewed before this visit: read once, before this visit's own view lands.
+  const [viewedAt, setViewedAt] = useState<string | null | undefined>(undefined);
+  if (detailFetched && viewedAt === undefined) setViewedAt(detail?.progress?.lessonViewedAt ?? null);
   const statusById = new Map(courseProgress?.exercises.map((e) => [e.exerciseId, e.status]) ?? []);
 
   const viewed = useMutation({
@@ -68,6 +75,8 @@ export function ExerciseView({ exerciseId, reading = [] }: { exerciseId: string;
   const next = graph.refs[ref.order + 1];
   const dependents = graph.dependents.get(exerciseId) ?? [];
   const weakPrereqs = (detail?.prerequisites ?? []).filter((p) => p.status === "new" || p.status === "struggling");
+  const step = nextStep({ progress, requested: requestedMode, viewedAt, now });
+  const practiceDue = !!user && step.kind === "practice";
 
   const startPractice = (mode: PracticeMode) => {
     setTab("practice");
@@ -96,40 +105,40 @@ export function ExerciseView({ exerciseId, reading = [] }: { exerciseId: string;
               <Clock className="size-3.5" /> ~{exercise.estimatedMinutes} min
             </span>
             {progress && <StatusBadge status={progress.status} />}
-            {progress?.dueAt && progress.sessionsCompleted > 0 && <span>· review {relative(progress.dueAt)}</span>}
+            {progress?.dueAt && progress.sessionsCompleted > 0 && (
+              <span>· {new Date(progress.dueAt).getTime() <= now ? <span className="font-medium text-warning">review due now</span> : `next review ${relative(progress.dueAt, now)}`}</span>
+            )}
           </div>
         </div>
       </header>
 
       <Reveal ready={settled} skeleton={<LessonSkeleton />}>
-        {progress && progress.itemsSeen > 0 && (
-          <div className="flex items-center gap-3 mb-6 w-fit rounded-2xl border bg-card px-4 py-3">
-            <MasteryRing value={progress.effectiveMastery} size={52} stroke={5} color={statusMeta[progress.status].ring}>
-              <span className="text-xs">{pct(progress.effectiveMastery)}</span>
-            </MasteryRing>
-            <div className="text-xs text-muted-foreground">
-              <div className="font-semibold text-foreground">Mastery today</div>
-              {progress.itemsSeen} problems · {progress.sessionsCompleted} sessions
-              <br />
-              struggle {pct(progress.struggle)}
-            </div>
-          </div>
-        )}
+        {/* On small screens your mastery sits above the lesson; on wide ones it heads the sidebar. */}
+        {progress && progress.itemsSeen > 0 && <MasteryCard progress={progress} className="mb-6 w-fit lg:hidden" />}
         {settled && locked ? (
           <LockedLesson exerciseId={exerciseId} />
         ) : (
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
             <Tabs value={tab} onValueChange={(v) => setTab(v as string)} className="min-w-0">
-              <TabsList className="mb-4">
-                <TabsTrigger value="lesson" className="gap-1.5">
-                  <BookOpen className="size-4" /> Lesson
+              <AnimatePresence initial={false}>
+                {practiceDue && tab === "lesson" && step.kind === "practice" && (
+                  <div className="mb-5">
+                    <PracticeDueBanner step={step} onStart={() => startPractice(step.mode)} />
+                  </div>
+                )}
+              </AnimatePresence>
+              <TabsList className="mb-3 h-9">
+                <TabsTrigger value="lesson" className="group gap-1.5 px-3">
+                  <StepMarker n={1} done={practiceDue} /> <BookOpen className="size-4" /> Lesson
                 </TabsTrigger>
-                <TabsTrigger value="practice" className="gap-1.5">
-                  <Dumbbell className="size-4" /> Practice
+                <TabsTrigger value="practice" className="group gap-1.5 px-3">
+                  {practiceDue && tab === "lesson" ? <StepMarker n={2} due /> : <StepMarker n={2} />} <Dumbbell className="size-4" /> Practice
+                  {practiceDue && tab === "lesson" && <DueChip />}
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="lesson" className="space-y-8">
+                {!practiceDue && !(progress && progress.sessionsCompleted > 0) && <LessonFirstHint minutes={exercise.estimatedMinutes} onPractise={() => setTab("practice")} />}
                 {exercise.prerequisites.length > 0 && weakPrereqs.length > 0 && <PrereqNudge ids={weakPrereqs.map((p) => p.exerciseId)} />}
                 <Lesson blocks={exercise.lesson} />
                 <div className="flex flex-col items-center gap-3 rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-chart-2/10 p-6 text-center">
@@ -138,8 +147,8 @@ export function ExerciseView({ exerciseId, reading = [] }: { exerciseId: string;
                     <div className="text-lg font-semibold">Ready to try it?</div>
                     <p className="text-sm text-muted-foreground">Problems adapt to you as you go — no two sessions are the same.</p>
                   </div>
-                  <Button size="lg" className="h-11 px-6" onClick={() => startPractice(progress?.status === "struggling" ? "challenge" : "learn")}>
-                    Start practising <ArrowRight />
+                  <Button size="lg" className="group h-11 px-6" onClick={() => startPractice(step.mode)}>
+                    {step.kind === "practice" ? step.cta : "Start practising"} <ArrowRight className="transition-transform group-hover:translate-x-0.5" />
                   </Button>
                 </div>
               </TabsContent>
@@ -162,12 +171,13 @@ export function ExerciseView({ exerciseId, reading = [] }: { exerciseId: string;
                     }}
                   />
                 ) : (
-                  <ModePicker status={progress?.status ?? "new"} sessions={progress?.sessionsCompleted ?? 0} recommended={requestedMode} onStart={startPractice} />
+                  <ModePicker status={progress?.status ?? "new"} sessions={progress?.sessionsCompleted ?? 0} recommended={step.mode} onStart={startPractice} />
                 )}
               </TabsContent>
             </Tabs>
 
             <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
+              {progress && progress.itemsSeen > 0 && <MasteryCard progress={progress} className="hidden lg:flex" />}
               {exercise.prerequisites.length > 0 && (
                 <Card className="gap-3">
                   <CardHeader>
@@ -222,6 +232,22 @@ export function ExerciseView({ exerciseId, reading = [] }: { exerciseId: string;
   );
 }
 
+function MasteryCard({ progress, className }: { progress: ProgressView; className?: string }) {
+  return (
+    <div className={cn("flex items-center gap-3 rounded-2xl border bg-card px-4 py-3", className)}>
+      <MasteryRing value={progress.effectiveMastery} size={52} stroke={5} color={statusMeta[progress.status].ring}>
+        <span className="text-xs">{pct(progress.effectiveMastery)}</span>
+      </MasteryRing>
+      <div className="text-xs text-muted-foreground">
+        <div className="font-semibold text-foreground">Mastery today</div>
+        {progress.itemsSeen} problems · {progress.sessionsCompleted} session{progress.sessionsCompleted === 1 ? "" : "s"}
+        <br />
+        struggle {pct(progress.struggle)}
+      </div>
+    </div>
+  );
+}
+
 /** Previous / next lesson button; a locked neighbour renders as a disabled button with a padlock. */
 function SiblingLink({ id, direction }: { id: string; direction: "prev" | "next" }) {
   const { isLocked } = useLessonAccess();
@@ -243,7 +269,11 @@ function LockedLesson({ exerciseId }: { exerciseId: string }) {
   const { lockedBy, mode } = useLessonAccess();
   const before = lockedBy(exerciseId);
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative overflow-hidden rounded-3xl border border-dashed bg-muted/30 px-6 py-12 text-center sm:py-16">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative overflow-hidden rounded-3xl border border-dashed bg-muted/30 px-6 py-12 text-center sm:py-16"
+    >
       <div className="pointer-events-none absolute inset-0 bg-dots opacity-50" />
       <div className="relative mx-auto flex max-w-md flex-col items-center gap-4">
         <span className="grid size-16 place-items-center rounded-2xl border bg-card text-muted-foreground shadow-sm">
@@ -320,7 +350,17 @@ const MODES: { mode: PracticeMode; icon: typeof Dices; title: string; text: stri
   { mode: "challenge", icon: Dumbbell, title: "Challenge", text: "Eight problems that start gently and build back confidence on weak spots." },
 ];
 
-function ModePicker({ status, sessions, recommended, onStart }: { status: ExerciseStatus; sessions: number; recommended: PracticeMode | null; onStart: (m: PracticeMode) => void }) {
+function ModePicker({
+  status,
+  sessions,
+  recommended,
+  onStart,
+}: {
+  status: ExerciseStatus;
+  sessions: number;
+  recommended: PracticeMode | null;
+  onStart: (m: PracticeMode) => void;
+}) {
   const rec = recommended ?? (status === "struggling" ? "challenge" : status === "review" ? "review" : "learn");
   return (
     <div className="space-y-4">
@@ -351,8 +391,8 @@ function ModePicker({ status, sessions, recommended, onStart }: { status: Exerci
         })}
       </div>
       <p className="text-center text-xs text-muted-foreground">
-        Press <kbd className="rounded border bg-muted px-1">Enter</kbd> to check answers, <kbd className="rounded border bg-muted px-1">1</kbd>–<kbd className="rounded border bg-muted px-1">4</kbd> to
-        pick options.
+        Press <kbd className="rounded border bg-muted px-1">Enter</kbd> to check answers, <kbd className="rounded border bg-muted px-1">1</kbd>–
+        <kbd className="rounded border bg-muted px-1">4</kbd> to pick options.
       </p>
     </div>
   );
@@ -367,7 +407,9 @@ function SignInToPractice({ exerciseId }: { exerciseId: string }) {
       </span>
       <div>
         <h3 className="text-xl font-semibold">Practise with adaptive problems</h3>
-        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Create a free account so we can track your progress, adapt difficulty and schedule reviews at the right time.</p>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+          Create a free account so we can track your progress, adapt difficulty and schedule reviews at the right time.
+        </p>
       </div>
       <div className="flex gap-2">
         <ButtonLink href={`/register?next=${next}`}>Create free account</ButtonLink>

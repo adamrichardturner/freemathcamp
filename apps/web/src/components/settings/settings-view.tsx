@@ -35,9 +35,9 @@ const SECTIONS = [
 const errorMessage = (e: unknown, fallback: string) => (e instanceof ApiError ? e.message : fallback);
 
 export function SettingsView() {
-  const { data } = useAccountSettings();
+  const { data, isError, refetch } = useAccountSettings();
   return (
-    <Reveal ready={!!data} skeleton={<SettingsSkeleton />}>
+    <Reveal ready={!!data} error={isError} onRetry={() => void refetch()} skeleton={<SettingsSkeleton />}>
       {data && <SettingsBody data={data} />}
     </Reveal>
   );

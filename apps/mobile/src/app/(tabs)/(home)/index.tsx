@@ -20,7 +20,7 @@ import { alpha, radius, toneColor, useTheme, type Tone } from "@/lib/theme";
 /** The web's dashboard (/learn): greeting, streak, stats, today's plan, queues, league and progress. */
 export default function Home() {
   const { user } = useSession();
-  const { data, refetch, isRefetching } = useDashboard();
+  const { data, refetch, isRefetching, isError } = useDashboard();
   const { data: progress, isFetched: progressFetched } = useCourseProgress();
   const counts = useNotificationCounts();
   const { c } = useTheme();
@@ -46,7 +46,7 @@ export default function Home() {
   return (
     <Screen width={widths.wide} refreshControl={data ? <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} /> : undefined}>
       {header}
-      <Reveal ready={!!data && progressFetched} gap={20} skeleton={<HomeSkeleton />}>
+      <Reveal ready={!!data && progressFetched} error={isError} onRetry={() => void refetch()} gap={20} skeleton={<HomeSkeleton />}>
         {data && <HomeBody data={data} progress={progress} />}
       </Reveal>
     </Screen>

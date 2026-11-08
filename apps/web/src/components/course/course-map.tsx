@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronRight, List, Lock, Waypoints } from "lucide-react";
+import { ArrowRight, ChevronRight, List, Lock, Waypoints } from "lucide-react";
 import { motion } from "motion/react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { ButtonLink } from "@/components/app/button-link";
 import { MasteryRing, StatusDot, statusMeta } from "@/components/app/status";
 import { UnitIcon } from "@/components/app/unit-icon";
 import { Md } from "@/components/math/md";
@@ -11,8 +12,8 @@ import { Reveal } from "@/components/ui/reveal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useCourseProgress, useLessonAccess, useSession } from "@/hooks/queries";
-import type { ExerciseStatus } from "@/lib/api";
-import { course, graph } from "@/lib/course";
+import type { ExerciseStatus, ProgressView } from "@/lib/api";
+import { course, graph, lessonHref } from "@/lib/course";
 import { LearningModeSwitch, MODE_META } from "./learning-mode";
 import { LessonLink } from "./lesson-link";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,13 @@ export function CourseMap() {
   const total = graph.refs.length;
   const mastered = progress?.exercises.filter((e) => e.status === "mastered").length ?? 0;
   const overall = progress ? progress.units.reduce((a, u) => a + u.mastery * u.total, 0) / total : 0;
+  const [now] = useState(() => Date.now());
+  // Lessons whose practice is due now, and the first fresh lesson open to the learner:
+  // marked on the map so it's plain where to go next.
+  const isDue = (p: ProgressView | undefined) => !!p && p.sessionsCompleted > 0 && (p.status === "struggling" || (!!p.dueAt && new Date(p.dueAt).getTime() <= now));
+  const startHere = user && access.known ? graph.refs.find((r) => !access.isLocked(r.exercise.id) && (byId.get(r.exercise.id)?.sessionsCompleted ?? 0) === 0)?.exercise.id : undefined;
+  const firstDue = user ? graph.refs.find((r) => isDue(byId.get(r.exercise.id)))?.exercise.id : undefined;
+  const jumpTo = firstDue ?? startHere;
 
   // The mastery ring, mode switch and lesson locks depend on the learner; hold the
   // map (still in the HTML for crawlers) until they've all landed together.
@@ -49,6 +57,12 @@ export function CourseMap() {
                 <span>{total} lessons</span>
                 <span>∞ practice problems</span>
               </div>
+              {jumpTo && (
+                <ButtonLink href={lessonHref(jumpTo)} className="group mt-5 h-10 gap-2 px-4">
+                  {firstDue ? "Practice due:" : "Continue with"} <span className="max-w-48 truncate font-semibold">{graph.refs.find((r) => r.exercise.id === jumpTo)?.exercise.title}</span>
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                </ButtonLink>
+              )}
             </div>
             {user && (
               <div className="flex items-center gap-4 rounded-2xl border bg-card/80 p-4 backdrop-blur">
@@ -120,11 +134,17 @@ export function CourseMap() {
                     {unit.exercises.map((e, i) => {
                       const p = byId.get(e.id);
                       const status = p?.status ?? "new";
+                      const due = isDue(p);
+                      const here = e.id === startHere;
                       return (
                         <LessonLink
                           key={e.id}
                           id={e.id}
-                          className="group flex min-w-0 items-center gap-3 rounded-xl border bg-card p-3.5 transition-all"
+                          className={cn(
+                            "group relative flex min-w-0 items-center gap-3 rounded-xl border bg-card p-3.5 transition-all",
+                            here && "border-primary/50 ring-4 ring-primary/10",
+                            due && (status === "struggling" ? "border-danger/40" : "border-warning/40"),
+                          )}
                           openClassName="hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
                         >
                           {(locked) => (
@@ -153,7 +173,11 @@ export function CourseMap() {
                                   )}
                                 </div>
                               </div>
-                              {!locked && <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />}
+                              {!locked && (due || here) ? (
+                                <TileFlag label={here ? (p && p.itemsSeen > 0 ? "Continue" : "Start here") : status === "struggling" ? "Practise" : "Review"} tone={here ? "primary" : status === "struggling" ? "danger" : "warning"} />
+                              ) : (
+                                !locked && <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                              )}
                             </>
                           )}
                         </LessonLink>
@@ -167,6 +191,26 @@ export function CourseMap() {
         )}
       </div>
     </Reveal>
+  );
+}
+
+const FLAG = {
+  primary: { chip: "bg-primary text-primary-foreground", dot: "bg-primary-foreground" },
+  warning: { chip: "bg-warning/15 text-warning", dot: "bg-warning" },
+  danger: { chip: "bg-danger/12 text-danger", dot: "bg-danger" },
+} as const;
+
+/** A small pulsing flag on a lesson tile: where to start, or practice that's due. */
+function TileFlag({ label, tone }: { label: string; tone: keyof typeof FLAG }) {
+  const f = FLAG[tone];
+  return (
+    <span className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold", f.chip)}>
+      <span className="relative flex size-1.5">
+        <span className={cn("absolute inline-flex size-full animate-ping rounded-full opacity-70 motion-reduce:animate-none", f.dot)} />
+        <span className={cn("relative inline-flex size-1.5 rounded-full", f.dot)} />
+      </span>
+      {label}
+    </span>
   );
 }
 

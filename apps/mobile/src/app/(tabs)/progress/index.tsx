@@ -14,7 +14,7 @@ import { alpha, useTheme, type Tone } from "@/lib/theme";
 
 /** The web's progress page: totals, activity, time, mastery by unit, difficulty, strengths and weak spots. */
 export default function Progress() {
-  const { data, refetch, isRefetching } = useAnalytics();
+  const { data, refetch, isRefetching, isError } = useAnalytics();
   if (data && data.totals.problems === 0)
     return (
       <Screen title="Progress">
@@ -23,7 +23,7 @@ export default function Progress() {
     );
   return (
     <Screen title="Progress" width={widths.wide} refreshControl={data ? <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} /> : undefined}>
-      <Reveal ready={!!data} gap={20} skeleton={<ProgressSkeleton />}>
+      <Reveal ready={!!data} error={isError} onRetry={() => void refetch()} gap={20} skeleton={<ProgressSkeleton />}>
         {data && <ProgressBody data={data} />}
       </Reveal>
     </Screen>
