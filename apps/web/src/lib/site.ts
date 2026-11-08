@@ -95,9 +95,18 @@ export const allCourses: Course[] = courses;
 export const IOS_APP = {
   available: false,
   appStoreUrl: "https://apps.apple.com/app/id6829382170",
+  /**
+   * The phone screens the landing page's app section cycles through, in order.
+   * Raw iPhone captures (no frame) from apps/mobile/store/screenshots/raw/iphone,
+   * resized; see public/app/README.md.
+   */
   screenshots: [
-    { src: "/app/iphone-1.png", alt: "Today's plan in the FreeMathCamp app, with the daily goal, streak and the next lessons to practise" },
-    { src: "/app/iphone-2.png", alt: "A lesson in the FreeMathCamp app, with an interactive graph and typeset maths" },
-    { src: "/app/iphone-3.png", alt: "Progress in the FreeMathCamp app: problems solved, accuracy, streak and daily activity" },
+    { src: "/app/learn.png", label: "Today's plan", caption: "Reviews, repairs and new lessons, mixed for you", alt: "Today's plan in the FreeMathCamp app, with the daily goal, streak and the next lessons to practise" },
+    { src: "/app/lesson.png", label: "Lessons", caption: "Interactive visuals and worked examples", alt: "A lesson in the FreeMathCamp app, with an interactive graph and typeset maths" },
+    { src: "/app/practice.png", label: "Practice", caption: "Problems that adapt as you go", alt: "An adaptive practice problem in the FreeMathCamp app, with hints and a step-by-step solution" },
+    { src: "/app/progress.png", label: "Progress", caption: "Mastery, accuracy, streaks and your week", alt: "Progress in the FreeMathCamp app: problems solved, accuracy, streak and daily activity" },
+    { src: "/app/leagues.png", label: "Leagues", caption: "Friendly weekly leagues, if you want them", alt: "The weekly league table in the FreeMathCamp app, with promotion and demotion zones" },
+    { src: "/app/course.png", label: "The course", caption: "Every unit, from place value to limits", alt: "The Foundations course map in the FreeMathCamp app, with mastery for each unit and lesson" },
+    { src: "/app/welcome.png", label: "Your way", caption: "Follow the path in order, or explore freely", alt: "The FreeMathCamp welcome tour, choosing between Path mode and Audit mode" },
   ],
 } as const;

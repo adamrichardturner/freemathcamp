@@ -50,6 +50,7 @@ const listing = [
   { name: "04-progress", title: "Watch mastery *grow*", sub: "Streaks, daily goals and every lesson's progress", theme: "aurora" },
   { name: "05-leagues", title: "Friendly *weekly* leagues", sub: "Earn XP for every problem you solve", theme: "night" },
   { name: "06-course", title: "Place value to your first *limits*", sub: "95 connected lessons, free and ad-free", theme: "indigo" },
+  { name: "07-welcome", title: "Your path, *your* way", sub: "Unlock lessons in order, or explore them all", theme: "aurora" },
 ];
 /** The same story on every device; the Duo's progress shot is taken in dark mode, so it gets the night sky. */
 const shots = {
@@ -114,7 +115,7 @@ const creatives = {
 const creative = readFileSync(join(here, "creative.html"), "utf8");
 const logo = `<span class="chip"><span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 18 L10 6 L14 14 L20 4" /><circle cx="20" cy="4" r="2.3" fill="currentColor" stroke="none" /></svg></span><span>FreeMath<span class="camp">Camp</span></span></span>`;
 const creativeBody = {
-  header: () => `${creativeCards.header()}<div class="copy">${logo}<h1>${headline("Maths that *clicks*")}</h1><p>Free lessons from place value to calculus</p></div>`,
+  header: () => `${creativeCards.header()}<div class="copy">${logo}<h1>${headline("Maths that *clicks*")}</h1><p>Free, visual lessons from place value to calculus</p></div>`,
   search: (spec) =>
     `<div class="copy">${logo}<h1>${headline("Lessons that *show* the idea")}</h1><p>Interactive visuals, worked examples and practice that adapts to you. Free, with no ads.</p></div>
      <div class="device"><img class="screen" src="${pathToFileURL(join(raw, spec.screen)).href}" alt="" /><div class="island"></div>${creativeCards.search()}</div>`,

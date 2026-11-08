@@ -142,6 +142,7 @@ const motifs = {
   "04-progress": () => [card(check("Lesson mastered", "Equivalent fractions"), { side: "left", top: 33, rot: -4 }), card(bars([4, 7, 5, 9, 8, 12, 15], "XP this week"), { side: "right", top: 60, rot: 3 })],
   "05-leagues": () => [card(rank(), { side: "right", top: 24, rot: 3 }), card(check("Daily goal met", "+40 XP today"), { side: "left", top: 64, rot: -3 })],
   "06-course": () => [card(graph(), { side: "right", top: 18, rot: 3 }), card(check("95 connected lessons", "Free, with no ads"), { side: "left", top: 62, rot: -4 })],
+  "07-welcome": () => [card(check("Lesson unlocked", "Path mode · in order"), { side: "right", top: 22, rot: 3 }), card(stars("Or explore freely", "Audit mode opens all 95"), { side: "left", top: 64, rot: -4 })],
 };
 
 export const cards = (name) => (motifs[name] ? motifs[name]().join("") : "");
@@ -190,7 +191,7 @@ export const creativeCards = {
       at(pie(3, 8), 33, 20, 4),
       at(ring(67, "Daily goal", "10 of 15 problems"), 69, 17, -3),
       at(check("Correct!", "+10 XP · 6 in a row"), 64, 85, 3),
-      at(stars("Stretch unlocked", "Level 3 problems next"), 37, 86, -3),
+      at(stars("Your path, your way", "Path or Audit mode"), 37, 86, -3),
     ].join(""),
   search: () => [card(plot(), { side: "right", top: 20, rot: 4 }), card(pie(3, 8), { side: "left", top: 76, rot: -3 })].join(""),
 };
