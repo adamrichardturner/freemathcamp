@@ -41,6 +41,20 @@ function LessonNodeView({ data }: NodeProps<LessonNode>) {
 
 const nodeTypes = { lesson: LessonNodeView };
 
+/**
+ * A lesson card's size before it is measured. The nodes are rebuilt on every
+ * render with no onNodesChange, so React Flow's measurements never reach them;
+ * without a size the MiniMap skips every node and shows (and does) nothing.
+ */
+const NODE_WIDTH = 190;
+const NODE_HEIGHT = 64;
+
+/** Mini map colours: "Not started" uses the muted foreground, as var(--border) vanishes at that scale. */
+const miniMapColor = (n: Node) => {
+  const status = (n.data as LessonNode["data"]).status;
+  return status === "new" ? "var(--muted-foreground)" : statusMeta[status].ring;
+};
+
 /** Layered layout: depth = longest prerequisite chain, ordered by course position. */
 const layout = () => {
   const depth = new Map<string, number>();
@@ -81,6 +95,8 @@ export function PrereqGraph({
     id: r.exercise.id,
     type: "lesson",
     position: positions.get(r.exercise.id)!,
+    initialWidth: NODE_WIDTH,
+    initialHeight: NODE_HEIGHT,
     data: {
       title: r.exercise.title,
       unit: r.unit.title,
@@ -125,7 +141,15 @@ export function PrereqGraph({
       >
         <Background gap={22} size={1} />
         <Controls showInteractive={false} />
-        <MiniMap pannable zoomable nodeColor={(n) => statusMeta[(n.data as LessonNode["data"]).status].ring} className="!hidden sm:!block" />
+        <MiniMap
+          pannable
+          zoomable
+          nodeColor={miniMapColor}
+          nodeBorderRadius={6}
+          maskColor="color-mix(in oklch, var(--background) 70%, transparent)"
+          className="!hidden overflow-hidden rounded-lg border !bg-card sm:!block"
+          ariaLabel="Overview of the prerequisite map"
+        />
       </ReactFlow>
     </div>
   );
