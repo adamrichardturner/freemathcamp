@@ -77,6 +77,22 @@ export const verificationEmail = ({ name, link: href, origin }: { name: string; 
   };
 };
 
+export const passwordResetEmail = ({ name, link: href, origin }: { name: string; link: string; origin: string }) => {
+  const reason = "You're receiving this because someone asked to reset the password for this address on FreeMathCamp. If that wasn't you, you can safely ignore this email: your password won't change.";
+  return {
+    subject: "Reset your FreeMathCamp password",
+    text: `Hi ${name},\n\nWe got a request to reset your FreeMathCamp password. Choose a new one here:\n${href}\n\nThis link can be used once and expires in 1 hour. Resetting your password signs you out on your other devices.\n\n${signOff}\n\n${reason}`,
+    html: layout({
+      origin,
+      heading: "Reset your password",
+      paragraphs: [`Hi ${name},`, "We got a request to reset your FreeMathCamp password. Choose a new one and you'll be straight back to practising."],
+      cta: { label: "Choose a new password", href },
+      note: `This link can be used once and expires in 1 hour. Resetting your password signs you out on your other devices. If the button doesn't work, copy this address into your browser:<br><a href="${escape(href)}" style="color:${C.primary};word-break:break-all">${escape(href)}</a>`,
+      reason,
+    }),
+  };
+};
+
 /**
  * The email copy of a notification. Security notices explain why they can't be
  * switched off; reminders carry an unsubscribe link (and List-Unsubscribe headers).

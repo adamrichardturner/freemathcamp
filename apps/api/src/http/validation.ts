@@ -61,6 +61,10 @@ export const DeleteAccountBody = Schema.Struct({
   password: Schema.optional(Schema.String.pipe(Schema.maxLength(128))),
 });
 export const VerifyEmailBody = Schema.Struct({ token: Schema.String.pipe(Schema.minLength(20), Schema.maxLength(100)) });
+export const ForgotPasswordBody = Schema.Struct({ email: Email });
+const ResetToken = Schema.String.pipe(Schema.minLength(20, { message: () => "This reset link isn't complete." }), Schema.maxLength(100, { message: () => "This reset link isn't valid." }));
+export const ResetTokenBody = Schema.Struct({ token: ResetToken });
+export const ResetPasswordBody = Schema.Struct({ token: ResetToken, password: Password });
 
 const Slug = Schema.String.pipe(Schema.pattern(/^[a-z0-9-]{1,64}$/));
 const Index = Schema.Int.pipe(Schema.between(0, 50));

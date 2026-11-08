@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { router } from "expo-router";
 import { useRef, useState, type ComponentRef } from "react";
 import { KeyboardAvoidingView, ScrollView, TextInput, View } from "react-native";
 import { ApiError, api, type SignedIn } from "@/lib/api";
@@ -93,6 +94,19 @@ export function AuthForm({ mode, onSwitch }: { mode: "login" | "register"; onSwi
               invalid={!!errors.password}
             />
           </Field>
+          {mode === "login" && (
+            <Text
+              variant="small"
+              weight="semibold"
+              tone="primary"
+              accessibilityRole="button"
+              onPress={() => router.push({ pathname: "/forgot-password", params: form.email.trim() ? { email: form.email.trim() } : {} })}
+              suppressHighlighting
+              style={{ alignSelf: "flex-end", paddingVertical: 4 }}
+            >
+              Forgot password?
+            </Text>
+          )}
           <Button title={busy ? (mode === "login" ? "Signing in…" : "Creating your account…") : mode === "login" ? "Sign in" : "Create account"} size="lg" loading={busy} onPress={go} style={{ marginTop: 4 }} />
         </View>
         <View style={{ flexDirection: "row", justifyContent: "center", gap: 4 }}>

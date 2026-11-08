@@ -112,6 +112,12 @@ export const notices = {
     body: `${hadPassword ? "Your password was changed." : "You can now sign in with your email and password."}${signedOut ? ` We signed out ${plural(signedOut, "other device")}.` : ""} If this wasn't you, reset your password straight away.`,
     href: "/settings#security",
   }),
+  passwordResetByLink: (signedOut: number): NotificationDraft => ({
+    kind: "password_changed",
+    title: "Password reset",
+    body: `Your password was reset from the link we emailed you.${signedOut ? ` We signed out ${plural(signedOut, "device")}.` : ""} If this wasn't you, reset your password again straight away and check the security of your email account.`,
+    href: "/settings#security",
+  }),
   passwordReset: (): NotificationDraft => ({
     kind: "password_reset",
     title: "Password reset by FreeMathCamp support",

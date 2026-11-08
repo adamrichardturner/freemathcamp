@@ -3,12 +3,24 @@ import { Router, type Request } from "express";
 import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import { login, loginWithGoogle, loginWithProvider, logout, register, rememberAppleSignIn, signInVerified, toPublicUser } from "../../application/auth";
 import { sendVerificationEmail, verifyEmail } from "../../application/email-verification";
+import { checkResetToken, requestPasswordReset, resetPassword } from "../../application/password-reset";
 import { beginGoogleFlow, completeGoogleFlow, isGoogleEnabled, type OAuthFlowState } from "../../infrastructure/oauth/google";
 import { isGoogleNativeEnabled, verifyAppleIdToken, verifyGoogleIdToken } from "../../infrastructure/oauth/id-tokens";
 import { clearSessionCookie, cookieOptions, currentUser, isNativeClient, issueSession, requireUser, setSessionCookie } from "../middleware/auth";
 import { handle, type AppRuntime } from "../runtime";
 import { usernameAvailability } from "../../application/account";
-import { AppleIdTokenBody, decode, GoogleIdTokenBody, LoginBody, RegisterBody, UsernameQuery, VerifyEmailBody } from "../validation";
+import {
+  AppleIdTokenBody,
+  decode,
+  ForgotPasswordBody,
+  GoogleIdTokenBody,
+  LoginBody,
+  RegisterBody,
+  ResetPasswordBody,
+  ResetTokenBody,
+  UsernameQuery,
+  VerifyEmailBody,
+} from "../validation";
 
 const OAUTH_COOKIE = "fmc_oauth";
 
@@ -44,6 +56,33 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
     legacyHeaders: false,
     keyGenerator: (req) => ipKeyGenerator(req.clientIp),
     message: { error: { code: "RateLimited", message: "Too many sign-ups from this network. Try again later." } },
+  });
+
+  // Reset emails: a few per address, and a cap per network so nobody can spam many inboxes.
+  const forgotLimiter = rateLimit({
+    windowMs: 15 * 60_000,
+    limit: 5,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    keyGenerator: (req) => `${ipKeyGenerator(req.clientIp)}:${String(req.body?.email ?? "").trim().toLowerCase().slice(0, 254)}`,
+    message: { error: { code: "RateLimited", message: "Too many reset requests. Please wait a few minutes and check your inbox (and spam)." } },
+  });
+  const forgotNetworkLimiter = rateLimit({
+    windowMs: 60 * 60_000,
+    limit: 20,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.clientIp),
+    message: { error: { code: "RateLimited", message: "Too many reset requests from this network. Try again later." } },
+  });
+  // Guessing a 256-bit token is hopeless, but there's no reason to allow trying.
+  const resetLimiter = rateLimit({
+    windowMs: 15 * 60_000,
+    limit: 20,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    keyGenerator: (req) => ipKeyGenerator(req.clientIp),
+    message: { error: { code: "RateLimited", message: "Too many attempts. Please wait a few minutes." } },
   });
 
   // Live feedback while choosing a username, at sign-up or later.
@@ -104,6 +143,41 @@ export const authRoutes = (runtime: AppRuntime, opts: { secure: boolean; webOrig
           return { user: toPublicUser(user), ...issueSession(req, res, opts.secure, s) };
         }
         return { user: toPublicUser(user) };
+      }),
+    ),
+  );
+
+  // Same answer, just as fast, whether or not the address has an account: the
+  // lookup and the email happen after the response, so timing gives nothing away.
+  router.post(
+    "/forgot-password",
+    forgotNetworkLimiter,
+    forgotLimiter,
+    h((req) =>
+      Effect.gen(function* () {
+        const { email } = yield* decode(ForgotPasswordBody, req.body);
+        yield* Effect.forkDaemon(requestPasswordReset(email).pipe(Effect.catchAll((e) => Effect.logWarning("password reset email failed", e))));
+        return { ok: true };
+      }),
+    ),
+  );
+
+  router.post(
+    "/reset-password/check",
+    resetLimiter,
+    h((req) => Effect.flatMap(decode(ResetTokenBody, req.body), ({ token }) => checkResetToken(token))),
+  );
+
+  router.post(
+    "/reset-password",
+    resetLimiter,
+    h((req, res) =>
+      Effect.gen(function* () {
+        const body = yield* decode(ResetPasswordBody, req.body);
+        const { user, signedOutSessions } = yield* resetPassword(body);
+        // Every old session has ended; sign in whoever just proved control of the inbox.
+        const s = yield* signInVerified(user, clientInfo(req));
+        return { user: s.user, signedOutSessions, ...issueSession(req, res, opts.secure, s) };
       }),
     ),
   );

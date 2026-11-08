@@ -47,6 +47,14 @@ export interface EmailVerificationTokensTable {
   created_at: Generated<Date>;
 }
 
+export interface PasswordResetTokensTable {
+  /** SHA-256 of the token in the emailed reset link. */
+  id: string;
+  user_id: string;
+  expires_at: Timestamp;
+  created_at: Generated<Date>;
+}
+
 /** Third-party sign-in providers: Google (web and iOS) and Sign in with Apple (iOS). */
 export type OAuthProvider = "google" | "apple";
 
@@ -224,6 +232,7 @@ export interface DB {
   users: UsersTable;
   oauth_accounts: OAuthAccountsTable;
   email_verification_tokens: EmailVerificationTokensTable;
+  password_reset_tokens: PasswordResetTokensTable;
   account_events: AccountEventsTable;
   sessions: SessionsTable;
   exercise_progress: ExerciseProgressTable;
