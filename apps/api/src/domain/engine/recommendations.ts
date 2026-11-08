@@ -122,7 +122,8 @@ export const buildQueues = (graph: CourseGraph, progress: Map<string, ProgressSn
   next.sort(byPriority);
   cont.sort(byPriority);
 
-  const plan = interleave([review.slice(0, 4), challenge.slice(0, 2), cont.slice(0, 2), next.slice(0, 4)], 10);
+  const unitOf = (id: string) => graph.byId.get(id)?.unit.id;
+  const plan = mixSubjects(interleave([review.slice(0, 4), challenge.slice(0, 2), cont.slice(0, 2), next.slice(0, 4)], 10), unitOf);
 
   return {
     review: review.slice(0, limit),
@@ -148,6 +149,24 @@ const interleave = (lists: Recommendation[][], max: number) => {
   return out;
 };
 
+/**
+ * Reorders suggestions so two in a row never share a unit when another unit is
+ * available, keeping priority order otherwise. `after` is the unit just
+ * practised, so the first suggestion moves on to a different subject.
+ */
+export const mixSubjects = (items: Recommendation[], unitOf: (id: string) => string | undefined, after?: string): Recommendation[] => {
+  const pool = [...items];
+  const out: Recommendation[] = [];
+  let last = after;
+  while (pool.length > 0) {
+    const i = last === undefined ? 0 : pool.findIndex((r) => unitOf(r.exerciseId) !== last);
+    const [pick] = pool.splice(Math.max(0, i), 1);
+    out.push(pick!);
+    last = unitOf(pick!.exerciseId);
+  }
+  return out;
+};
+
 /** Problems a session for this suggestion asks for. */
 export const sessionItems = (kind: QueueKind) => ITEMS_PER_SESSION[kind === "review" ? "review" : kind === "challenge" ? "challenge" : "learn"];
 
@@ -167,8 +186,18 @@ export interface DayPlan {
  * added, so the day has a clear end; the rest waits in `upcoming`. Lessons
  * already practised today drop to the back unless nothing else is left.
  */
-export const planDay = (suggestions: Recommendation[], goal: number, done: number, practisedToday: ReadonlySet<string> = new Set(), upcomingLimit = 6): DayPlan => {
-  const ordered = [...suggestions.filter((r) => !practisedToday.has(r.exerciseId)), ...suggestions.filter((r) => practisedToday.has(r.exerciseId))];
+export interface PlanDayOptions {
+  upcomingLimit?: number;
+  /** The unit of each lesson, so the plan can switch subjects between sessions. */
+  unitOf?: (id: string) => string | undefined;
+  /** The unit of the session just finished; the plan opens with a different one. */
+  lastUnit?: string;
+}
+
+export const planDay = (suggestions: Recommendation[], goal: number, done: number, practisedToday: ReadonlySet<string> = new Set(), options: PlanDayOptions = {}): DayPlan => {
+  const { upcomingLimit = 6, unitOf, lastUnit } = options;
+  const fresh = suggestions.filter((r) => !practisedToday.has(r.exerciseId));
+  const ordered = [...(unitOf ? mixSubjects(fresh, unitOf, lastUnit) : fresh), ...suggestions.filter((r) => practisedToday.has(r.exerciseId))];
   let left = Math.max(0, goal - done);
   let take = 0;
   while (left > 0 && take < ordered.length) left -= sessionItems(ordered[take++]!.kind);

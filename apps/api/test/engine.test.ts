@@ -162,6 +162,14 @@ describe("planDay", () => {
     expect(day.upcoming.map((r) => r.exerciseId)).toEqual(["a", "b", "c", "d", "e"]);
   });
 
+  it("switches subject after the session just finished, and between sessions", () => {
+    const unit: Record<string, string> = { a: "fractions", b: "fractions", c: "algebra", d: "algebra", e: "geometry" };
+    const day = planDay(suggestions, 30, 0, new Set(), { unitOf: (id) => unit[id], lastUnit: "fractions" });
+    const order = [...day.today, ...day.upcoming].map((r) => r.exerciseId);
+    expect(order[0]).toBe("c");
+    for (let i = 1; i < order.length; i++) expect(unit[order[i]!]).not.toBe(unit[order[i - 1]!]);
+  });
+
   it("recalculates when the goal changes", () => {
     expect(planDay(suggestions, 10, 10).complete).toBe(true);
     const raised = planDay(suggestions, 20, 10);

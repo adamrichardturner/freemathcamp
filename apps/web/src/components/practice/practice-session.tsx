@@ -92,7 +92,7 @@ export function PracticeSession({ exerciseId, mode, onExit }: { exerciseId: stri
     setState({ phase: "answering" });
   };
 
-  if (summary) return <SessionSummaryView summary={summary} onAgain={() => !start.isPending && start.mutate()} restarting={start.isPending} onExit={onExit} />;
+  if (summary) return <SessionSummaryView summary={summary} onAgain={() => !start.isPending && start.mutate()} restarting={start.isPending} />;
 
   if (!session || !item || !problem)
     return (
