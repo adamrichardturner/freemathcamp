@@ -52,7 +52,7 @@ export default function Notifications() {
             ) : null,
         }}
       />
-      <View style={{ paddingTop: 16, ...sides(widths.readable), paddingBottom: 8 }}>
+      <View style={{ paddingTop: 20, ...sides(widths.readable), paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: c.border, backgroundColor: c.background, zIndex: 1 }}>
         <Segmented
           value={filter}
           onChange={setFilter}
@@ -66,7 +66,7 @@ export default function Notifications() {
       <FlatList
         data={items}
         keyExtractor={(n) => n.id}
-        contentContainerStyle={{ paddingTop: 16, ...sides(widths.readable), gap: 10, paddingBottom: 40 }}
+        contentContainerStyle={{ paddingTop: 20, ...sides(widths.readable), gap: 10, paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
         onEndReached={() => list.hasNextPage && !list.isFetchingNextPage && list.fetchNextPage()}
         ListEmptyComponent={
