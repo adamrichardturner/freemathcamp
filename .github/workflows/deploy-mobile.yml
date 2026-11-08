@@ -1,0 +1,54 @@
+name: Deploy iOS to TestFlight
+
+# Every change to the iOS app on main builds a production App Store binary on EAS
+# and submits it to App Store Connect, where it lands in TestFlight.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/deploy-mobile.yml"
+  workflow_dispatch:
+
+# One release at a time; a newer push waits rather than cancelling a submit midway.
+concurrency:
+  group: deploy-mobile
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      # The whole workspace: the app's typecheck reaches into apps/web and packages/curriculum.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @fmc/mobile typecheck
+
+  testflight:
+    needs: check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      # Signing credentials and the App Store Connect API key live on EAS; the build
+      # number increments remotely (eas.json: appVersionSource remote, autoIncrement).
+      - name: Build on EAS and submit to TestFlight
+        run: eas build --platform ios --profile production --non-interactive --auto-submit
