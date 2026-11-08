@@ -2,7 +2,8 @@ import { courses, getCourse } from "@fmc/curriculum";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { CourseMap, CourseMapSkeleton } from "@/components/course/course-map";
+import { CourseMap } from "@/components/course/course-map";
+import { PageSpinner } from "@/components/ui/spinner";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ogImagePath, shareImage, SITE_IMAGE_ALT } from "@/lib/og";
 import { breadcrumbs, courseSchema, graph } from "@/lib/structured-data";
@@ -45,7 +46,7 @@ async function Course({ params }: Pick<Props, "params">) {
 
 export default function CoursePage({ params }: Props) {
   return (
-    <Suspense fallback={<CourseMapSkeleton />}>
+    <Suspense fallback={<PageSpinner />}>
       <Course params={params} />
     </Suspense>
   );
