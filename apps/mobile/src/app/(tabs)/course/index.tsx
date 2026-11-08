@@ -1,12 +1,14 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { useState } from "react";
 import { Pressable, RefreshControl, View } from "react-native";
 import { LearningModeSwitch, MODE_META } from "@/components/learning-mode";
 import { useOpenLesson } from "@/components/lesson-link";
+import { LessonFlag } from "@/components/next-step";
 import { Reveal } from "@/components/reveal";
 import { statusMeta, unitSymbol } from "@/components/status";
-import { Card, Icon, IconChip, MasteryRing, Row, Screen, Skeleton, Text } from "@/components/ui";
-import type { ExerciseStatus } from "@/lib/api";
+import { Button, Card, Icon, IconChip, MasteryRing, Row, Screen, Skeleton, Text } from "@/components/ui";
+import type { ExerciseStatus, ProgressView } from "@/lib/api";
 import { course, graph } from "@/lib/course";
 import { plain } from "@/lib/plain";
 import { useCourseProgress, useSession } from "@/lib/queries";
@@ -22,6 +24,12 @@ export default function CourseMap() {
   const total = graph.refs.length;
   const mastered = progress?.exercises.filter((e) => e.status === "mastered").length ?? 0;
   const overall = progress ? progress.units.reduce((a, u) => a + u.mastery * u.total, 0) / total : 0;
+  const [now] = useState(() => Date.now());
+  // Practice that's due now, and the first fresh lesson open to the learner: flagged so it's plain where to go next.
+  const isDue = (p: ProgressView | undefined) => !!p && p.sessionsCompleted > 0 && (p.status === "struggling" || (!!p.dueAt && new Date(p.dueAt).getTime() <= now));
+  const startHere = user && known ? graph.refs.find((r) => !isLocked(r.exercise.id) && (byId.get(r.exercise.id)?.sessionsCompleted ?? 0) === 0)?.exercise.id : undefined;
+  const firstDue = user ? graph.refs.find((r) => isDue(byId.get(r.exercise.id)))?.exercise.id : undefined;
+  const jumpTo = firstDue ?? startHere;
 
   return (
     <Screen title="Foundations" refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
@@ -57,6 +65,14 @@ export default function CourseMap() {
                   </Text>
                 </View>
               </View>
+            )}
+            {jumpTo && (
+              <Button
+                title={`${firstDue ? "Practice due" : "Continue"}: ${graph.refs.find((r) => r.exercise.id === jumpTo)?.exercise.title ?? ""}`}
+                iconRight="arrow.right"
+                style={{ marginTop: 6 }}
+                onPress={() => open(jumpTo)}
+              />
             )}
           </LinearGradient>
         </View>
@@ -120,11 +136,20 @@ export default function CourseMap() {
                   const status = p?.status ?? "new";
                   const locked = isLocked(e.id);
                   const ring = statusMeta[status].ring(c);
+                  const due = !locked && isDue(p);
+                  const here = !locked && e.id === startHere;
                   return (
                     <View key={e.id} style={i > 0 ? { borderTopWidth: 1, borderColor: c.border } : undefined}>
                       <Row
                         onPress={() => open(e.id)}
-                        chevron={!locked}
+                        chevron={!locked && !due && !here}
+                        right={
+                          here ? (
+                            <LessonFlag label={p && p.itemsSeen > 0 ? "Continue" : "Start here"} tone="primary" />
+                          ) : due ? (
+                            <LessonFlag label={status === "struggling" ? "Practise" : "Review"} tone={status === "struggling" ? "danger" : "warning"} />
+                          ) : undefined
+                        }
                         leading={
                           locked ? (
                             <View style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderStyle: "dashed", borderColor: alpha(c.mutedForeground, 0.4), alignItems: "center", justifyContent: "center" }}>

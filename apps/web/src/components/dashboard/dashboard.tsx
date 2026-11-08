@@ -23,13 +23,13 @@ import { cn } from "@/lib/utils";
 
 export function DashboardView() {
   const { user, ready, verified } = useSession();
-  const { data } = useDashboard(verified);
+  const { data, isError, refetch } = useDashboard(verified);
   const { data: progress, isFetched: progressFetched } = useCourseProgress(verified);
 
   if (ready && user && !verified) return <VerifyEmailCard user={user} />;
   // Course progress fills the unit bars, so it lands with the rest rather than after.
   return (
-    <Reveal ready={!!data && progressFetched} skeleton={<DashboardSkeleton />}>
+    <Reveal ready={!!data && progressFetched} error={isError} onRetry={() => void refetch()} skeleton={<DashboardSkeleton />}>
       {data && <DashboardBody data={data} user={user} progress={progress} />}
     </Reveal>
   );

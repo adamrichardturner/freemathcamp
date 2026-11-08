@@ -19,10 +19,10 @@ const weekLabel = (start: string) => new Date(`${start}T00:00:00Z`).toLocaleDate
 
 export function LeaguesView() {
   const { user, ready, verified } = useSession();
-  const { data } = useLeague(verified);
+  const { data, isError, refetch } = useLeague(verified);
   if (ready && user && !verified) return <VerifyEmailCard user={user} />;
   return (
-    <Reveal ready={!!data} skeleton={<LeaguesSkeleton />}>
+    <Reveal ready={!!data} error={isError} onRetry={() => void refetch()} skeleton={<LeaguesSkeleton />}>
       {data && <LeaguesBody data={data} />}
     </Reveal>
   );

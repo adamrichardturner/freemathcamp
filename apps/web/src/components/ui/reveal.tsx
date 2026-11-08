@@ -1,7 +1,10 @@
 "use client";
 
 import { cn } from "cn";
+import { CloudOff, RotateCw } from "lucide-react";
+import { motion } from "motion/react";
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 
 /** How long the content must hold its size before we call it painted. */
 const QUIET_MS = 120;
@@ -86,9 +89,25 @@ export function usePainted(ref: RefObject<HTMLElement | null>, ready: boolean) {
  * Pass `children` only when its data exists, or always (for server-rendered content that
  * should stay in the page for crawlers) and gate with `ready`.
  */
-export function Reveal({ ready, skeleton, children, className }: { ready: boolean; skeleton: ReactNode; children: ReactNode; className?: string }) {
+export function Reveal({
+  ready,
+  skeleton,
+  children,
+  className,
+  error,
+  onRetry,
+}: {
+  ready: boolean;
+  skeleton: ReactNode;
+  children: ReactNode;
+  className?: string;
+  /** The load failed for good: say so in place of a skeleton that would otherwise pulse forever. */
+  error?: boolean;
+  onRetry?: () => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const painted = usePainted(ref, ready);
+  if (error && !ready) return <LoadError className={className} onRetry={onRetry} />;
   // Once there's content to lay out, the skeleton floats over it instead of above it.
   const mounted = children !== null && children !== undefined && children !== false;
 
@@ -108,5 +127,30 @@ export function Reveal({ ready, skeleton, children, className }: { ready: boolea
         {children}
       </div>
     </div>
+  );
+}
+
+/** What a page shows when its data couldn't be loaded, with a way to try again. */
+export function LoadError({ className, onRetry }: { className?: string; onRetry?: () => void }) {
+  return (
+    <motion.div
+      role="alert"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn("mx-auto flex max-w-md flex-col items-center gap-4 rounded-3xl border border-dashed bg-card/50 px-6 py-12 text-center", className)}
+    >
+      <span className="grid size-14 place-items-center rounded-2xl bg-muted text-muted-foreground">
+        <CloudOff className="size-7" />
+      </span>
+      <div>
+        <h2 className="text-lg font-semibold">We couldn&apos;t load this</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Something went wrong on our side or the connection dropped. Your progress is safe.</p>
+      </div>
+      {onRetry && (
+        <Button variant="outline" onClick={onRetry} className="gap-2">
+          <RotateCw className="size-4" /> Try again
+        </Button>
+      )}
+    </motion.div>
   );
 }

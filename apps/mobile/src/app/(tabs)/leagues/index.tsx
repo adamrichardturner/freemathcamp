@@ -9,12 +9,14 @@ import { alpha, useTheme } from "@/lib/theme";
 
 /** The web's /leagues page: this week's table, last week's result, the tiers and how XP works. */
 export default function Leagues() {
-  const { data, refetch, isRefetching } = useLeague();
+  const { data, refetch, isRefetching, isError } = useLeague();
   return (
     <Screen title="Leagues" refreshControl={data ? <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} /> : undefined}>
       <Text muted>Weekly tables of learners at your level. Solve problems, earn XP, move up.</Text>
       <Reveal
         ready={!!data}
+        error={isError}
+        onRetry={() => void refetch()}
         gap={20}
         skeleton={
           <>
