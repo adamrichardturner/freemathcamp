@@ -104,6 +104,10 @@ npx eas-cli@latest init          # already done: the project is @adamrichardturn
 
 In [App Store Connect → Apps](https://appstoreconnect.apple.com/apps), the app **FreeMathCamp** with bundle id `com.freemathcamp.app` already exists. Its Apple ID, `6829382170`, is in `eas.json` → `submit.production.ios.ascAppId`, and EAS holds an App Store Connect API key for submitting, so `pnpm submit:ios` needs no Apple sign-in.
 
+## Releasing to TestFlight
+
+Every push to `main` that touches `apps/mobile/` runs `.github/workflows/deploy-mobile.yml`: it typechecks the app, builds the `production` profile on EAS and submits it to App Store Connect (`eas build --auto-submit`), so it shows up in TestFlight once Apple finishes processing. The build number increments on EAS. The workflow signs in to Expo with the `EXPO_TOKEN` repository secret; run it by hand from the Actions tab with **Run workflow**.
+
 ## The App Store listing
 
 The listing lives in the repo and is uploaded with EAS Metadata, using the App Store Connect key EAS already holds:
