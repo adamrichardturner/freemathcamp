@@ -6,6 +6,7 @@ import type { MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ButtonLink } from "@/components/app/button-link";
+import { Wordmark } from "@/components/app/logo";
 import { UnitIcon } from "@/components/app/unit-icon";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tex } from "@/components/math/tex";
@@ -42,7 +43,7 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
       <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pt-14 pb-20 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:pt-24">
         <div>
           <motion.span initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border bg-card/80 px-3 py-1 text-xs font-medium backdrop-blur">
-            <Sparkles className="size-3.5 text-primary" /> FreeMathCamp · adaptive · beautifully visual
+            <Sparkles className="size-3.5 text-primary" /> <Wordmark /> · adaptive · beautifully visual
           </motion.span>
           <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="mt-5 font-display text-5xl leading-[1.02] tracking-tight text-balance sm:text-6xl lg:text-7xl">
             All the maths you need <em className="bg-gradient-to-r from-primary to-chart-4 bg-clip-text text-transparent">before</em> calculus.
@@ -292,7 +293,7 @@ function MobileApp() {
             The whole course, <em className="text-primary">in your pocket</em>.
           </h2>
           <p className="mt-4 max-w-lg text-muted-foreground">
-            The FreeMathCamp app for iPhone and iPad has every lesson, the same adaptive practice and your daily plan, built to feel at home on iOS. Ten minutes in a queue is ten minutes of maths.
+            The <Wordmark /> app for iPhone and iPad has every lesson, the same adaptive practice and your daily plan, built to feel at home on iOS. Ten minutes in a queue is ten minutes of maths.
           </p>
           <ul className="mt-8 space-y-5">
             {APP_POINTS.map((p) => (
@@ -363,7 +364,7 @@ function Faq() {
   return (
     <section id="faq" className="mx-auto max-w-3xl scroll-mt-20 px-4 pt-20 pb-20 sm:px-6 sm:pt-24" aria-labelledby="faq-heading">
       <motion.h2 {...fadeUp} id="faq-heading" className="text-center font-display text-4xl sm:text-5xl">
-        FreeMathCamp, answered
+        <Wordmark />, answered
       </motion.h2>
       <motion.div {...fadeUp} transition={{ delay: 0.08, duration: 0.5 }}>
         <Accordion defaultValue={[FAQS[0].q]} className="mt-10 rounded-2xl border bg-card">

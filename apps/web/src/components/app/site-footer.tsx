@@ -3,8 +3,9 @@
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Logo } from "@/components/app/logo";
 import { useSession } from "@/hooks/queries";
-import { AUTHOR, SITE } from "@/lib/site";
+import { AUTHOR } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const PAGE_LINKS = [
@@ -68,7 +69,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl px-6 py-16 sm:py-20">
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-10">
           <div className="space-y-5 lg:col-span-5">
-            <p className="font-display text-3xl tracking-tight">{SITE.alternateName}</p>
+            <Logo />
             <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
               A free course in the maths you need before calculus. Short lessons, interactive visuals, practice that adapts to you, and a record of progress on your account.
             </p>

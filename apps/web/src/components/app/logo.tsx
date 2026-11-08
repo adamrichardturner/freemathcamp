@@ -5,10 +5,17 @@ export function Logo({ className, href = "/" }: { className?: string; href?: str
   return (
     <Link href={href} className={cn("group flex items-center gap-2 font-semibold tracking-tight", className)}>
       <LogoMark className="transition-transform group-hover:rotate-6" />
-      <span className="text-[1.05rem]">
-        FreeMath<span className="text-primary">Camp</span>
-      </span>
+      <Wordmark className="text-[1.05rem]" />
     </Link>
+  );
+}
+
+/** The "FreeMathCamp" name in the header's style, for use on its own or inline in text. */
+export function Wordmark({ className }: { className?: string }) {
+  return (
+    <span className={cn("font-sans font-semibold tracking-tight", className)}>
+      FreeMath<span className="text-primary">Camp</span>
+    </span>
   );
 }
 
