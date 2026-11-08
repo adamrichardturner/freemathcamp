@@ -1,11 +1,12 @@
 "use client";
 
 import { generateProblem, type Problem } from "@fmc/curriculum";
-import { ArrowRight, CalendarClock, Check, ChevronDown, Clock, Eye, Lightbulb, Loader2, RotateCcw, Target, Trophy, X } from "lucide-react";
+import { ArrowRight, CalendarClock, Check, ChevronDown, Clock, Eye, LayoutDashboard, Lightbulb, Loader2, RotateCcw, Target, Trophy, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo } from "react";
 import { ButtonLink } from "@/components/app/button-link";
 import { MasteryRing, queueMeta } from "@/components/app/status";
+import { UnitIcon } from "@/components/app/unit-icon";
 import { LessonLink } from "@/components/course/lesson-link";
 import { Md } from "@/components/math/md";
 import { Tex } from "@/components/math/tex";
@@ -18,7 +19,7 @@ import { cn } from "@/lib/utils";
 const headline = (s: SessionSummary) =>
   s.accuracy === 1 ? "Flawless session!" : s.accuracy >= 0.8 ? "Great work!" : s.accuracy >= 0.5 ? "Solid progress" : "Tough one — that's how learning feels";
 
-export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { summary: SessionSummary; onAgain: () => void; restarting: boolean; onExit: () => void }) {
+export function SessionSummaryView({ summary, onAgain, restarting }: { summary: SessionSummary; onAgain: () => void; restarting: boolean }) {
   // Rounded first, so a change too small to show reads as +0% rather than a red "0%".
   const gained = Math.round((summary.mastery.after - summary.mastery.before) * 100);
   return (
@@ -54,6 +55,8 @@ export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { s
       </div>
 
       <div className="space-y-5 p-5 sm:p-6">
+        <NextSteps summary={summary} onAgain={onAgain} restarting={restarting} />
+
         <ProblemBreakdown summary={summary} />
 
         {summary.brushUp.length > 0 && (
@@ -68,39 +71,57 @@ export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { s
             </div>
           </div>
         )}
-
-        {summary.upNext.length > 0 && (
-          <div>
-            <div className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">Recommended next</div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {summary.upNext.map((r) => {
-                const m = queueMeta[r.kind];
-                return (
-                  <LessonLink key={r.exerciseId} id={r.exerciseId} query={`mode=${m.mode}`} className="group rounded-xl border p-3 transition-all" openClassName="hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm">
-                    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", m.className)}>
-                      <m.icon className="size-3" /> {m.label}
-                    </span>
-                    <div className="mt-1.5 text-sm font-semibold group-hover:text-primary">{exerciseTitle(r.exerciseId)}</div>
-                  </LessonLink>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button variant="outline" onClick={onAgain} disabled={restarting} aria-busy={restarting}>
-            {restarting ? <Loader2 className="animate-spin" /> : <RotateCcw />} {restarting ? "Starting…" : "Practice again"}
-          </Button>
-          <Button variant="ghost" onClick={onExit}>
-            Back to lesson
-          </Button>
-          <ButtonLink href="/learn" className="ml-auto">
-            Dashboard <ArrowRight />
-          </ButtonLink>
-        </div>
       </div>
     </motion.div>
+  );
+}
+
+/**
+ * Three clear choices: carry on with the next session (a different subject
+ * when there is one), practise this lesson again, or go back to the dashboard.
+ */
+function NextSteps({ summary, onAgain, restarting }: { summary: SessionSummary; onAgain: () => void; restarting: boolean }) {
+  const next = summary.upNext[0];
+  const ref = next ? exerciseRef(next.exerciseId) : undefined;
+  const m = next ? queueMeta[next.kind] : undefined;
+  return (
+    <div className="space-y-2.5">
+      {next && ref && m && (
+        <LessonLink
+          id={next.exerciseId}
+          query={`mode=${m.mode}`}
+          className="group flex items-center gap-4 rounded-2xl bg-gradient-to-br from-primary to-[color-mix(in_oklch,var(--primary),var(--chart-5)_35%)] px-4 py-4 text-primary-foreground shadow-lg shadow-primary/25 transition-all sm:px-5"
+          openClassName="hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30"
+          lockedClassName="bg-none"
+        >
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-white/15 ring-1 ring-white/20">
+            <UnitIcon name={ref.unit.icon} className="size-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-medium opacity-85">
+              Up next · {m.label} · {ref.unit.title}
+            </span>
+            <span className="block truncate text-base font-semibold sm:text-lg">{ref.exercise.title}</span>
+          </span>
+          <span className="hidden shrink-0 items-center gap-1.5 text-sm font-semibold sm:inline-flex">Continue</span>
+          <ArrowRight className="size-5 shrink-0 transition-transform group-hover:translate-x-1" />
+        </LessonLink>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant="secondary"
+          onClick={onAgain}
+          disabled={restarting}
+          aria-busy={restarting}
+          className="h-11 rounded-xl bg-primary/10 text-sm font-semibold text-primary hover:bg-primary/15"
+        >
+          {restarting ? <Loader2 className="animate-spin" /> : <RotateCcw />} {restarting ? "Starting…" : "Practise again"}
+        </Button>
+        <ButtonLink href="/learn" variant={next ? "outline" : "default"} className="h-11 rounded-xl text-sm font-semibold">
+          <LayoutDashboard /> Dashboard
+        </ButtonLink>
+      </div>
+    </div>
   );
 }
 

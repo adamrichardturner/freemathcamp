@@ -228,11 +228,19 @@ function TodayPlan({ day, mode }: { day: DayPlan; mode: LearningMode }) {
         <div className="space-y-3">
           {day.completed.length > 0 && <CompletedList items={day.completed} />}
           {day.today.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {day.today.map((r, i) => (
-                <PlanCard key={r.exerciseId} rec={r} index={i} featured={i === 0} />
-              ))}
-            </div>
+            <>
+              <UpNextCard rec={day.today[0]!} />
+              {day.today.length > 1 && (
+                <div className="pt-1">
+                  <div className="mb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">Then</div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {day.today.slice(1).map((r, i) => (
+                      <PlanCard key={r.exerciseId} rec={r} index={i + 1} featured={false} compact />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
               Nothing is lined up right now.{" "}
@@ -348,12 +356,74 @@ function Upcoming({ day }: { day: DayPlan }) {
         </div>
         <span className="text-xs text-muted-foreground">Mixed for you: review, repair and new ideas</span>
       </div>
+      {/* Once today is done, the first upcoming session is the obvious next step. */}
+      {day.complete && (
+        <div className="mb-3">
+          <UpNextCard rec={day.upcoming[0]!} />
+        </div>
+      )}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {day.upcoming.map((r, i) => (
+        {day.upcoming.slice(day.complete ? 1 : 0).map((r, i) => (
           <PlanCard key={r.exerciseId} rec={r} index={i} featured={false} compact />
         ))}
       </div>
     </section>
+  );
+}
+
+/** The one thing to press next: the first session of today's plan, set apart from the rest. */
+function UpNextCard({ rec }: { rec: Recommendation }) {
+  const ref = exerciseRef(rec.exerciseId);
+  if (!ref) return null;
+  const m = queueMeta[rec.kind];
+  return (
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+      <LessonLink
+        id={rec.exerciseId}
+        query={`mode=${m.mode}`}
+        className="group relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-primary/35 bg-gradient-to-br from-primary/[0.16] via-primary/[0.06] to-chart-2/[0.10] p-5 shadow-sm shadow-primary/10 transition-all sm:flex-row sm:items-center sm:p-6"
+        openClassName="hover:-translate-y-0.5 hover:border-primary/55 hover:shadow-xl hover:shadow-primary/15"
+        lockedClassName="bg-none"
+      >
+        {(locked) => (
+          <>
+            <div className="flex min-w-0 flex-1 items-start gap-4">
+              <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary to-chart-5 text-primary-foreground shadow-lg shadow-primary/25 sm:size-14">
+                <UnitIcon name={ref.unit.icon} className="size-6" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold tracking-wider text-primary uppercase">
+                    <span className="relative flex size-2">
+                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-50 motion-reduce:animate-none" />
+                      <span className="relative inline-flex size-2 rounded-full bg-primary" />
+                    </span>
+                    Up next
+                  </span>
+                  <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", m.className)}>
+                    <m.icon className="size-3" /> {m.label}
+                  </span>
+                </div>
+                <div className="mt-1.5 font-display text-2xl leading-tight sm:text-3xl">{ref.exercise.title}</div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {ref.unit.title} · ~{ref.exercise.estimatedMinutes} min
+                </p>
+                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{rec.reason}</p>
+              </div>
+            </div>
+            <span
+              className={cn(
+                "inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-6 text-sm font-semibold transition-all",
+                locked ? "bg-muted text-muted-foreground" : "bg-primary text-primary-foreground shadow-md shadow-primary/30 group-hover:gap-3 group-hover:bg-primary/90",
+              )}
+            >
+              {locked ? "Locked" : rec.kind === "review" ? "Start review" : rec.kind === "next" ? "Start lesson" : "Start practice"}
+              <ArrowRight className="size-4" />
+            </span>
+          </>
+        )}
+      </LessonLink>
+    </motion.div>
   );
 }
 

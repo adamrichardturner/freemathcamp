@@ -295,36 +295,82 @@ export function ArrayGrid({ rows, cols, groupBy }: V<"arrayGrid">) {
 
 /* ---------------- Place value, percent, tape ---------------- */
 
+const PLACES = [
+  { name: "ones", short: "O" },
+  { name: "tens", short: "T" },
+  { name: "hundreds", short: "H" },
+  { name: "thousands", short: "Th" },
+  { name: "ten thousands", short: "TTh" },
+  { name: "hundred thousands", short: "HTh" },
+  { name: "millions", short: "M" },
+  { name: "ten millions", short: "TM" },
+];
+
+/**
+ * A place-value chart. The digits always sit on one line, each column headed
+ * like a classroom chart (H, T, O…), with a small gap between groups of
+ * three. Wide frames spell the places out and add their values; narrow ones
+ * keep the short headings and explain them in a key underneath.
+ */
 export function PlaceValue({ value, highlight, conceal }: V<"placeValue">) {
-  const names = ["ones", "tens", "hundreds", "thousands", "ten-thousands", "hundred-thousands", "millions", "ten-millions"];
   const digits = String(value).split("");
+  const places = digits.map((_, i) => digits.length - 1 - i);
   return (
     <VisualFrame>
-      <div className="flex flex-wrap justify-center gap-1.5 sm:gap-2">
-        {digits.map((d, i) => {
-          const place = digits.length - 1 - i;
-          const on = highlight === i;
-          return (
-            <motion.div
-              key={i}
-              initial={{ y: 10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: i * 0.05 }}
-              className={cn(
-                "flex w-12 flex-col items-center rounded-lg border-2 bg-background px-1 py-2 sm:w-16",
-                on ? "border-primary bg-primary/10 shadow-md shadow-primary/20" : "border-border",
-              )}
-            >
-              <span className={cn("font-mono text-2xl font-semibold sm:text-3xl", on && "text-primary")}>{d}</span>
-              {!conceal && (
-                <>
-                  <span className="mt-1 text-center text-[10px] leading-tight text-muted-foreground sm:text-[11px]">{names[place]}</span>
-                  <span className="text-[11px] tabular-nums text-muted-foreground/70">×{(10 ** place).toLocaleString()}</span>
-                </>
-              )}
-            </motion.div>
-          );
-        })}
+      <div className="@container">
+        <div className="mx-auto flex w-full max-w-md items-stretch justify-center gap-1 @sm:gap-1.5 @lg:max-w-2xl" role="group" aria-label={`${value.toLocaleString()} in a place-value chart`}>
+          {digits.map((d, i) => {
+            const place = places[i]!;
+            const meta = PLACES[place] ?? { name: `10^${place}`, short: `10^${place}` };
+            const on = highlight === i;
+            // A wider gap where a new group of three starts, as the comma would.
+            const groupStart = i > 0 && place % 3 === 2;
+            return (
+              <motion.div
+                key={i}
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: i * 0.05 }}
+                className={cn("flex max-w-16 min-w-0 flex-1 basis-0 flex-col items-center gap-1", groupStart && "ml-1.5 @sm:ml-3")}
+                aria-label={conceal ? d : `${d} in the ${meta.name} place`}
+              >
+                {!conceal && (
+                  <span
+                    className={cn(
+                      "flex min-h-5 w-full items-center justify-center rounded-md px-0.5 text-center text-[10px] leading-tight font-semibold @lg:min-h-8 @lg:text-[11px]",
+                      on ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    <span className="@lg:hidden">{meta.short}</span>
+                    <span className="hidden @lg:inline">{meta.name}</span>
+                  </span>
+                )}
+                <span
+                  className={cn(
+                    "grid w-full place-items-center rounded-lg border-2 bg-background py-2 font-mono text-xl font-semibold @xs:text-2xl @md:py-2.5 @md:text-3xl",
+                    on ? "border-primary bg-primary/10 text-primary shadow-md shadow-primary/20" : "border-border",
+                  )}
+                >
+                  {d}
+                </span>
+                {!conceal && <span className="hidden text-[10px] text-muted-foreground/80 tabular-nums @lg:inline">×{(10 ** place).toLocaleString()}</span>}
+              </motion.div>
+            );
+          })}
+        </div>
+        {!conceal && (
+          <p className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground @lg:hidden">
+            {places.map((place, i) => {
+              const meta = PLACES[place];
+              if (!meta) return null;
+              return (
+                <span key={place} className={cn("whitespace-nowrap", highlight === i && "font-medium text-primary")}>
+                  <span className="font-semibold">{meta.short}</span> {meta.name}
+                </span>
+              );
+            })}
+          </p>
+        )}
       </div>
     </VisualFrame>
   );

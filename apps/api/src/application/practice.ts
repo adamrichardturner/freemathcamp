@@ -5,6 +5,7 @@ import {
   INITIAL_SCHEDULE,
   ITEMS_PER_SESSION,
   itemSignal,
+  mixSubjects,
   nextLevel,
   nextSchedule,
   sessionQuality,
@@ -236,6 +237,11 @@ export const completePractice = (user: User, sessionId: string) =>
         timeMs: r.time_ms,
       })),
       brushUp: struggledOn ? (queues.challenge.find((c) => c.exerciseId === session.exercise_id)?.brushUp ?? []) : [],
-      upNext: queues.plan.filter((p) => p.exerciseId !== session.exercise_id).slice(0, 3),
+      // Move on to a different subject first, so a run of sessions mixes topics.
+      upNext: mixSubjects(
+        queues.plan.filter((p) => p.exerciseId !== session.exercise_id),
+        (id) => getExercise(session.course_id, id)?.unit.id,
+        getExercise(session.course_id, session.exercise_id)?.unit.id,
+      ).slice(0, 3),
     };
   });

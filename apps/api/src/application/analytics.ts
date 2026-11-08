@@ -1,6 +1,6 @@
 import { getGraph, type LearningMode } from "@fmc/curriculum";
 import { Effect } from "effect";
-import { planDay } from "../domain/engine";
+import { mixSubjects, planDay } from "../domain/engine";
 import { NotFound } from "../domain/errors";
 import { round } from "../utils/math";
 import { learnerQueues, progressView, statusOf } from "./learning";
@@ -50,9 +50,14 @@ export const dashboard = (userId: string, courseId: string, mode: LearningMode, 
     for (const s of recent)
       if (s.completed_at && isoDay(s.completed_at) === todayKey && !completed.has(s.exercise_id))
         completed.set(s.exercise_id, { exerciseId: s.exercise_id, mode: s.mode, mastery: round(s.mastery_after ?? s.mastery_before), completedAt: s.completed_at.toISOString() });
-    const day = planDay(queues.plan, dailyGoal, today?.problems ?? 0, new Set(completed.keys()));
+    const graph = getGraph(courseId);
+    const unitOf = (id: string) => graph?.byId.get(id)?.unit.id;
+    // The newest finished session sets the subject to move on from.
+    const last = recent.find((s) => s.completed_at);
+    const lastUnit = last ? unitOf(last.exercise_id) : undefined;
+    const day = planDay(queues.plan, dailyGoal, today?.problems ?? 0, new Set(completed.keys()), { unitOf, lastUnit });
     return {
-      queues,
+      queues: { ...queues, plan: mixSubjects(queues.plan, unitOf, lastUnit) },
       day: { ...day, completed: [...completed.values()] },
       stats: {
         streak: streaks(activeDays),

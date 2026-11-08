@@ -9,7 +9,7 @@ import { Segmented } from "@/components/segmented";
 import { queueMeta, unitSymbol } from "@/components/status";
 import { Card, CardHeader, Empty, Grid, Icon, MasteryRing, Pill, ProgressBar, Row, Screen, SectionTitle, Separator, Skeleton, Text, type SymbolName } from "@/components/ui";
 import { WeekBars } from "@/components/week-bars";
-import type { QueueKind, Recommendation } from "@/lib/api";
+import type { CompletedToday, DayPlan, QueueKind, Recommendation } from "@/lib/api";
 import { course, exerciseRef } from "@/lib/course";
 import { greeting, minutes, shortMinutes } from "@/lib/format";
 import { plain } from "@/lib/plain";
@@ -56,9 +56,8 @@ export default function Home() {
       </Screen>
     );
 
-  const { queues, stats } = data;
+  const { queues, stats, day } = data;
   const firstName = user?.displayName.split(" ")[0] ?? "there";
-  const goal = user?.dailyGoal ?? 10;
   const isNew = stats.exercisesStarted === 0;
 
   return (
@@ -72,7 +71,9 @@ export default function Home() {
         <Text muted style={{ marginTop: 4 }}>
           {isNew
             ? "Welcome to Foundations. We've lined up the perfect place to start."
-            : stats.reviewsDue > 0
+            : day.complete
+              ? "You've met today's goal. Anything more today is a bonus."
+              : stats.reviewsDue > 0
               ? `You have ${stats.reviewsDue} review${stats.reviewsDue > 1 ? "s" : ""} due — a quick refresh keeps them locked in.`
               : "Here's your plan for today, tuned to how you've been doing."}
         </Text>
@@ -88,23 +89,13 @@ export default function Home() {
           icon="target"
           tone="info"
           label="Today"
-          value={`${stats.today.problems}/${goal}`}
-          sub={stats.today.problems >= goal ? "Daily goal reached 🎉" : "toward your daily goal"}
-          progress={Math.min(1, stats.today.problems / goal)}
+          value={`${day.done}/${day.goal}`}
+          sub={day.complete ? "Daily goal reached 🎉" : "toward your daily goal"}
+          progress={Math.min(1, day.done / day.goal)}
         />
       </Grid>
 
-      <View style={{ gap: 12 }}>
-        <SectionTitle title="Today's plan" />
-        <Text variant="caption" muted style={{ marginTop: -8 }}>
-          Mixed for you: review, repair and new ideas
-        </Text>
-        <Grid columns={columns(1, 2)}>
-          {queues.plan.map((r, i) => (
-            <PlanCard key={r.exerciseId} rec={r} index={i} featured={i === 0} />
-          ))}
-        </Grid>
-      </View>
+      <TodayPlan day={data.day} />
 
       <Queues queues={queues} />
 
@@ -219,7 +210,138 @@ function StatCard({ icon, tone, label, value, sub, progress }: { icon: SymbolNam
   );
 }
 
-function PlanCard({ rec, index, featured }: { rec: Recommendation; index: number; featured: boolean }) {
+/** Today's share of the plan, as the web's: the next session up front, the rest after it, then what's upcoming. */
+function TodayPlan({ day }: { day: DayPlan }) {
+  const { columns } = useLayout();
+  const left = Math.max(0, day.goal - day.done);
+  // Once the goal is met, the first upcoming session becomes the next step.
+  const upNext = day.complete ? day.upcoming[0] : day.today[0];
+  const then = day.complete ? [] : day.today.slice(1);
+  const upcoming = day.complete ? day.upcoming.slice(1) : day.upcoming;
+  return (
+    <View style={{ gap: 12 }}>
+      <View style={{ gap: 2 }}>
+        <SectionTitle title="Today's plan" />
+        <Text variant="caption" muted>
+          {day.complete ? "Goal reached. A fresh plan arrives tomorrow." : `About ${left} more problem${left === 1 ? "" : "s"} to reach your daily goal`}
+        </Text>
+      </View>
+      {day.completed.length > 0 && <CompletedList items={day.completed} />}
+      {upNext ? (
+        <UpNextCard rec={upNext} optional={day.complete} />
+      ) : (
+        <Empty icon="map" title="Nothing lined up" text="Open the course to pick a lesson." />
+      )}
+      {then.length > 0 && (
+        <View style={{ gap: 8 }}>
+          <Text variant="label" muted>
+            Then
+          </Text>
+          <Grid columns={columns(1, 2)}>
+            {then.map((r, i) => (
+              <PlanCard key={r.exerciseId} rec={r} index={i + 1} />
+            ))}
+          </Grid>
+        </View>
+      )}
+      {upcoming.length > 0 && (
+        <View style={{ gap: 8, marginTop: 4 }}>
+          <View style={{ gap: 2 }}>
+            <SectionTitle title="Upcoming" />
+            <Text variant="caption" muted>
+              {day.complete ? "Optional. A head start on what's next." : "Lined up after today's plan"}
+            </Text>
+          </View>
+          <Grid columns={columns(1, 2)}>
+            {upcoming.map((r, i) => (
+              <PlanCard key={r.exerciseId} rec={r} index={i} />
+            ))}
+          </Grid>
+        </View>
+      )}
+    </View>
+  );
+}
+
+/** Sessions finished today, ticked off. */
+function CompletedList({ items }: { items: CompletedToday[] }) {
+  const { c } = useTheme();
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+      <Text variant="caption" muted weight="medium">
+        Done today
+      </Text>
+      {items.map((x) => {
+        const ref = exerciseRef(x.exerciseId);
+        if (!ref) return null;
+        return (
+          <View key={x.exerciseId} style={{ flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 999, borderWidth: 1, borderColor: alpha(c.success, 0.25), backgroundColor: alpha(c.success, 0.1), paddingVertical: 4, paddingLeft: 5, paddingRight: 10 }}>
+            <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: c.success, alignItems: "center", justifyContent: "center" }}>
+              <Icon name="checkmark" size={9} color="#fff" weight="bold" />
+            </View>
+            <Text variant="caption" weight="medium">
+              {ref.exercise.title}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** The one thing to press next, set apart from the rest of the plan with a clear button. */
+function UpNextCard({ rec, optional }: { rec: Recommendation; optional?: boolean }) {
+  const { c } = useTheme();
+  const { open, isLocked } = useOpenLesson();
+  const ref = exerciseRef(rec.exerciseId);
+  if (!ref) return null;
+  const m = queueMeta[rec.kind];
+  const locked = isLocked(rec.exerciseId);
+  const action = locked ? "Locked" : rec.kind === "review" ? "Start review" : rec.kind === "next" ? "Start lesson" : "Start practice";
+  return (
+    <Animated.View entering={FadeInDown.duration(400)}>
+      <Pressable onPress={() => open(rec.exerciseId, m.mode)} accessibilityRole="button" accessibilityLabel={`Up next: ${ref.exercise.title}. ${action}`} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }], opacity: locked ? 0.6 : 1 })}>
+        <View style={{ borderRadius: radius["2xl"], borderCurve: "continuous", borderWidth: 1.5, borderColor: alpha(c.primary, 0.4), overflow: "hidden", backgroundColor: c.card, boxShadow: `0 8px 24px ${alpha(c.primary, 0.14)}` }}>
+          <LinearGradient colors={[alpha(c.primary, 0.18), alpha(c.primary, 0.06), alpha(c.chart2, 0.1)]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 18, gap: 14 }}>
+            <View style={{ flexDirection: "row", gap: 14, alignItems: "flex-start" }}>
+              <LinearGradient colors={[c.primary, c.chart5]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 50, height: 50, borderRadius: 15, alignItems: "center", justifyContent: "center", boxShadow: `0 4px 12px ${alpha(c.primary, 0.3)}` }}>
+                <Icon name={unitSymbol(ref.unit.icon)} size={22} color={c.primaryForeground} />
+              </LinearGradient>
+              <View style={{ flex: 1, gap: 4 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                    <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: c.primary }} />
+                    <Text variant="caption" weight="bold" tone="primary" style={{ letterSpacing: 0.8 }}>
+                      {optional ? "UP NEXT · BONUS" : "UP NEXT"}
+                    </Text>
+                  </View>
+                  <Pill label={m.label} tone={m.tone} icon={m.icon} />
+                </View>
+                <Text variant="display" style={{ fontSize: 26, lineHeight: 30 }}>
+                  {ref.exercise.title}
+                </Text>
+                <Text variant="small" muted>
+                  {ref.unit.title} · ~{ref.exercise.estimatedMinutes} min
+                </Text>
+                <Text variant="small" muted numberOfLines={2}>
+                  {plain(rec.reason)}
+                </Text>
+              </View>
+            </View>
+            <View style={{ height: 48, borderRadius: radius.xl, borderCurve: "continuous", backgroundColor: locked ? c.muted : c.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: locked ? undefined : `0 4px 14px ${alpha(c.primary, 0.3)}` }}>
+              <Text weight="semibold" style={{ color: locked ? c.mutedForeground : c.primaryForeground }}>
+                {action}
+              </Text>
+              <Icon name={locked ? "lock.fill" : "arrow.right"} size={15} color={locked ? c.mutedForeground : c.primaryForeground} />
+            </View>
+          </LinearGradient>
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function PlanCard({ rec, index }: { rec: Recommendation; index: number }) {
   const { open, isLocked } = useOpenLesson();
   const ref = exerciseRef(rec.exerciseId);
   if (!ref) return null;
@@ -228,7 +350,7 @@ function PlanCard({ rec, index, featured }: { rec: Recommendation; index: number
   return (
     <Animated.View entering={FadeInDown.delay(index * 70).duration(400)} style={{ flex: 1 }}>
       <Pressable onPress={() => open(rec.exerciseId, m.mode)} style={({ pressed }) => ({ flex: 1, transform: [{ scale: pressed ? 0.985 : 1 }], opacity: locked ? 0.6 : 1 })}>
-        <Card featured={featured} style={{ flex: 1, padding: 16, gap: 4 }}>
+        <Card style={{ flex: 1, padding: 16, gap: 4 }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
             <Pill label={m.label} tone={m.tone} icon={m.icon} />
             {rec.kind !== "next" && <MasteryRing value={rec.effectiveMastery} size={36} stroke={3.5} />}
@@ -253,7 +375,7 @@ function PlanCard({ rec, index, featured }: { rec: Recommendation; index: number
             </Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Text variant="caption" weight="semibold" tone="primary">
-                {locked ? "Locked" : featured ? "Start here" : "Start"}
+                {locked ? "Locked" : "Start"}
               </Text>
               <Icon name={locked ? "lock.fill" : "arrow.right"} size={12} tone="primary" />
             </View>

@@ -3,12 +3,11 @@ import { router } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
 import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
 import type { SessionSummary } from "@/lib/api";
-import { exerciseTitle } from "@/lib/course";
+import { exerciseRef, exerciseTitle } from "@/lib/course";
 import { duration, pct } from "@/lib/format";
 import { alpha, radius, useTheme, type Tone } from "@/lib/theme";
-import { queueMeta } from "./status";
+import { queueMeta, unitSymbol } from "./status";
 import { Button, Card, Icon, MasteryRing, Pill, Text, type SymbolName } from "./ui";
-import { useLayout } from "@/lib/layout";
 
 const headline = (s: SessionSummary) =>
   s.accuracy === 1 ? "Flawless session!" : s.accuracy >= 0.8 ? "Great work!" : s.accuracy >= 0.5 ? "Solid progress" : "Tough one — that's how learning feels";
@@ -27,7 +26,6 @@ const outcomeOf = (it: Item) => (it.revealed ? "shown" : it.wrongAttempts > 0 ? 
 /** The end of a session, as the web's summary: mastery before and after, stats, each problem and what next. */
 export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { summary: SessionSummary; onAgain: () => void; restarting: boolean; onExit: () => void }) {
   const { c } = useTheme();
-  const { medium } = useLayout();
   // Rounded first, so a change too small to show reads as +0% rather than a red "0%".
   const gained = Math.round((summary.mastery.after - summary.mastery.before) * 100);
   const openLesson = (id: string, mode?: string) => {
@@ -75,6 +73,8 @@ export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { s
         </Card>
       </Animated.View>
 
+      <NextSteps summary={summary} onAgain={onAgain} restarting={restarting} onDone={onExit} onOpen={openLesson} />
+
       <Card style={{ padding: 16, gap: 10 }}>
         <Text variant="label" muted>
           Problem by problem
@@ -118,43 +118,72 @@ export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { s
         </View>
       )}
 
-      {summary.upNext.length > 0 && (
-        <View style={{ gap: 8 }}>
-          <Text variant="label" muted>
-            Recommended next
-          </Text>
-          {summary.upNext.map((r) => {
-            const m = queueMeta[r.kind];
-            return (
-              <Pressable key={r.exerciseId} onPress={() => openLesson(r.exerciseId, m.mode)}>
-                <Card style={{ padding: 14, gap: 6 }}>
-                  <Pill label={m.label} tone={m.tone} icon={m.icon} />
-                  <Text weight="semibold">{exerciseTitle(r.exerciseId)}</Text>
-                </Card>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-
-      {/* Stacked on a phone; side by side on an iPad, where full-width buttons would be very long. */}
-      <View style={{ gap: 10, flexDirection: medium ? "row" : "column", alignItems: medium ? "center" : "stretch" }}>
-        <Button title="Back to lesson" size="lg" onPress={onExit} style={medium ? { flex: 1 } : undefined} />
-        <Button title={restarting ? "Starting…" : "Practice again"} variant="outline" icon="arrow.counterclockwise" loading={restarting} onPress={onAgain} style={medium ? { flex: 1 } : undefined} />
-        <Button
-          title="Dashboard"
-          variant="ghost"
-          iconRight="arrow.right"
-          style={medium ? { flex: 1 } : undefined}
-          onPress={() => {
-            router.dismissAll();
-            router.navigate("/");
-          }}
-        />
-      </View>
     </ScrollView>
   );
 }
+
+/**
+ * Three clear choices: carry on with the next session (a different subject
+ * when there is one), practise this lesson again, or finish.
+ */
+function NextSteps({ summary, onAgain, restarting, onDone, onOpen }: { summary: SessionSummary; onAgain: () => void; restarting: boolean; onDone: () => void; onOpen: (id: string, mode?: string) => void }) {
+  const { c } = useTheme();
+  const next = summary.upNext[0];
+  const ref = next ? exerciseRef(next.exerciseId) : undefined;
+  const m = next ? queueMeta[next.kind] : undefined;
+  return (
+    <Animated.View entering={FadeIn.delay(150).duration(300)} style={{ gap: 10 }}>
+      {next && ref && m && (
+        <Pressable
+          onPress={() => onOpen(next.exerciseId, m.mode)}
+          accessibilityRole="button"
+          accessibilityLabel={`Continue to ${ref.exercise.title}`}
+          style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }], opacity: pressed ? 0.92 : 1 })}
+        >
+          <LinearGradient
+            colors={[c.primary, mix(c.primary, c.chart5)]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingVertical: 14, borderRadius: radius.xl, borderCurve: "continuous", boxShadow: `0 8px 20px ${alpha(c.primary, 0.3)}` }}
+          >
+            <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: alpha(c.primaryForeground, 0.16), alignItems: "center", justifyContent: "center" }}>
+              <Icon name={unitSymbol(ref.unit.icon)} size={19} color={c.primaryForeground} />
+            </View>
+            <View style={{ flex: 1, gap: 1 }}>
+              <Text variant="caption" weight="medium" numberOfLines={1} style={{ color: alpha(c.primaryForeground, 0.85) }}>
+                Up next · {m.label} · {ref.unit.title}
+              </Text>
+              <Text weight="semibold" numberOfLines={1} style={{ color: c.primaryForeground, fontSize: 17 }}>
+                {ref.exercise.title}
+              </Text>
+            </View>
+            <Icon name="arrow.right" size={18} color={c.primaryForeground} weight="semibold" />
+          </LinearGradient>
+        </Pressable>
+      )}
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        <Pressable
+          onPress={onAgain}
+          disabled={restarting}
+          accessibilityRole="button"
+          style={({ pressed }) => ({ flex: 1, height: 48, borderRadius: radius.lg, borderCurve: "continuous", backgroundColor: alpha(c.primary, pressed ? 0.18 : 0.11), flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 })}
+        >
+          <Icon name="arrow.counterclockwise" size={15} tone="primary" weight="semibold" />
+          <Text weight="semibold" tone="primary">
+            {restarting ? "Starting…" : "Practise again"}
+          </Text>
+        </Pressable>
+        <Button title="Done" variant={next ? "outline" : "default"} icon="checkmark" onPress={onDone} style={{ flex: 1, height: 48 }} />
+      </View>
+    </Animated.View>
+  );
+}
+
+/** Blends two hex colours halfway, for a gentle gradient between theme tones. */
+const mix = (a: string, b: string) => {
+  const ch = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
+  return `#${[0, 1, 2].map((i) => Math.round(ch(a, i) * 0.65 + ch(b, i) * 0.35).toString(16).padStart(2, "0")).join("")}`;
+};
 
 function Stat({ icon, label, value, border }: { icon: SymbolName; label: string; value: string; border?: boolean }) {
   const { c } = useTheme();
