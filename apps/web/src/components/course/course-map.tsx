@@ -171,7 +171,7 @@ export function CourseMap() {
 }
 
 /** The course hero, the legend row and a unit of lesson cards, pulsing. */
-export function CourseMapSkeleton() {
+function CourseMapSkeleton() {
   return (
     <div className="space-y-8">
       <Skeleton className="h-72 rounded-3xl" />

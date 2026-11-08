@@ -9,7 +9,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { ogImagePath, shareImage } from "@/lib/og";
 import { lessonDescription, lessonPath } from "@/lib/site";
 import { breadcrumbs, graph, lessonSchema } from "@/lib/structured-data";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageSpinner } from "@/components/ui/spinner";
 
 type Props = PageProps<"/courses/[courseId]/[exerciseId]">;
 
@@ -59,22 +59,8 @@ async function Exercise({ params }: Pick<Props, "params">) {
 
 export default function ExercisePage({ params }: Props) {
   return (
-    <Suspense fallback={<LessonSkeleton />}>
+    <Suspense fallback={<PageSpinner />}>
       <Exercise params={params} />
     </Suspense>
-  );
-}
-
-function LessonSkeleton() {
-  return (
-    <div className="space-y-4">
-      <Skeleton className="h-4 w-48" />
-      <Skeleton className="h-14 w-80" />
-      <Skeleton className="h-5 w-96 max-w-full" />
-      <div className="grid gap-8 pt-6 lg:grid-cols-[1fr_300px]">
-        <Skeleton className="h-96 rounded-2xl" />
-        <Skeleton className="h-64 rounded-2xl" />
-      </div>
-    </div>
   );
 }

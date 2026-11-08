@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ComponentRef } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import Animated, { FadeIn, FadeInDown, FadeInRight, FadeOutLeft, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, ZoomIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Reveal, useRevealHold } from "@/components/reveal";
@@ -106,7 +106,9 @@ export default function Practice() {
       {summary ? (
         <SessionSummaryView summary={summary} restarting={start.isPending} onAgain={() => !start.isPending && start.mutate()} onExit={exit} />
       ) : !session || !item || !problem ? (
-        <PracticeSkeleton />
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color={c.mutedForeground} accessibilityLabel="Loading" />
+        </View>
       ) : (
         <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={Platform.OS === "ios" && Platform.isPad ? 56 : 0} style={{ flex: 1 }}>
           <SessionHeader total={session.targetItems} results={results} current={item.index} level={item.level} mastery={mastery} mode={mode} onExit={exit} />
@@ -321,28 +323,6 @@ function ProblemCard({
 function HeldProblemContent(props: Omit<ComponentProps<typeof ProblemContent>, "onReady">) {
   const release = useRevealHold();
   return <ProblemContent {...props} onReady={async () => release()} />;
-}
-
-/** The session header and problem card, pulsing, while the session starts. */
-function PracticeSkeleton() {
-  return (
-    <View style={{ flex: 1 }}>
-      <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, gap: 12 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Skeleton height={32} width={32} style={{ borderRadius: 16 }} />
-          <Skeleton height={8} style={{ flex: 1, borderRadius: 4 }} />
-        </View>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <Skeleton height={24} width={64} style={{ borderRadius: 999 }} />
-          <Skeleton height={24} width={92} style={{ borderRadius: 999 }} />
-          <Skeleton height={24} width={96} style={{ borderRadius: 999 }} />
-        </View>
-      </View>
-      <View style={{ padding: 16, paddingTop: 4 }}>
-        <ProblemCardSkeleton />
-      </View>
-    </View>
-  );
 }
 
 function ProblemCardSkeleton() {
