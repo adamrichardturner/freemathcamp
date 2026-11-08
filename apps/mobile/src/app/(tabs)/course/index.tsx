@@ -10,6 +10,7 @@ import { statusMeta, unitSymbol } from "@/components/status";
 import { Button, Card, Icon, IconChip, MasteryRing, Row, Screen, Skeleton, Text } from "@/components/ui";
 import type { ExerciseStatus, ProgressView } from "@/lib/api";
 import { course, graph } from "@/lib/course";
+import { useLayout } from "@/lib/layout";
 import { plain } from "@/lib/plain";
 import { useCourseProgress, useSession } from "@/lib/queries";
 import { alpha, radius, useTheme } from "@/lib/theme";
@@ -17,6 +18,7 @@ import { alpha, radius, useTheme } from "@/lib/theme";
 /** The web's course map: the course, its mode, and every unit's lessons with their status. */
 export default function CourseMap() {
   const { c } = useTheme();
+  const { fit, medium } = useLayout();
   const { user } = useSession();
   const { data: progress, isFetched, refetch, isRefetching } = useCourseProgress();
   const { open, isLocked, lockedBy, mode, known } = useOpenLesson();
@@ -70,7 +72,7 @@ export default function CourseMap() {
               <Button
                 title={`${firstDue ? "Practice due" : "Continue"}: ${graph.refs.find((r) => r.exercise.id === jumpTo)?.exercise.title ?? ""}`}
                 iconRight="arrow.right"
-                style={{ marginTop: 6 }}
+                style={{ marginTop: 6, ...fit(), alignSelf: medium ? "flex-start" : "stretch" }}
                 onPress={() => open(jumpTo)}
               />
             )}

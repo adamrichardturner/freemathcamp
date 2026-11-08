@@ -5,6 +5,7 @@ import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
 import type { SessionSummary } from "@/lib/api";
 import { exerciseRef, exerciseTitle } from "@/lib/course";
 import { duration, pct } from "@/lib/format";
+import { useLayout } from "@/lib/layout";
 import { alpha, radius, useTheme, type Tone } from "@/lib/theme";
 import { queueMeta, unitSymbol } from "./status";
 import { Button, Card, Icon, MasteryRing, Pill, Text, type SymbolName } from "./ui";
@@ -128,6 +129,7 @@ export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { s
  */
 function NextSteps({ summary, onAgain, restarting, onDone, onOpen }: { summary: SessionSummary; onAgain: () => void; restarting: boolean; onDone: () => void; onOpen: (id: string, mode?: string) => void }) {
   const { c } = useTheme();
+  const { medium } = useLayout();
   const next = summary.upNext[0];
   const ref = next ? exerciseRef(next.exerciseId) : undefined;
   const m = next ? queueMeta[next.kind] : undefined;
@@ -161,7 +163,7 @@ function NextSteps({ summary, onAgain, restarting, onDone, onOpen }: { summary: 
           </LinearGradient>
         </Pressable>
       )}
-      <View style={{ flexDirection: "row", gap: 10 }}>
+      <View style={{ flexDirection: "row", gap: 10, width: "100%", maxWidth: medium ? 520 : undefined, alignSelf: "center" }}>
         <Pressable
           onPress={onAgain}
           disabled={restarting}

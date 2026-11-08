@@ -31,7 +31,7 @@ export function AuthForm({ mode, onSwitch }: { mode: "login" | "register"; onSwi
   const error = submit.error && !(submit.error instanceof ApiError && submit.error.issues) ? (submit.error instanceof ApiError ? submit.error.message : "Something went wrong.") : null;
   const busy = submit.isPending || submit.isSuccess;
   const set = (k: keyof typeof form) => (v: string) => {
-    setForm({ ...form, [k]: v });
+    setForm((f) => ({ ...f, [k]: v }));
     setErrors(({ [k]: _, ...rest }) => rest);
   };
   const go = () => !busy && submit.mutate();

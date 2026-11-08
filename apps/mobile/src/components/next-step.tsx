@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { Button, Icon, Pill, Text, type SymbolName } from "@/components/ui";
 import type { PracticeMode } from "@/lib/api";
+import { useLayout } from "@/lib/layout";
 import type { NextStep } from "@/lib/next-step";
 import { alpha, radius, useTheme, type Colors, type Tone } from "@/lib/theme";
 
@@ -43,6 +44,7 @@ function Pulse({ color, size, round }: { color: string; size: number; round?: bo
  */
 export function PracticeDueBanner({ step, onStart }: { step: PracticeStep; onStart: () => void }) {
   const { c } = useTheme();
+  const { fit } = useLayout();
   const reduce = useReducedMotion();
   const t = TONE[step.mode];
   const color = t.color(c);
@@ -79,7 +81,7 @@ export function PracticeDueBanner({ step, onStart }: { step: PracticeStep; onSta
               </Text>
             </View>
           </View>
-          <Button title={step.cta} iconRight="arrow.right" size="lg" onPress={onStart} />
+          <Button title={step.cta} iconRight="arrow.right" size="lg" style={fit()} onPress={onStart} />
           <Text variant="caption" muted style={{ textAlign: "center" }}>
             Need a refresher first? The lesson is just below.
           </Text>
