@@ -30,7 +30,7 @@ xcrun simctl status_bar "$UDID" override --time "09:41" --dataNetwork wifi --wif
 run() {
   TEST_RUNNER_SHOTS_DIR="$OUT" TEST_RUNNER_SHOTS_EMAIL="${SHOTS_EMAIL:-shots@freemathcamp.test}" \
   TEST_RUNNER_SHOTS_PASSWORD="$SHOTS_PASSWORD" TEST_RUNNER_SHOTS_LESSON="${SHOTS_LESSON:-Equivalent Fractions}" \
-  TEST_RUNNER_SHOTS_PRACTICE="${SHOTS_PRACTICE:-Fractions, Decimals & Percents}" \
+  TEST_RUNNER_SHOTS_PRACTICE="${SHOTS_PRACTICE:-Fractions, Decimals & Percents}" TEST_RUNNER_SHOTS_TOUR="${SHOTS_TOUR:-}" \
   xcodebuild test -workspace ios/FreeMathCamp.xcworkspace -scheme ShotsUITests -configuration Release \
     -destination "id=$UDID" -derivedDataPath build/dd CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= "$@" > "build/capture-$SET.log" 2>&1 \
     || { tail -40 "build/capture-$SET.log"; exit 1; }

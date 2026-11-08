@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowDown, ArrowRight, Bell, BrainCircuit, CalendarClock, Check, Gauge, Network, RefreshCw, ShieldCheck, Smartphone, Sparkles, TrendingUp } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
-import type { MouseEvent } from "react";
+import { ArrowDown, ArrowRight, Bell, BrainCircuit, CalendarClock, Check, Flame, Gauge, Lightbulb, Network, RefreshCw, Route, ShieldCheck, Smartphone, Sparkles, Tablet, Trophy, TrendingUp } from "lucide-react";
+import { AnimatePresence, motion, useInView, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ButtonLink } from "@/components/app/button-link";
@@ -61,7 +61,7 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
           </motion.div>
           <AppComingSoonBadge />
           <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }} className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            {[`${course.units.length} units`, `${graph.refs.length} lessons`, "Unlimited practice", "Light & dark mode"].map((x) => (
+            {[`${course.units.length} units`, `${graph.refs.length} lessons`, "Unlimited practice", "Step-by-step solutions", "Free, no ads"].map((x) => (
               <li key={x} className="flex items-center gap-1.5">
                 <Check className="size-4 text-success" /> {x}
               </li>
@@ -189,7 +189,9 @@ const FEATURES = [
   { icon: Gauge, title: "Difficulty that adapts", text: "Every problem is generated for you. Two clean solves and we step up; a struggle and we ease back — in real time.", color: "from-primary to-chart-5" },
   { icon: BrainCircuit, title: "Knows when you struggle", text: "Wrong answers are weighted, time is compared to a baseline, hints count. Tricky topics land in your Strengthen queue.", color: "from-chart-4 to-chart-3" },
   { icon: CalendarClock, title: "Reviews before you forget", text: "Spaced repetition schedules each topic so memory sticks, with intervals that stretch as you master it.", color: "from-chart-3 to-chart-2" },
-  { icon: Network, title: "Every idea is connected", text: "Each lesson links to the ideas it builds on. New to a topic? See exactly what background helps, then follow the path in order or explore freely.", color: "from-chart-2 to-primary" },
+  { icon: Network, title: "Every idea is connected", text: "Each lesson links to the ideas it builds on. New to a topic? See exactly what background helps before you dive in.", color: "from-chart-2 to-primary" },
+  { icon: Route, title: "Your path, or your own", text: "Path mode unlocks lessons in order as you practise. Audit mode opens all of them so you can explore. Switch any time.", color: "from-primary to-chart-2" },
+  { icon: Lightbulb, title: "Help the moment you're stuck", text: "Hints when you need a nudge, and a step-by-step worked solution for every problem, with the visual that explains it.", color: "from-chart-5 to-chart-4" },
 ];
 
 function Features() {
@@ -199,7 +201,7 @@ function Features() {
         <h2 className="font-display text-4xl sm:text-5xl">Built around how people actually learn</h2>
         <p className="mt-3 text-muted-foreground">Not a video library. A personal tutor that watches how you work and plans what&apos;s next.</p>
       </motion.div>
-      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {FEATURES.map((f, i) => (
           <motion.div key={f.title} {...fadeUp} transition={{ delay: i * 0.08, duration: 0.5 }} className="group rounded-2xl border bg-card p-6 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5">
             <span className={`grid size-11 place-items-center rounded-xl bg-gradient-to-br ${f.color} text-white shadow-md`}>
@@ -276,28 +278,36 @@ function Engine() {
 }
 
 const APP_POINTS = [
+  { icon: Route, title: "Your path, your pace", text: "Pick Path mode to unlock lessons in order, or Audit mode to open them all. The welcome tour asks first, and you can switch any time." },
   { icon: RefreshCw, title: "One account, everywhere", text: "Start a lesson on your laptop and finish it on the bus. Progress, reviews and streaks sync both ways." },
   { icon: ShieldCheck, title: "Sign in your way", text: "Sign in with Apple, Google or email, and the session stays safely in your keychain." },
   { icon: Bell, title: "Nudges, not nagging", text: "An optional reminder when a review is due or your streak needs a session. Turn it off any time." },
 ];
 
+const DEVICES = [
+  { icon: Smartphone, label: "iPhone" },
+  { icon: Tablet, label: "iPad" },
+  { icon: Smartphone, label: "iPhone Duo" },
+];
+
 function MobileApp() {
   return (
-    <section id="app" className="scroll-mt-20 border-y bg-muted/30" aria-labelledby="app-heading">
-      <div className="mx-auto grid max-w-6xl items-center gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.1fr]">
+    <section id="app" className="relative scroll-mt-20 overflow-hidden border-y bg-muted/30" aria-labelledby="app-heading">
+      <div className="pointer-events-none absolute inset-0 bg-dots opacity-60 [mask-image:radial-gradient(ellipse_70%_60%_at_70%_50%,black,transparent)]" />
+      <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.15fr] lg:py-28">
         <motion.div {...fadeUp}>
           <span className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs font-medium">
             <Smartphone className="size-3.5 text-primary" /> iPhone & iPad · {IOS_APP.available ? "Out now" : "Coming soon"}
           </span>
           <h2 id="app-heading" className="mt-4 font-display text-4xl sm:text-5xl">
-            The whole course, <em className="text-primary">in your pocket</em>.
+            The whole course, <em className="bg-gradient-to-r from-primary to-chart-4 bg-clip-text text-transparent">in your pocket</em>.
           </h2>
           <p className="mt-4 max-w-lg text-muted-foreground">
-            The <Wordmark /> app for iPhone and iPad has every lesson, the same adaptive practice and your daily plan, built to feel at home on iOS. Ten minutes in a queue is ten minutes of maths.
+            The <Wordmark /> app has all {graph.refs.length} lessons, the same adaptive practice with step-by-step solutions, your daily plan and the weekly leagues, built to feel at home on iOS. Ten minutes in a queue is ten minutes of maths.
           </p>
-          <ul className="mt-8 space-y-5">
-            {APP_POINTS.map((p) => (
-              <li key={p.title} className="flex gap-3">
+          <ul className="mt-8 grid gap-5 sm:grid-cols-2">
+            {APP_POINTS.map((p, i) => (
+              <motion.li key={p.title} {...fadeUp} transition={{ delay: 0.05 + i * 0.07, duration: 0.45 }} className="flex gap-3">
                 <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
                   <p.icon className="size-4" />
                 </span>
@@ -305,10 +315,18 @@ function MobileApp() {
                   <span className="block font-semibold">{p.title}</span>
                   <span className="block text-sm text-muted-foreground">{p.text}</span>
                 </span>
-              </li>
+              </motion.li>
             ))}
           </ul>
-          <div className="mt-9 flex flex-wrap items-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span>Designed for</span>
+            {DEVICES.map((d) => (
+              <span key={d.label} className="inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1 font-medium text-foreground">
+                <d.icon className="size-3.5 text-primary" /> {d.label}
+              </span>
+            ))}
+          </div>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <AppStoreBadge />
             {!IOS_APP.available && (
               <ButtonLink href="/register" variant="outline" size="lg" className="h-12 px-5">
@@ -318,24 +336,187 @@ function MobileApp() {
           </div>
           {!IOS_APP.available && <p className="mt-3 text-sm text-muted-foreground">Your progress will be waiting in the app when it lands.</p>}
         </motion.div>
-        <motion.div {...fadeUp} transition={{ delay: 0.1, duration: 0.6 }} className="relative">
-          <div className="pointer-events-none absolute inset-x-10 top-10 bottom-0 rounded-full bg-primary/20 blur-3xl" />
-          <div className="relative flex items-end justify-center gap-3 sm:gap-5">
-            {IOS_APP.screenshots.map((shot, i) => (
-              <PhoneFrame key={shot.src} src={shot.src} alt={shot.alt} className={i === 1 ? "z-10 w-[38%] sm:w-[36%]" : "w-[30%] translate-y-6 opacity-95 sm:w-[29%]"} priority={i === 1} />
-            ))}
-          </div>
-        </motion.div>
+        <PhoneShowcase />
       </div>
     </section>
   );
 }
 
-function PhoneFrame({ src, alt, className, priority }: { src: string; alt: string; className: string; priority?: boolean }) {
+/** Maths glyphs drifting around the showcase, each at its own depth for a little parallax as the page scrolls. */
+const GLYPHS = [
+  { t: "π", x: "4%", y: "8%", size: "text-6xl", depth: 60, dur: 7, tone: "text-primary/35" },
+  { t: "√x", x: "84%", y: "4%", size: "text-5xl", depth: -40, dur: 8, tone: "text-chart-4/40" },
+  { t: "∑", x: "90%", y: "46%", size: "text-6xl", depth: 80, dur: 9, tone: "text-chart-2/35" },
+  { t: "θ", x: "0%", y: "52%", size: "text-5xl", depth: -70, dur: 6.5, tone: "text-chart-3/40" },
+  { t: "x²", x: "10%", y: "86%", size: "text-5xl", depth: 50, dur: 7.5, tone: "text-chart-5/40" },
+  { t: "∞", x: "80%", y: "88%", size: "text-6xl", depth: -50, dur: 8.5, tone: "text-primary/30" },
+  { t: "½", x: "48%", y: "-2%", size: "text-4xl", depth: 30, dur: 6, tone: "text-chart-4/35" },
+] as const;
+
+const SLIDE_MS = 3800;
+
+/**
+ * The app's screens in a phone that cycles through them on its own (pausing on
+ * hover, off screen, or when the reader prefers less motion), with the screens
+ * either side peeking out behind it and maths glyphs floating around.
+ */
+function PhoneShowcase() {
+  const shots = IOS_APP.screenshots;
+  const n = shots.length;
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { margin: "-15% 0px" });
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const playing = !reduce && !paused && inView;
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+
+  useEffect(() => {
+    if (!playing) return;
+    const t = setTimeout(() => setIndex((i) => (i + 1) % n), SLIDE_MS);
+    return () => clearTimeout(t);
+  }, [playing, index, n]);
+
+  const at = (offset: number) => shots[(index + offset + n) % n]!;
+  const current = shots[index]!;
+
   return (
-    <div className={`rounded-[2rem] border border-black/10 bg-neutral-900 p-1.5 dark:border-white/15 shadow-2xl shadow-primary/15 sm:rounded-[2.4rem] sm:p-2 ${className}`}>
-      <Image src={src} alt={alt} width={660} height={1434} sizes="(min-width: 1024px) 220px, 34vw" priority={priority} className="aspect-[1320/2868] w-full rounded-[1.6rem] bg-muted object-cover sm:rounded-[2rem]" />
+    <motion.div
+      ref={ref}
+      {...fadeUp}
+      transition={{ delay: 0.1, duration: 0.6 }}
+      className="relative mx-auto w-full max-w-xl"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocusCapture={() => setPaused(true)}
+      onBlurCapture={() => setPaused(false)}
+    >
+      <div className="pointer-events-none absolute inset-x-6 top-16 bottom-24 rounded-full bg-gradient-to-tr from-primary/30 via-chart-4/20 to-chart-2/25 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 select-none">
+        {GLYPHS.map((g) => (
+          <Glyph key={g.t} glyph={g} progress={scrollYProgress} still={!!reduce} />
+        ))}
+      </div>
+
+      <div className="relative flex h-[35rem] items-center justify-center sm:h-[40rem]">
+        {/* The neighbouring screens, tilted back behind the phone. */}
+        <SidePhone shot={at(-1)} side="left" />
+        <SidePhone shot={at(1)} side="right" />
+
+        <motion.div
+          className="relative z-10 w-[15rem] sm:w-[17.5rem]"
+          animate={reduce ? undefined : { y: [0, -10, 0] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <div className="rounded-[2.6rem] border border-black/10 bg-neutral-900 p-2 shadow-2xl shadow-primary/25 ring-1 ring-white/10 dark:border-white/15">
+            <div className="relative aspect-[1320/2868] overflow-hidden rounded-[2.1rem] bg-muted">
+              <AnimatePresence initial={false}>
+                <motion.div
+                  key={current.src}
+                  className="absolute inset-0"
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 1.06, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                  exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.98, filter: "blur(4px)" }}
+                  transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <Image src={current.src} alt={current.alt} fill sizes="(min-width: 640px) 280px, 240px" priority={index === 0} className="object-cover object-top" />
+                </motion.div>
+              </AnimatePresence>
+              <span className="absolute top-2.5 left-1/2 h-[1.15rem] w-[4.6rem] -translate-x-1/2 rounded-full bg-black" />
+            </div>
+          </div>
+
+          <motion.div
+            animate={reduce ? undefined : { y: [0, -8, 0] }}
+            transition={{ duration: 4.5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-20 -left-16 hidden items-center gap-2 rounded-2xl border bg-card/95 px-3 py-2 text-sm font-semibold shadow-xl backdrop-blur sm:flex"
+          >
+            <span className="grid size-7 place-items-center rounded-lg bg-warning/20 text-warning">
+              <Flame className="size-4" />
+            </span>
+            26-day streak
+          </motion.div>
+          <motion.div
+            animate={reduce ? undefined : { y: [0, 8, 0] }}
+            transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -right-20 bottom-28 hidden items-center gap-2 rounded-2xl border bg-card/95 px-3 py-2 text-sm shadow-xl backdrop-blur sm:flex"
+          >
+            <span className="grid size-7 place-items-center rounded-lg bg-chart-4/20 text-chart-4">
+              <Trophy className="size-4" />
+            </span>
+            <span>
+              <span className="block text-xs text-muted-foreground">This week</span>
+              <span className="font-semibold">+1,150 XP</span>
+            </span>
+          </motion.div>
+        </motion.div>
+      </div>
+
+      <div className="relative mt-2 text-center" aria-live="polite">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={current.src} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }}>
+            <div className="font-display text-2xl">{current.label}</div>
+            <div className="text-sm text-muted-foreground">{current.caption}</div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      <div role="tablist" aria-label="App screens" className="relative mt-4 flex justify-center gap-1.5">
+        {shots.map((s, i) => (
+          <button
+            key={s.src}
+            type="button"
+            role="tab"
+            aria-selected={i === index}
+            aria-label={s.label}
+            onClick={() => setIndex(i)}
+            className={`relative h-1.5 overflow-hidden rounded-full transition-all duration-300 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none ${i === index ? "w-10 bg-primary/25" : "w-1.5 bg-foreground/20 hover:bg-foreground/40"}`}
+          >
+            {i === index && (
+              <motion.span
+                key={`${index}-${playing}`}
+                className="absolute inset-y-0 left-0 rounded-full bg-primary"
+                initial={{ width: playing ? "0%" : "100%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: playing ? SLIDE_MS / 1000 : 0, ease: "linear" }}
+              />
+            )}
+          </button>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+function SidePhone({ shot, side }: { shot: (typeof IOS_APP.screenshots)[number]; side: "left" | "right" }) {
+  const left = side === "left";
+  return (
+    <div className={`absolute top-1/2 hidden w-[11.5rem] -translate-y-1/2 sm:block ${left ? "left-0 -rotate-[8deg]" : "right-0 rotate-[8deg]"}`}>
+      <div className="rounded-[2rem] border border-black/10 bg-neutral-900 p-1.5 opacity-80 shadow-xl dark:border-white/15">
+        <div className="relative aspect-[1320/2868] overflow-hidden rounded-[1.6rem] bg-muted">
+          <AnimatePresence initial={false}>
+            <motion.div key={shot.src} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.7 }}>
+              <Image src={shot.src} alt="" fill sizes="190px" className="object-cover object-top" />
+            </motion.div>
+          </AnimatePresence>
+          <div className={`absolute inset-0 from-background/50 to-transparent ${left ? "bg-gradient-to-r" : "bg-gradient-to-l"}`} />
+        </div>
+      </div>
     </div>
+  );
+}
+
+function Glyph({ glyph, progress, still }: { glyph: (typeof GLYPHS)[number]; progress: MotionValue<number>; still: boolean }) {
+  const y = useTransform(progress, [0, 1], [glyph.depth, -glyph.depth]);
+  return (
+    <motion.span className="absolute" style={{ left: glyph.x, top: glyph.y, y: still ? 0 : y }}>
+      <motion.span
+        className={`block font-display italic ${glyph.size} ${glyph.tone}`}
+        animate={still ? undefined : { y: [0, -12, 0], rotate: [0, 6, 0] }}
+        transition={{ duration: glyph.dur, repeat: Infinity, ease: "easeInOut" }}
+      >
+        {glyph.t}
+      </motion.span>
+    </motion.span>
   );
 }
 
