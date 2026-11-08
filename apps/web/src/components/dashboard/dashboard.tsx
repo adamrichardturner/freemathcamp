@@ -8,6 +8,7 @@ import { ButtonLink } from "@/components/app/button-link";
 import { MasteryRing, queueMeta } from "@/components/app/status";
 import { UnitIcon } from "@/components/app/unit-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Reveal } from "@/components/ui/reveal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VerifyEmailCard } from "@/components/app/verify-email-card";
@@ -15,18 +16,26 @@ import { LessonLink } from "@/components/course/lesson-link";
 import { LeagueCard } from "@/components/leagues/league-card";
 import { useCourseProgress, useDashboard, useSession } from "@/hooks/queries";
 import type { LearningMode } from "@fmc/curriculum";
-import type { CompletedToday, DayPlan, QueueKind, Recommendation } from "@/lib/api";
+import type { CompletedToday, CourseProgress, Dashboard, DayPlan, QueueKind, Recommendation, User } from "@/lib/api";
 import { course, exerciseRef } from "@/lib/course";
 import { greeting, minutes, shortMinutes } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export function DashboardView() {
   const { user, ready, verified } = useSession();
-  const { data, isLoading } = useDashboard(verified);
-  const { data: progress } = useCourseProgress(verified);
+  const { data } = useDashboard(verified);
+  const { data: progress, isFetched: progressFetched } = useCourseProgress(verified);
 
   if (ready && user && !verified) return <VerifyEmailCard user={user} />;
-  if (isLoading || !data) return <DashboardSkeleton />;
+  // Course progress fills the unit bars, so it lands with the rest rather than after.
+  return (
+    <Reveal ready={!!data && progressFetched} skeleton={<DashboardSkeleton />}>
+      {data && <DashboardBody data={data} user={user} progress={progress} />}
+    </Reveal>
+  );
+}
+
+function DashboardBody({ data, user, progress }: { data: Dashboard; user: User | null; progress?: CourseProgress }) {
   const { queues, stats, day } = data;
   const firstName = user?.displayName.split(" ")[0] ?? "there";
   const isNew = stats.exercisesStarted === 0;
@@ -536,16 +545,34 @@ function WeekBars({ days: values, format = String, barClassName = "from-primary 
 function DashboardSkeleton() {
   return (
     <div className="space-y-8">
-      <Skeleton className="h-20 w-72" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-12 w-56" />
+          <Skeleton className="h-5 w-96 max-w-full" />
+        </div>
+        <Skeleton className="h-[70px] w-56 rounded-2xl" />
+      </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <Skeleton key={i} className="h-28" />
+          <Skeleton key={i} className="h-28 rounded-xl" />
         ))}
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} className="h-48" />
-        ))}
+      <div className="space-y-3">
+        <Skeleton className="h-6 w-36" />
+        <Skeleton className="h-36 rounded-2xl" />
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
+        </div>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <Skeleton className="h-96 rounded-xl" />
+        <div className="space-y-6">
+          <Skeleton className="h-56 rounded-xl" />
+          <Skeleton className="h-44 rounded-xl" />
+        </div>
       </div>
     </div>
   );

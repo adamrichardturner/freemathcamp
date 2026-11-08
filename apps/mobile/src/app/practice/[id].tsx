@@ -2,14 +2,15 @@ import { evaluate, generateProblem, type Problem } from "@fmc/curriculum";
 import { useMutation } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type ComponentRef } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import Animated, { FadeIn, FadeInDown, FadeInRight, FadeOutLeft, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, ZoomIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Reveal, useRevealHold } from "@/components/reveal";
 import { domProps } from "@/components/rich";
 import { SessionSummaryView } from "@/components/session-summary";
 import { useVisualViewer } from "@/components/visual-viewer";
-import { Button, Card, Icon, Input, Text } from "@/components/ui";
+import { Button, Card, Icon, Input, Skeleton, Text } from "@/components/ui";
 import ProblemContent from "@/dom/problem-content";
 import { api, type AttemptResponse, type PracticeItem, type PracticeMode, type Resolution, type RevealResponse, type SessionSummary, type StartPracticeResponse } from "@/lib/api";
 import { COURSE_ID, exerciseRef } from "@/lib/course";
@@ -105,13 +106,12 @@ export default function Practice() {
       {summary ? (
         <SessionSummaryView summary={summary} restarting={start.isPending} onAgain={() => !start.isPending && start.mutate()} onExit={exit} />
       ) : !session || !item || !problem ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color={c.mutedForeground} />
-        </View>
+        <PracticeSkeleton />
       ) : (
         <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={Platform.OS === "ios" && Platform.isPad ? 56 : 0} style={{ flex: 1 }}>
           <SessionHeader total={session.targetItems} results={results} current={item.index} level={item.level} mastery={mastery} mode={mode} onExit={exit} />
-          <Animated.View key={item.seed} entering={FadeInRight.duration(250)} exiting={FadeOutLeft.duration(150)} style={{ flex: 1 }}>
+          {/* The first problem fades in from its skeleton in place; later ones slide in. */}
+          <Animated.View key={item.seed} entering={item.index > 0 ? FadeInRight.duration(250) : undefined} exiting={FadeOutLeft.duration(150)} style={{ flex: 1 }}>
             <ProblemCard sessionId={session.sessionId} exerciseId={id} item={item} problem={problem} state={state} onResolved={onResolved} onNext={next} finishing={complete.isPending} />
           </Animated.View>
         </KeyboardAvoidingView>
@@ -238,66 +238,68 @@ function ProblemCard({
     <View style={{ flex: 1 }}>
       {zoom.viewer}
       <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 16 }}>
-        <Animated.View style={shakeStyle}>
-          <Card style={{ padding: 16, gap: 16 }}>
-            <ProblemContent
-              courseId={COURSE_ID}
-              exerciseId={exerciseId}
-              seed={item.seed}
-              level={item.level}
-              section="question"
-              scheme={scheme}
-              choice={choice}
-              resolved={resolved}
-              correct={resolved && state.correct}
-              disabled={busy}
-              onChoose={async (i) => {
-                void Haptics.selectionAsync();
-                setChoice(i);
-              }}
-              onExpandVisual={async (solution) => zoom.open({ kind: "problem", courseId: COURSE_ID, exerciseId, seed: item.seed, level: item.level, solution })}
-              dom={domProps}
-            />
-            {!isChoice && (
-              <View style={{ gap: 6 }}>
-                <Input
-                  value={answer}
-                  onChangeText={setAnswer}
-                  editable={!resolved && !busy}
-                  placeholder={problem.inputHint ?? "Your answer"}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  spellCheck={false}
-                  autoFocus
-                  maxLength={200}
-                  returnKeyType={resolved ? "next" : "done"}
-                  submitBehavior="submit"
-                  onSubmitEditing={() => (resolved ? !finishing && onNext() : submit())}
-                  accessibilityLabel="Your answer"
-                  style={{ height: 54, fontSize: 20 }}
-                />
-                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-                  <Text variant="caption" muted style={{ flex: 1 }}>
-                    {problem.inputHint ? `Format: ${problem.inputHint}` : "Fractions (3/4), decimals, sqrt(2) and pi all work"}
-                  </Text>
-                  {preview !== null && answer.trim() !== `${preview}` && <Text variant="caption" muted>= {Math.round(preview * 1e6) / 1e6}</Text>}
+        <Reveal ready skeleton={<ProblemCardSkeleton />}>
+          <Animated.View style={shakeStyle}>
+            <Card style={{ padding: 16, gap: 16 }}>
+              <HeldProblemContent
+                courseId={COURSE_ID}
+                exerciseId={exerciseId}
+                seed={item.seed}
+                level={item.level}
+                section="question"
+                scheme={scheme}
+                choice={choice}
+                resolved={resolved}
+                correct={resolved && state.correct}
+                disabled={busy}
+                onChoose={async (i) => {
+                  void Haptics.selectionAsync();
+                  setChoice(i);
+                }}
+                onExpandVisual={async (solution) => zoom.open({ kind: "problem", courseId: COURSE_ID, exerciseId, seed: item.seed, level: item.level, solution })}
+                dom={domProps}
+              />
+              {!isChoice && (
+                <View style={{ gap: 6 }}>
+                  <Input
+                    value={answer}
+                    onChangeText={setAnswer}
+                    editable={!resolved && !busy}
+                    placeholder={problem.inputHint ?? "Your answer"}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    spellCheck={false}
+                    autoFocus
+                    maxLength={200}
+                    returnKeyType={resolved ? "next" : "done"}
+                    submitBehavior="submit"
+                    onSubmitEditing={() => (resolved ? !finishing && onNext() : submit())}
+                    accessibilityLabel="Your answer"
+                    style={{ height: 54, fontSize: 20 }}
+                  />
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                    <Text variant="caption" muted style={{ flex: 1 }}>
+                      {problem.inputHint ? `Format: ${problem.inputHint}` : "Fractions (3/4), decimals, sqrt(2) and pi all work"}
+                    </Text>
+                    {preview !== null && answer.trim() !== `${preview}` && <Text variant="caption" muted>= {Math.round(preview * 1e6) / 1e6}</Text>}
+                  </View>
                 </View>
-              </View>
-            )}
-            {feedback && !resolved && (
-              <Animated.View entering={FadeIn} style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: radius.md, backgroundColor: alpha(c.danger, 0.1), paddingHorizontal: 12, paddingVertical: 9 }}>
-                <Icon name="xmark" size={13} tone="danger" weight="bold" />
-                <Text variant="small" tone="danger" style={{ flex: 1 }}>
-                  {feedback}
-                </Text>
-              </Animated.View>
-            )}
-            {resolved && <ResolvedBanner state={state} seed={problem.prompt.length} />}
-            {(hints > 0 || resolved) && (
-              <ProblemContent courseId={COURSE_ID} exerciseId={exerciseId} seed={item.seed} level={item.level} section="support" scheme={scheme} hints={hints} resolved={resolved} correct={resolved && state.correct} dom={domProps} />
-            )}
-          </Card>
-        </Animated.View>
+              )}
+              {feedback && !resolved && (
+                <Animated.View entering={FadeIn} style={{ flexDirection: "row", alignItems: "center", gap: 8, borderRadius: radius.md, backgroundColor: alpha(c.danger, 0.1), paddingHorizontal: 12, paddingVertical: 9 }}>
+                  <Icon name="xmark" size={13} tone="danger" weight="bold" />
+                  <Text variant="small" tone="danger" style={{ flex: 1 }}>
+                    {feedback}
+                  </Text>
+                </Animated.View>
+              )}
+              {resolved && <ResolvedBanner state={state} seed={problem.prompt.length} />}
+              {(hints > 0 || resolved) && (
+                <HeldProblemContent courseId={COURSE_ID} exerciseId={exerciseId} seed={item.seed} level={item.level} section="support" scheme={scheme} hints={hints} resolved={resolved} correct={resolved && state.correct} dom={domProps} />
+              )}
+            </Card>
+          </Animated.View>
+        </Reveal>
       </ScrollView>
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderColor: c.border, backgroundColor: c.background }}>
@@ -312,6 +314,45 @@ function ProblemCard({
         )}
       </View>
     </View>
+  );
+}
+
+/** The problem's web view, holding the card's skeleton until it has rendered at its full height. */
+function HeldProblemContent(props: Omit<ComponentProps<typeof ProblemContent>, "onReady">) {
+  const release = useRevealHold();
+  return <ProblemContent {...props} onReady={async () => release()} />;
+}
+
+/** The session header and problem card, pulsing, while the session starts. */
+function PracticeSkeleton() {
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Skeleton height={32} width={32} style={{ borderRadius: 16 }} />
+          <Skeleton height={8} style={{ flex: 1, borderRadius: 4 }} />
+        </View>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Skeleton height={24} width={64} style={{ borderRadius: 999 }} />
+          <Skeleton height={24} width={92} style={{ borderRadius: 999 }} />
+          <Skeleton height={24} width={96} style={{ borderRadius: 999 }} />
+        </View>
+      </View>
+      <View style={{ padding: 16, paddingTop: 4 }}>
+        <ProblemCardSkeleton />
+      </View>
+    </View>
+  );
+}
+
+function ProblemCardSkeleton() {
+  return (
+    <Card style={{ padding: 16, gap: 16 }}>
+      <Skeleton height={22} width="85%" />
+      <Skeleton height={90} />
+      <Skeleton height={54} />
+      <Skeleton height={14} width="70%" />
+    </Card>
   );
 }
 

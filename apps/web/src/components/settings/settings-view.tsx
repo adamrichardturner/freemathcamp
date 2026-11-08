@@ -11,6 +11,7 @@ import { NotificationSettings } from "./notification-settings";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Reveal } from "@/components/ui/reveal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -34,17 +35,40 @@ const SECTIONS = [
 const errorMessage = (e: unknown, fallback: string) => (e instanceof ApiError ? e.message : fallback);
 
 export function SettingsView() {
-  const { data, isLoading } = useAccountSettings();
-  if (isLoading || !data)
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-12 w-60" />
-        {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} className="h-56 rounded-xl" />
-        ))}
-      </div>
-    );
+  const { data } = useAccountSettings();
+  return (
+    <Reveal ready={!!data} skeleton={<SettingsSkeleton />}>
+      {data && <SettingsBody data={data} />}
+    </Reveal>
+  );
+}
 
+/** The header, section nav and the first cards, pulsing, while settings load. */
+function SettingsSkeleton() {
+  return (
+    <div className="space-y-8">
+      <div className="space-y-2">
+        <Skeleton className="h-12 w-48" />
+        <Skeleton className="h-5 w-96 max-w-full" />
+      </div>
+      <div className="grid gap-8 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div className="flex gap-1 lg:flex-col">
+          {Array.from({ length: 5 }, (_, i) => (
+            <Skeleton key={i} className="h-8 w-24 shrink-0 lg:w-full" />
+          ))}
+        </div>
+        <div className="min-w-0 space-y-4">
+          <Skeleton className="h-6 w-24" />
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-56 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingsBody({ data }: { data: AccountSettings }) {
   return (
     <div className="space-y-8">
       <header>

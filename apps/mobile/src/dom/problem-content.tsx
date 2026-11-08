@@ -8,7 +8,7 @@ import type { DOMProps } from "expo/dom";
 import { Check, ChevronDown, Lightbulb } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
-import { cx, screenWidth, useScheme, Visual } from "./blocks";
+import { cx, screenWidth, useReady, useScheme, Visual } from "./blocks";
 import "./content.css";
 import { Md } from "./web/md";
 
@@ -33,6 +33,7 @@ export default function ProblemContent({
   disabled = false,
   onChoose,
   onExpandVisual,
+  onReady,
 }: {
   courseId: string;
   exerciseId: string;
@@ -48,9 +49,12 @@ export default function ProblemContent({
   onChoose?: (index: number) => Promise<void>;
   /** Opens the visual shown (the solution's, once resolved) full screen, where it can be zoomed. */
   onExpandVisual?: (solution: boolean) => Promise<void>;
+  /** Called once fonts are in and the problem has laid out, so the screen can reveal it without a jump. */
+  onReady?: () => Promise<void>;
   dom?: DOMProps;
 }) {
   useScheme(scheme);
+  useReady(onReady);
   const problem = useMemo(() => {
     const ref = getExercise(courseId, exerciseId);
     return ref ? generateProblem(ref, seed, level) : null;

@@ -2,6 +2,7 @@ import { Chart, Host } from "@expo/ui/swift-ui";
 import { useState } from "react";
 import { RefreshControl, View } from "react-native";
 import { useOpenLesson } from "@/components/lesson-link";
+import { Reveal } from "@/components/reveal";
 import { Segmented } from "@/components/segmented";
 import { statusMeta } from "@/components/status";
 import { Card, CardHeader, Empty, Grid, Icon, MasteryRing, ProgressBar, Row, Screen, Separator, Skeleton, Text, type SymbolName } from "@/components/ui";
@@ -13,24 +14,43 @@ import { alpha, useTheme, type Tone } from "@/lib/theme";
 
 /** The web's progress page: totals, activity, time, mastery by unit, difficulty, strengths and weak spots. */
 export default function Progress() {
-  const { data, isLoading, refetch, isRefetching } = useAnalytics();
-  const { columns } = useLayout();
-  if (isLoading || !data)
-    return (
-      <Screen title="Progress">
-        <Skeleton height={220} />
-        <Skeleton height={180} />
-      </Screen>
-    );
-  const t = data.totals;
-  if (t.problems === 0)
+  const { data, refetch, isRefetching } = useAnalytics();
+  if (data && data.totals.problems === 0)
     return (
       <Screen title="Progress">
         <Empty icon="chart.bar.xaxis" title="Your progress fills in here" text="Solve a few problems and this page shows your activity, accuracy, time spent, and mastery across the course." />
       </Screen>
     );
   return (
-    <Screen title="Progress" width={widths.wide} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
+    <Screen title="Progress" width={widths.wide} refreshControl={data ? <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} /> : undefined}>
+      <Reveal ready={!!data} gap={20} skeleton={<ProgressSkeleton />}>
+        {data && <ProgressBody data={data} />}
+      </Reveal>
+    </Screen>
+  );
+}
+
+/** The stat grid and the first charts, pulsing, while the analytics load. */
+function ProgressSkeleton() {
+  const { columns } = useLayout();
+  return (
+    <>
+      <Grid columns={columns(2, 3)}>
+        {Array.from({ length: 6 }, (_, i) => (
+          <Skeleton key={i} height={92} />
+        ))}
+      </Grid>
+      <Skeleton height={180} />
+      <Skeleton height={220} />
+    </>
+  );
+}
+
+function ProgressBody({ data }: { data: Analytics }) {
+  const { columns } = useLayout();
+  const t = data.totals;
+  return (
+    <>
       <Grid columns={columns(2, 3)}>
         <Stat icon="checkmark.seal.fill" tone="success" label="Problems solved" value={t.problems.toLocaleString()} />
         <Stat icon="target" tone="primary" label="First-try accuracy" value={pct(t.accuracy)} />
@@ -51,7 +71,7 @@ export default function Progress() {
         <Lessons title="Weak spots" icon="exclamationmark.triangle.fill" tone="warning" items={data.weakest} empty="Nothing tricky yet. Lessons you struggle with appear here." />
       </Grid>
       <Recent sessions={data.recentSessions} />
-    </Screen>
+    </>
   );
 }
 
