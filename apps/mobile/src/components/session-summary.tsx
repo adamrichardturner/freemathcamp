@@ -25,12 +25,13 @@ const OUTCOME: Record<"clean" | "slipped" | "helped" | "shown", { label: string;
 const outcomeOf = (it: Item) => (it.revealed ? "shown" : it.wrongAttempts > 0 ? "slipped" : it.hintsUsed > 0 ? "helped" : "clean");
 
 /** The end of a session, as the web's summary: mastery before and after, stats, each problem and what next. */
-export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { summary: SessionSummary; onAgain: () => void; restarting: boolean; onExit: () => void }) {
+export function SessionSummaryView({ summary, onAgain, restarting, onDone }: { summary: SessionSummary; onAgain: () => void; restarting: boolean; onDone: () => void }) {
   const { c } = useTheme();
   // Rounded first, so a change too small to show reads as +0% rather than a red "0%".
   const gained = Math.round((summary.mastery.after - summary.mastery.before) * 100);
+  // Leaves the finished lesson behind rather than stacking the next one on top of it.
   const openLesson = (id: string, mode?: string) => {
-    router.back();
+    router.dismissAll();
     router.push({ pathname: "/lesson/[id]", params: mode ? { id, mode } : { id } });
   };
   return (
@@ -74,7 +75,7 @@ export function SessionSummaryView({ summary, onAgain, restarting, onExit }: { s
         </Card>
       </Animated.View>
 
-      <NextSteps summary={summary} onAgain={onAgain} restarting={restarting} onDone={onExit} onOpen={openLesson} />
+      <NextSteps summary={summary} onAgain={onAgain} restarting={restarting} onDone={onDone} onOpen={openLesson} />
 
       <Card style={{ padding: 16, gap: 10 }}>
         <Text variant="label" muted>
