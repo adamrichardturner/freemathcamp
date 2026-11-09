@@ -73,13 +73,23 @@ export default function LessonScreen() {
   // When the lesson was viewed before this visit: read once, before this visit's own view lands.
   const [viewedAt, setViewedAt] = useState<string | null | undefined>(undefined);
   if (detailFetched && viewedAt === undefined) setViewedAt(detail?.progress?.lessonViewedAt ?? null);
+  // Sessions finished before this visit. Once one is finished during it, the call that
+  // brought the learner here (a review or challenge that was due) has been answered.
+  const [sessionsAtOpen, setSessionsAtOpen] = useState<number | undefined>(undefined);
+  if (detailFetched && sessionsAtOpen === undefined) setSessionsAtOpen(detail?.progress?.sessionsCompleted ?? 0);
   // Once the banner scrolls out of sight, a floating button keeps the call to practise in reach.
   const [bannerBottom, setBannerBottom] = useState(0);
   const [floating, setFloating] = useState(false);
 
   const viewed = useMutation({
     mutationFn: () => api.post(`/courses/${COURSE_ID}/exercises/${id}/lesson-viewed`),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.exercise(id) }),
+    // Reading a lesson moves it along in the plan, so the Learn and Course tabs refresh too.
+    onSuccess: () =>
+      void Promise.all([
+        qc.invalidateQueries({ queryKey: keys.exercise(id) }),
+        qc.invalidateQueries({ queryKey: keys.dashboard }),
+        qc.invalidateQueries({ queryKey: keys.progress }),
+      ]),
   });
   const marked = useRef(false);
   useEffect(() => {
@@ -97,7 +107,8 @@ export default function LessonScreen() {
   const next = graph.refs[ref.order + 1];
   const dependents = graph.dependents.get(id) ?? [];
   const weakPrereqs = (detail?.prerequisites ?? []).filter((p) => p.status === "new" || p.status === "struggling");
-  const step = nextStep({ progress, requested: mode, viewedAt, now });
+  const practisedHere = sessionsAtOpen !== undefined && (progress?.sessionsCompleted ?? 0) > sessionsAtOpen;
+  const step = nextStep({ progress, requested: practisedHere ? undefined : mode, viewedAt, now: practisedHere ? Date.now() : now });
   const recommended: PracticeMode = step.mode;
   const reading = readingForLesson(COURSE_ID, id)
     .map((s) => articleBySlug(s))

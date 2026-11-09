@@ -8,13 +8,14 @@ import { statusMeta } from "@/components/status";
 import { Card, CardHeader, Empty, Grid, Icon, MasteryRing, ProgressBar, Row, Screen, Separator, Skeleton, Text, type SymbolName } from "@/components/ui";
 import type { Analytics } from "@/lib/api";
 import { duration, minutes, pct, relative } from "@/lib/format";
-import { useAnalytics } from "@/lib/queries";
+import { keys, useAnalytics, useRefreshOnFocus } from "@/lib/queries";
 import { useLayout, widths } from "@/lib/layout";
 import { alpha, useTheme, type Tone } from "@/lib/theme";
 
 /** The web's progress page: totals, activity, time, mastery by unit, difficulty, strengths and weak spots. */
 export default function Progress() {
   const { data, refetch, isRefetching, isError } = useAnalytics();
+  useRefreshOnFocus(keys.analytics);
   if (data && data.totals.problems === 0)
     return (
       <Screen title="Progress">

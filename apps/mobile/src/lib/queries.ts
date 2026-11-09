@@ -1,12 +1,14 @@
 import { unlockedBy, unlockedLessons } from "@fmc/curriculum";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryClient, type QueryKey } from "@tanstack/react-query";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useRef } from "react";
 import {
   api,
   session,
   type AccountSettings,
   type Analytics,
   type AppNotification,
+  type CompletedToday,
   type CourseProgress,
   type Dashboard,
   type ExerciseDetail,
@@ -14,6 +16,9 @@ import {
   type NotificationCounts,
   type NotificationFilter,
   type NotificationPage,
+  type PracticeMode,
+  type Recommendation,
+  type SessionSummary,
   type SignedIn,
   type User,
 } from "./api";
@@ -152,6 +157,50 @@ export const useInvalidateLearner = () => {
       qc.invalidateQueries({ queryKey: ["exercise"] }),
       qc.invalidateQueries({ queryKey: keys.counts }),
     ]);
+};
+
+/**
+ * A practice session (learn, review or challenge) just finished: tick the lesson
+ * off today's plan straight away, as the API will, so the Learn screen never
+ * offers it again while the fresh dashboard is on its way; then refresh it all.
+ */
+export const useSessionCompleted = () => {
+  const qc = useQueryClient();
+  const invalidate = useInvalidateLearner();
+  return (s: SessionSummary, mode: PracticeMode) => {
+    const id = s.exerciseId;
+    const keep = (r: Recommendation | CompletedToday) => r.exerciseId !== id;
+    qc.setQueryData<Dashboard>(keys.dashboard, (d) => {
+      if (!d) return d;
+      const completed: CompletedToday = { exerciseId: id, mode, mastery: s.mastery.after, completedAt: new Date().toISOString() };
+      return {
+        ...d,
+        queues: Object.fromEntries(Object.entries(d.queues).map(([k, v]) => [k, v.filter(keep)])) as Dashboard["queues"],
+        day: { ...d.day, today: d.day.today.filter(keep), upcoming: d.day.upcoming.filter(keep), completed: [completed, ...d.day.completed.filter(keep)] },
+      };
+    });
+    return invalidate();
+  };
+};
+
+/**
+ * Refreshes learner data each time a tab comes back into view (after a lesson,
+ * a practice session or anything else pushed over it), without cutting short a
+ * refresh that's already under way. The first focus is the mount, which fetches anyway.
+ */
+export const useRefreshOnFocus = (...queryKeys: QueryKey[]) => {
+  const qc = useQueryClient();
+  const first = useRef(true);
+  const id = JSON.stringify(queryKeys);
+  useFocusEffect(
+    useCallback(() => {
+      if (first.current) {
+        first.current = false;
+        return;
+      }
+      for (const queryKey of JSON.parse(id) as QueryKey[]) void qc.invalidateQueries({ queryKey }, { cancelRefetch: false });
+    }, [qc, id]),
+  );
 };
 
 /** Forgets the session on this device; the API ends it too when it can be reached. */

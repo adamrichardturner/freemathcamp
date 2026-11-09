@@ -13,7 +13,7 @@ import type { CompletedToday, CourseProgress, Dashboard, DayPlan, QueueKind, Rec
 import { course, exerciseRef } from "@/lib/course";
 import { greeting, minutes, shortMinutes } from "@/lib/format";
 import { plain } from "@/lib/plain";
-import { useCourseProgress, useDashboard, useNotificationCounts, useSession } from "@/lib/queries";
+import { keys, useCourseProgress, useDashboard, useNotificationCounts, useRefreshOnFocus, useSession } from "@/lib/queries";
 import { widths } from "@/lib/layout";
 import { alpha, radius, toneColor, useTheme, type Tone } from "@/lib/theme";
 
@@ -27,6 +27,8 @@ export default function Home() {
   const { data: progress, isFetched: progressFetched } = useCourseProgress();
   const counts = useNotificationCounts();
   const { c } = useTheme();
+  // Back from a lesson or a practice session: show where things stand now.
+  useRefreshOnFocus(keys.dashboard, keys.progress, keys.league);
 
   // The welcome tour, once, as on the web after confirming the email. The user
   // object is replaced whenever it changes (the tour's own league switch and mode

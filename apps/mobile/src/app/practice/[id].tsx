@@ -15,7 +15,7 @@ import ProblemContent from "@/dom/problem-content";
 import { api, type AttemptResponse, type PracticeItem, type PracticeMode, type Resolution, type RevealResponse, type SessionSummary, type StartPracticeResponse } from "@/lib/api";
 import { COURSE_ID, exerciseRef } from "@/lib/course";
 import { plainTex } from "@/lib/plain";
-import { useInvalidateLearner } from "@/lib/queries";
+import { useSessionCompleted } from "@/lib/queries";
 import { playSound, preloadSounds } from "@/lib/sound";
 import { alpha, radius, useTheme } from "@/lib/theme";
 import { toast } from "@/lib/toast";
@@ -35,7 +35,7 @@ export default function Practice() {
   const { id, mode = "learn" } = useLocalSearchParams<{ id: string; mode?: PracticeMode }>();
   const ref = exerciseRef(id)!;
   const { c } = useTheme();
-  const invalidate = useInvalidateLearner();
+  const completed = useSessionCompleted();
   const [session, setSession] = useState<StartPracticeResponse | null>(null);
   const [item, setItem] = useState<PracticeItem | null>(null);
   const [state, setState] = useState<ItemState>({ phase: "answering" });
@@ -64,7 +64,7 @@ export default function Practice() {
     onSuccess: (s) => {
       setSummary(s);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      void invalidate();
+      void completed(s, mode);
     },
     onError: (e) => toast.error(e, "Couldn't save your session."),
   });
@@ -97,6 +97,9 @@ export default function Practice() {
   };
 
   const exit = () => router.back();
+  // A finished session is done with this lesson: close the lesson underneath too and
+  // land back on the tab it was opened from, which has already refreshed.
+  const done = () => router.dismissAll();
   // iPadOS doesn't count the keyboard's shortcut bar, which would otherwise cover the Check bar.
 
   return (
@@ -104,7 +107,7 @@ export default function Practice() {
       {/* One readable column; on an iPad the problem doesn't stretch across the screen. */}
       <View style={{ flex: 1, width: "100%", maxWidth: widths.readable, alignSelf: "center" }}>
       {summary ? (
-        <SessionSummaryView summary={summary} restarting={start.isPending} onAgain={() => !start.isPending && start.mutate()} onExit={exit} />
+        <SessionSummaryView summary={summary} restarting={start.isPending} onAgain={() => !start.isPending && start.mutate()} onDone={done} />
       ) : !session || !item || !problem ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color={c.mutedForeground} accessibilityLabel="Loading" />

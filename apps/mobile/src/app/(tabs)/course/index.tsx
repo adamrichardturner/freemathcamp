@@ -12,7 +12,7 @@ import type { ExerciseStatus, ProgressView } from "@/lib/api";
 import { course, graph } from "@/lib/course";
 import { useLayout } from "@/lib/layout";
 import { plain } from "@/lib/plain";
-import { useCourseProgress, useSession } from "@/lib/queries";
+import { keys, useCourseProgress, useRefreshOnFocus, useSession } from "@/lib/queries";
 import { alpha, radius, useTheme } from "@/lib/theme";
 
 /** The web's course map: the course, its mode, and every unit's lessons with their status. */
@@ -21,6 +21,7 @@ export default function CourseMap() {
   const { fit, medium } = useLayout();
   const { user } = useSession();
   const { data: progress, isFetched, refetch, isRefetching } = useCourseProgress();
+  useRefreshOnFocus(keys.progress);
   const { open, isLocked, lockedBy, mode, known } = useOpenLesson();
   const byId = new Map(progress?.exercises.map((e) => [e.exerciseId, e]) ?? []);
   const total = graph.refs.length;
