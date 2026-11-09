@@ -129,6 +129,7 @@
       "firstName": "Adam",
       "lastName": "Turner",
       "email": "hello@adamrichardturner.dev",
+      "phone": "+44 7830 421624",
       "demoRequired": true,
       "notes": "Sign in with the demo account above (Welcome screen > I already have an account). Its email address is already confirmed, so every feature is available, including practice.\n\nAfter signing in, the app asks how you'd like to learn (follow the plan, or learn then practise); either choice works. Learn shows today's plan, Course shows every unit and lesson, and practice is under any lesson. Leagues are optional and can be joined from the Leagues tab.\n\nSign in with Apple and Sign in with Google are also offered on the sign-in screen. Accounts can be deleted in Settings > Your data > Delete account, which also revokes Sign in with Apple access.\n\nThe app is free. There are no purchases, ads or tracking."
     }
