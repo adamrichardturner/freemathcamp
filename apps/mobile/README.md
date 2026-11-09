@@ -113,7 +113,7 @@ Every push to `main` that touches `apps/mobile/` runs `.github/workflows/deploy-
 The listing lives in the repo and is uploaded with EAS Metadata, using the App Store Connect key EAS already holds:
 
 - `store.config.json`: name, subtitle, promotional text, description and keywords (en-GB and en-US), URLs, categories, age rating, release settings and App Review notes.
-- `store/screenshots/iphone` (1320 × 2868, 6.9"), `store/screenshots/ipad` (2064 × 2752, 13") and `store/screenshots/duo` (1398 × 2034, the iPhone Duo's cover display; the Duo slot also takes the inner display's 2007 × 2853). EAS Metadata doesn't know the iPhone Duo display type yet, so `store:push` uploads the iPhone and iPad sets; drag the Duo set into the **iPhone Duo** slot in App Store Connect (Media Manager) by hand.
+- `store/screenshots/iphone` (1320 × 2868, 6.9"), `store/screenshots/iphone-6.3` (1206 × 2622, the 6.1"/6.3" slot), `store/screenshots/ipad` (2064 × 2752, 13") and `store/screenshots/duo` (1398 × 2034, the iPhone Duo's cover display; the Duo slot also takes the inner display's 2007 × 2853). EAS Metadata doesn't know the iPhone Duo display type yet, so `store:push` uploads the iPhone (6.9" and 6.3") and iPad sets; drag the Duo set into the **iPhone Duo** slot in App Store Connect (Media Manager) by hand.
 - `store.config.js` adds the App Review demo account from the environment, so the password never lands in git.
 
 The demo account is a normal account on production with a confirmed email. Its details are in the server's `.env` (`APP_REVIEW_EMAIL`, `APP_REVIEW_PASSWORD`). To upload the listing:

@@ -43,6 +43,15 @@
             "./store/screenshots/iphone/06-course.png",
             "./store/screenshots/iphone/07-welcome.png"
           ],
+          "APP_IPHONE_61": [
+            "./store/screenshots/iphone-6.3/01-learn.png",
+            "./store/screenshots/iphone-6.3/02-lesson.png",
+            "./store/screenshots/iphone-6.3/03-practice.png",
+            "./store/screenshots/iphone-6.3/04-progress.png",
+            "./store/screenshots/iphone-6.3/05-leagues.png",
+            "./store/screenshots/iphone-6.3/06-course.png",
+            "./store/screenshots/iphone-6.3/07-welcome.png"
+          ],
           "APP_IPAD_PRO_3GEN_129": [
             "./store/screenshots/ipad/01-learn.png",
             "./store/screenshots/ipad/02-lesson.png",
@@ -84,6 +93,15 @@
             "./store/screenshots/iphone/05-leagues.png",
             "./store/screenshots/iphone/06-course.png",
             "./store/screenshots/iphone/07-welcome.png"
+          ],
+          "APP_IPHONE_61": [
+            "./store/screenshots/iphone-6.3/01-learn.png",
+            "./store/screenshots/iphone-6.3/02-lesson.png",
+            "./store/screenshots/iphone-6.3/03-practice.png",
+            "./store/screenshots/iphone-6.3/04-progress.png",
+            "./store/screenshots/iphone-6.3/05-leagues.png",
+            "./store/screenshots/iphone-6.3/06-course.png",
+            "./store/screenshots/iphone-6.3/07-welcome.png"
           ],
           "APP_IPAD_PRO_3GEN_129": [
             "./store/screenshots/ipad/01-learn.png",
@@ -129,7 +147,6 @@
       "firstName": "Adam",
       "lastName": "Turner",
       "email": "hello@adamrichardturner.dev",
-      "phone": "+44 7830 421624",
       "demoRequired": true,
       "notes": "Sign in with the demo account above (Welcome screen > I already have an account). Its email address is already confirmed, so every feature is available, including practice.\n\nAfter signing in, the app asks how you'd like to learn (follow the plan, or learn then practise); either choice works. Learn shows today's plan, Course shows every unit and lesson, and practice is under any lesson. Leagues are optional and can be joined from the Leagues tab.\n\nSign in with Apple and Sign in with Google are also offered on the sign-in screen. Accounts can be deleted in Settings > Your data > Delete account, which also revokes Sign in with Apple access.\n\nThe app is free. There are no purchases, ads or tracking."
     }
