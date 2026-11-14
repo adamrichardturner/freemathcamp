@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, RefreshControl, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { LearningModeSwitch, MODE_META } from "@/components/learning-mode";
 import { useOpenLesson } from "@/components/lesson-link";
 import { LessonFlag } from "@/components/next-step";
@@ -14,13 +14,15 @@ import { useLayout } from "@/lib/layout";
 import { plain } from "@/lib/plain";
 import { keys, useCourseProgress, useRefreshOnFocus, useSession } from "@/lib/queries";
 import { alpha, radius, useTheme } from "@/lib/theme";
+import { usePullToRefresh } from "@/lib/pull-to-refresh";
 
 /** The web's course map: the course, its mode, and every unit's lessons with their status. */
 export default function CourseMap() {
   const { c } = useTheme();
   const { fit, medium } = useLayout();
   const { user } = useSession();
-  const { data: progress, isFetched, refetch, isRefetching } = useCourseProgress();
+  const { data: progress, isFetched, refetch } = useCourseProgress();
+  const refreshControl = usePullToRefresh(refetch);
   useRefreshOnFocus(keys.progress);
   const { open, isLocked, lockedBy, mode, known } = useOpenLesson();
   const byId = new Map(progress?.exercises.map((e) => [e.exerciseId, e]) ?? []);
@@ -35,7 +37,7 @@ export default function CourseMap() {
   const jumpTo = firstDue ?? startHere;
 
   return (
-    <Screen title="Foundations" refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}>
+    <Screen title="Foundations" refreshControl={refreshControl}>
       {/* The mastery ring, statuses and locks all depend on progress; they land together. */}
       <Reveal ready={isFetched && known} gap={20} skeleton={<CourseSkeleton />}>
         <View style={{ borderRadius: radius["3xl"], borderCurve: "continuous", overflow: "hidden", borderWidth: 1, borderColor: c.border }}>

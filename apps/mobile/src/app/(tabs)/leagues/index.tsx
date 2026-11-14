@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, RefreshControl, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { Reveal } from "@/components/reveal";
 import { standing, TierBadge, tierColour, useTimeLeft, ZonePill } from "@/components/league";
 import { Button, Card, CardHeader, Icon, Screen, Separator, Skeleton, Text } from "@/components/ui";
@@ -7,12 +7,14 @@ import type { League } from "@/lib/api";
 import { useLayout } from "@/lib/layout";
 import { useLeague, useLeagueOptIn } from "@/lib/queries";
 import { alpha, useTheme } from "@/lib/theme";
+import { usePullToRefresh } from "@/lib/pull-to-refresh";
 
 /** The web's /leagues page: this week's table, last week's result, the tiers and how XP works. */
 export default function Leagues() {
-  const { data, refetch, isRefetching, isError } = useLeague();
+  const { data, refetch, isError } = useLeague();
+  const refreshControl = usePullToRefresh(refetch);
   return (
-    <Screen title="Leagues" refreshControl={data ? <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} /> : undefined}>
+    <Screen title="Leagues" refreshControl={data ? refreshControl : undefined}>
       <Text muted>Weekly tables of learners at your level. Solve problems, earn XP, move up.</Text>
       <Reveal
         ready={!!data}

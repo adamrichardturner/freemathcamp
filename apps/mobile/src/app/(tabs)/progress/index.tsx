@@ -1,6 +1,6 @@
 import { Chart, Host } from "@expo/ui/swift-ui";
 import { useState } from "react";
-import { RefreshControl, View } from "react-native";
+import { View } from "react-native";
 import { useOpenLesson } from "@/components/lesson-link";
 import { Reveal } from "@/components/reveal";
 import { Segmented } from "@/components/segmented";
@@ -11,10 +11,12 @@ import { duration, minutes, pct, relative } from "@/lib/format";
 import { keys, useAnalytics, useRefreshOnFocus } from "@/lib/queries";
 import { useLayout, widths } from "@/lib/layout";
 import { alpha, useTheme, type Tone } from "@/lib/theme";
+import { usePullToRefresh } from "@/lib/pull-to-refresh";
 
 /** The web's progress page: totals, activity, time, mastery by unit, difficulty, strengths and weak spots. */
 export default function Progress() {
-  const { data, refetch, isRefetching, isError } = useAnalytics();
+  const { data, refetch, isError } = useAnalytics();
+  const refreshControl = usePullToRefresh(refetch);
   useRefreshOnFocus(keys.analytics);
   if (data && data.totals.problems === 0)
     return (
@@ -23,7 +25,7 @@ export default function Progress() {
       </Screen>
     );
   return (
-    <Screen title="Progress" width={widths.wide} refreshControl={data ? <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} /> : undefined}>
+    <Screen title="Progress" width={widths.wide} refreshControl={data ? refreshControl : undefined}>
       <Reveal ready={!!data} error={isError} onRetry={() => void refetch()} gap={20} skeleton={<ProgressSkeleton />}>
         {data && <ProgressBody data={data} />}
       </Reveal>
