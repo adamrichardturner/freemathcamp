@@ -1,7 +1,7 @@
 import { router, Stack } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from "react-native";
 import { ChipTabs } from "@/components/chip-tabs";
 import { Empty, Icon, IconChip, Text, type SymbolName } from "@/components/ui";
 import type { AppNotification, NotificationFilter } from "@/lib/api";
@@ -10,6 +10,7 @@ import { appHref } from "@/lib/links";
 import { useNotificationActions, useNotifications } from "@/lib/queries";
 import { alpha, useTheme, type Tone } from "@/lib/theme";
 import { useLayout, widths } from "@/lib/layout";
+import { usePullToRefresh } from "@/lib/pull-to-refresh";
 
 const CATEGORY: Record<AppNotification["category"], { icon: SymbolName; tone: Tone }> = {
   account: { icon: "lock.shield.fill", tone: "info" },
@@ -23,6 +24,7 @@ export default function Notifications() {
   const { sides } = useLayout();
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const list = useNotifications(filter);
+  const refreshControl = usePullToRefresh(list.refetch);
   const actions = useNotificationActions();
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
   const counts = list.data?.pages[0]?.counts;
@@ -82,7 +84,7 @@ export default function Notifications() {
         contentInsetAdjustmentBehavior="never"
         automaticallyAdjustContentInsets={false}
         contentContainerStyle={{ paddingTop: 16, ...pad, gap: 10, paddingBottom: 40 }}
-        refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
+        refreshControl={refreshControl}
         onEndReached={() => list.hasNextPage && !list.isFetchingNextPage && list.fetchNextPage()}
         ListEmptyComponent={
           list.isLoading ? (

@@ -1,3 +1,4 @@
+import { sql } from "kysely";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { handle } from "./helpers";
@@ -87,13 +88,18 @@ describe.skipIf(!enabled)("account settings", () => {
     expect(res.status).toBe(200);
     expect((await agent.get("/api/auth/me")).body.user).toBeNull();
 
+    // Every table that holds a user_id, so a new table without a cascade fails here.
     const db = createKysely(process.env.DATABASE_URL!);
-    const left = await Promise.all(
-      (["users", "sessions", "email_verification_tokens", "account_events"] as const).map((t) =>
-        db.selectFrom(t).select((eb) => eb.fn.countAll<string>().as("n")).where(t === "users" ? "id" : "user_id", "=", userId).executeTakeFirstOrThrow(),
-      ),
-    );
+    const { rows: tables } = await sql<{ table_name: string }>`select table_name from information_schema.columns where table_schema = 'public' and column_name = 'user_id'`.execute(db);
+    expect(tables.length).toBeGreaterThan(10);
+    const left: Record<string, number> = {};
+    for (const { table_name } of tables) {
+      const { rows } = await sql<{ n: string }>`select count(*) as n from ${sql.table(table_name)} where user_id = ${userId}`.execute(db);
+      left[table_name] = Number(rows[0]!.n);
+    }
+    const { rows: users } = await sql<{ n: string }>`select count(*) as n from users where id = ${userId}`.execute(db);
+    left.users = Number(users[0]!.n);
     await db.destroy();
-    expect(left.map((r) => Number(r.n))).toEqual([0, 0, 0, 0]);
+    expect(Object.values(left).every((n) => n === 0), JSON.stringify(left)).toBe(true);
   });
 });

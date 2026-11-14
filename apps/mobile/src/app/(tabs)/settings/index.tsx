@@ -3,16 +3,16 @@ import * as Application from "expo-application";
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState, type ReactNode } from "react";
-import { Alert, Appearance, Linking, Platform, Share, Switch, View, useColorScheme } from "react-native";
+import { ActivityIndicator, Alert, Appearance, Linking, Platform, Share, Switch, View, useColorScheme } from "react-native";
 import { MODE_META, useSetLearningMode } from "@/components/learning-mode";
 import { Segmented } from "@/components/segmented";
 import { Button, Card, Field, Icon, IconChip, Input, Row, Screen, Separator, Text, type SymbolName } from "@/components/ui";
 import { UsernameField, useUsernameCheck } from "@/components/username-field";
 import { saveAppearance, type AppearancePref } from "@/lib/appearance";
-import { ApiError, WEB_URL, api, type User } from "@/lib/api";
+import { ApiError, WEB_URL, api, session, type User } from "@/lib/api";
 import { COURSE_ID } from "@/lib/course";
-import { pushPermission, registerPush, unregisterPush } from "@/lib/push";
-import { keys, useAccountSettings, useApplyUser, useInvalidateLearner, useLeagueOptIn, usePreferences, useSession, useSignOut } from "@/lib/queries";
+import { forgetPush, pushPermission, registerPush, unregisterPush } from "@/lib/push";
+import { keys, switchUser, useAccountSettings, useApplyUser, useInvalidateLearner, useLeagueOptIn, usePreferences, useSession, useSignOut } from "@/lib/queries";
 import { loadAppearance } from "@/lib/appearance";
 import { alpha, useTheme } from "@/lib/theme";
 import { toast } from "@/lib/toast";
@@ -286,11 +286,8 @@ function Security({ user, linked, otherSessions }: { user: User; linked: string[
 }
 
 function Data({ user }: { user: User }) {
-  const { fit } = useLayout();
   const invalidate = useInvalidateLearner();
-  const signOut = useSignOut();
-  const [deleting, setDeleting] = useState(false);
-  const [confirm, setConfirm] = useState({ email: "", password: "" });
+  const qc = useQueryClient();
   const exportData = useMutation({
     mutationFn: () => api.get<unknown>("/me/export"),
     onSuccess: (data) => void Share.share({ title: "FreeMathCamp data", message: JSON.stringify(data, null, 2) }),
@@ -304,14 +301,38 @@ function Data({ user }: { user: User }) {
     },
     onError: (e) => toast.error(e, "Couldn't reset your progress."),
   });
+  // The API checks the email (and the password, when the account has one) as a last
+  // guard; the app confirms with the account's own email so Apple accounts with a
+  // private relay address never have to type it out.
   const remove = useMutation({
-    mutationFn: () => api.delete<{ deleted: boolean }>("/me", { confirmEmail: confirm.email.trim(), ...(user.hasPassword ? { password: confirm.password } : {}) }),
-    onSuccess: () => {
-      toast.success("Your account has been deleted.");
-      signOut.mutate();
+    mutationFn: (password?: string) => api.delete<{ deleted: boolean }>("/me", { confirmEmail: user.email, ...(password !== undefined ? { password } : {}) }),
+    onSuccess: async () => {
+      // The account, its sessions and push subscriptions are gone on the server: forget them here without calling the API again.
+      await forgetPush();
+      await session.set(null);
+      switchUser(qc, null);
+      toast.success("Your account and all its data have been deleted.");
     },
+    onError: (e) => toast.error(e, "Couldn't delete your account. Please try again."),
   });
-  const removeError = remove.error instanceof ApiError ? remove.error.message : null;
+  const confirmDelete = () => {
+    const message = "This permanently deletes your account, progress, leagues and notifications. It can't be undone.";
+    if (user.hasPassword)
+      Alert.prompt(
+        "Delete your account?",
+        `${message}\n\nEnter your password to confirm.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", style: "destructive", onPress: (password?: string) => remove.mutate(password ?? "") },
+        ],
+        "secure-text",
+      );
+    else
+      Alert.alert("Delete your account?", message, [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete account", style: "destructive", onPress: () => remove.mutate(undefined) },
+      ]);
+  };
   return (
     <Group title="Your data">
       <Row leading={<IconChip name="square.and.arrow.up" size={30} />} title="Export your data" subtitle="Everything we store about you, as JSON" onPress={() => exportData.mutate()} />
@@ -328,22 +349,14 @@ function Data({ user }: { user: User }) {
         }
       />
       <Separator inset={58} />
-      <Row leading={<IconChip name="trash.fill" size={30} tone="danger" />} title="Delete account" subtitle="Permanently remove your account and data" onPress={() => setDeleting(!deleting)} />
-      {deleting && (
-        <View style={{ padding: 16, paddingTop: 4, gap: 12 }}>
-          <Text variant="small" muted>
-            This deletes your account, progress and notifications for good. Type your email{user.hasPassword ? " and password" : ""} to confirm.
-          </Text>
-          <Input placeholder={user.email} value={confirm.email} onChangeText={(v) => setConfirm((f) => ({ ...f, email: v }))} autoCapitalize="none" keyboardType="email-address" />
-          {user.hasPassword && <Input placeholder="Password" secureTextEntry value={confirm.password} onChangeText={(v) => setConfirm((f) => ({ ...f, password: v }))} />}
-          {removeError && (
-            <Text variant="caption" tone="danger">
-              {removeError}
-            </Text>
-          )}
-          <Button title="Delete my account" variant="destructive" loading={remove.isPending} disabled={confirm.email.trim().toLowerCase() !== user.email.toLowerCase()} style={fit(220)} onPress={() => remove.mutate()} />
-        </View>
-      )}
+      <Row
+        leading={<IconChip name="trash.fill" size={30} tone="danger" />}
+        title={remove.isPending ? "Deleting your account…" : "Delete account"}
+        subtitle="Permanently remove your account and all its data"
+        right={remove.isPending ? <ActivityIndicator /> : undefined}
+        chevron={!remove.isPending}
+        onPress={remove.isPending ? undefined : confirmDelete}
+      />
     </Group>
   );
 }

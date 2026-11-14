@@ -4,7 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { handle } from "./helpers";
 import { createApp } from "../src/http/app";
 import { makeRuntime, type AppRuntime } from "../src/http/runtime";
-import { Effect } from "effect";
+import { Effect, Option, Redacted } from "effect";
+import { AppConfig } from "../src/config/config";
 import { SessionRepository, UserRepository } from "../src/application/ports";
 import { outbox } from "../src/infrastructure/email/senders";
 import { hashToken } from "../src/infrastructure/security/tokens";
@@ -270,6 +271,26 @@ describe.skipIf(!enabled)("iOS app sessions", () => {
     );
     // No Apple key in tests, so revocation is skipped and deletion carries on.
     await runtime.runPromise(purgeAccount(user.id));
+    expect(await runtime.runPromise(Effect.flatMap(UserRepository, (u) => u.findById(user.id)))).toBeUndefined();
+  });
+
+  it("still deletes an Apple account when its token can't be revoked (a misconfigured key)", async () => {
+    const sub = `apple-badkey-${Date.now()}`;
+    const user = await runtime.runPromise(
+      Effect.gen(function* () {
+        const users = yield* UserRepository;
+        const u = yield* users.upsertOAuthUser({ provider: "apple", providerUserId: sub, email: `${sub}@example.com`, displayName: "Apple Learner", avatarUrl: null });
+        yield* users.setOAuthRefreshToken("apple", sub, "apple-refresh-token");
+        return u;
+      }),
+    );
+    await runtime.runPromise(
+      Effect.gen(function* () {
+        const config = yield* AppConfig;
+        const badKey = { ...config, appleSignInKey: Option.some({ teamId: "TEAM", keyId: "KEY", privateKey: Redacted.make("not a key") }) };
+        yield* purgeAccount(user.id).pipe(Effect.provideService(AppConfig, badKey));
+      }),
+    );
     expect(await runtime.runPromise(Effect.flatMap(UserRepository, (u) => u.findById(user.id)))).toBeUndefined();
   });
 });

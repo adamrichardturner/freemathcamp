@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { ChipTabs } from "@/components/chip-tabs";
 import { LeagueCard } from "@/components/league";
 import { useOpenLesson } from "@/components/lesson-link";
@@ -16,6 +16,7 @@ import { plain } from "@/lib/plain";
 import { keys, useCourseProgress, useDashboard, useNotificationCounts, useRefreshOnFocus, useSession } from "@/lib/queries";
 import { widths } from "@/lib/layout";
 import { alpha, radius, toneColor, useTheme, type Tone } from "@/lib/theme";
+import { usePullToRefresh } from "@/lib/pull-to-refresh";
 
 /** Accounts the welcome tour has been opened for since launch. */
 const toured = new Set<string>();
@@ -23,8 +24,9 @@ const toured = new Set<string>();
 /** The web's dashboard (/learn): greeting, streak, stats, today's plan, queues, league and progress. */
 export default function Home() {
   const { user } = useSession();
-  const { data, refetch, isRefetching, isError } = useDashboard();
-  const { data: progress, isFetched: progressFetched } = useCourseProgress();
+  const { data, refetch, isError } = useDashboard();
+  const { data: progress, isFetched: progressFetched, refetch: refetchProgress } = useCourseProgress();
+  const refreshControl = usePullToRefresh(refetch, refetchProgress);
   const counts = useNotificationCounts();
   const { c } = useTheme();
   // Back from a lesson or a practice session: show where things stand now.
@@ -56,7 +58,7 @@ export default function Home() {
 
   // Course progress fills the unit bars, so it lands with the rest rather than after.
   return (
-    <Screen width={widths.wide} refreshControl={data ? <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} /> : undefined}>
+    <Screen width={widths.wide} refreshControl={data ? refreshControl : undefined}>
       {header}
       <Reveal ready={!!data && progressFetched} error={isError} onRetry={() => void refetch()} gap={20} skeleton={<HomeSkeleton />}>
         {data && <HomeBody data={data} progress={progress} />}

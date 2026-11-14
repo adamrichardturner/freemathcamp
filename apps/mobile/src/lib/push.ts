@@ -38,6 +38,12 @@ export async function unregisterPush() {
   await Notifications.setBadgeCountAsync(0).catch(() => {});
 }
 
+/** Forgets this device's registration without asking the API: for after the account is gone, taking its subscriptions with it. */
+export async function forgetPush() {
+  registered = null;
+  await Notifications.setBadgeCountAsync(0).catch(() => {});
+}
+
 /** iOS can hand out a new token at any time; keep the API's copy current. */
 export const watchPushToken = () =>
   Notifications.addPushTokenListener(({ data }) => {

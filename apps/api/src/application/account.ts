@@ -120,17 +120,27 @@ export const resetCourseProgress = (user: User, courseId: string) =>
     return { ok: true };
   });
 
-/** Removes an account and everything it owns. Shared by self-service deletion and the admin panel. */
 /**
- * Deletes an account and everything in it. First revokes any Sign in with
- * Apple tokens, as Apple requires; that's best effort, so an Apple outage
- * never stops someone deleting their account.
+ * Deletes an account and everything in it (every owned row cascades with the
+ * user). Shared by self-service deletion and the admin panel. First revokes any
+ * Sign in with Apple tokens, as Apple requires; that's best effort, so an Apple
+ * outage, a slow answer or a misconfigured key never stops someone deleting
+ * their account.
  */
 export const purgeAccount = (userId: string) =>
   Effect.gen(function* () {
     const users = yield* UserRepository;
     const appleTokens = yield* users.oauthRefreshTokens(userId, "apple");
-    yield* Effect.forEach(appleTokens, (t) => revokeAppleToken(t).pipe(Effect.catchAll((e) => Effect.logWarning("couldn't revoke an Apple token", e))), { discard: true });
+    yield* Effect.forEach(
+      appleTokens,
+      (t) =>
+        revokeAppleToken(t).pipe(
+          Effect.timeout("15 seconds"),
+          // catchAllCause, not catchAll: a key that won't parse throws while signing the client secret, which is a defect.
+          Effect.catchAllCause((cause) => Effect.logWarning("couldn't revoke an Apple token", cause)),
+        ),
+      { discard: true },
+    );
     yield* users.delete(userId);
   });
 
