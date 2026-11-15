@@ -3,7 +3,7 @@ import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { SiteFooter } from "@/components/app/site-footer";
 import { Providers } from "@/components/providers";
 import { ogImagePath, shareImage, SITE_IMAGE_ALT } from "@/lib/og";
-import { SITE } from "@/lib/site";
+import { IOS_APP, SITE } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -46,6 +46,8 @@ export const metadata: Metadata = {
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
   formatDetection: { telephone: false, address: false, email: false },
+  // Safari's Smart App Banner on iPhone and iPad, pointing at the App Store listing.
+  itunes: { appId: IOS_APP.appStoreId },
   other: { "llms-txt": "/llms.txt" },
 };
 

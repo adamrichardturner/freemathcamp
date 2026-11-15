@@ -87,14 +87,12 @@ export const lessonDescription = (ref: ExerciseRef) => {
 export const allCourses: Course[] = courses;
 
 /**
- * The iOS app. While `available` is false the landing page says it's coming
- * soon; set it to true once the App Store listing is live and the badge links
- * to the store. The screenshots shown on the landing page live in
- * public/app/ (see public/app/README.md for sizes).
+ * The iOS app, live on the App Store. The screenshots shown on the landing
+ * page live in public/app/ (see public/app/README.md for sizes).
  */
 export const IOS_APP = {
-  available: false,
-  appStoreUrl: "https://apps.apple.com/app/id6829382170",
+  appStoreId: "6829382170",
+  appStoreUrl: "https://apps.apple.com/app/freemathcamp/id6829382170",
   /**
    * The phone screens the landing page's app section cycles through, in order.
    * Raw iPhone captures (no frame) from apps/mobile/store/screenshots/raw/iphone,

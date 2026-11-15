@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowDown, ArrowRight, Bell, BrainCircuit, CalendarClock, Check, Flame, Gauge, Lightbulb, Network, RefreshCw, Route, ShieldCheck, Smartphone, Sparkles, Tablet, Trophy, TrendingUp } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Bell, BrainCircuit, CalendarClock, Check, Flame, Gauge, Lightbulb, Network, RefreshCw, Route, ShieldCheck, Smartphone, Sparkles, Tablet, Trophy, TrendingUp } from "lucide-react";
 import { AnimatePresence, motion, useInView, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ButtonLink } from "@/components/app/button-link";
@@ -59,7 +59,7 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
               Explore the course
             </ButtonLink>
           </motion.div>
-          <AppComingSoonBadge />
+          <AppStorePill />
           <motion.ul initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }} className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
             {[`${course.units.length} units`, `${graph.refs.length} lessons`, "Unlimited practice", "Step-by-step solutions", "Free, no ads"].map((x) => (
               <li key={x} className="flex items-center gap-1.5">
@@ -74,27 +74,20 @@ function Hero({ cta }: { cta: { href: string; label: string } }) {
   );
 }
 
-/** Hero pill that glides the reader down to the iPhone & iPad section. */
-function AppComingSoonBadge() {
+/** Hero pill announcing the iPhone & iPad app, straight to its App Store listing. */
+function AppStorePill() {
   const reduceMotion = useReducedMotion();
-  const live = IOS_APP.available;
-  const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    const target = document.getElementById("app");
-    if (!target) return;
-    e.preventDefault();
-    target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-    history.replaceState(null, "", "#app");
-  };
   return (
     <motion.a
-      href="#app"
-      onClick={onClick}
+      href={IOS_APP.appStoreUrl}
+      target="_blank"
+      rel="noopener noreferrer"
       initial={{ opacity: 0, y: 12, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ delay: 0.28, type: "spring", stiffness: 260, damping: 22 }}
       whileHover={reduceMotion ? undefined : { y: -2 }}
       whileTap={{ scale: 0.97 }}
-      aria-label={live ? "The FreeMathCamp app is on the App Store for iPhone and iPad. Jump to the app section" : "FreeMathCamp for iPhone and iPad is coming soon to the App Store. Jump to the app section"}
+      aria-label="Download FreeMathCamp for iPhone and iPad on the App Store"
       className="group relative mt-6 inline-flex max-w-full items-center gap-3 overflow-hidden rounded-full border bg-card/80 py-1.5 pr-3 pl-1.5 text-sm shadow-sm backdrop-blur transition-[border-color,box-shadow] hover:border-primary/40 hover:shadow-md hover:shadow-primary/10 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
     >
       {/* A soft sheen that sweeps across now and then, so the pill catches the eye without shouting. */}
@@ -107,27 +100,25 @@ function AppComingSoonBadge() {
         />
       )}
       <span className="relative inline-flex shrink-0 items-center gap-1.5 rounded-full bg-foreground py-1 pr-2.5 pl-2 text-xs font-semibold text-background">
-        <svg viewBox="0 0 384 512" className="size-3.5 fill-current" aria-hidden>
-          <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
-        </svg>
-        {live ? "Out now" : "Coming soon"}
+        <AppleLogo className="size-3.5" />
+        Out now
       </span>
-      <span className="relative flex min-w-0 items-center gap-2">
-        {!live && (
-          <span className="relative flex size-2 shrink-0" aria-hidden>
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60 motion-reduce:animate-none" />
-            <span className="relative inline-flex size-2 rounded-full bg-primary" />
-          </span>
-        )}
-        <span className="truncate font-medium">
-          {live ? "On the App Store" : "App Store"} <span className="text-muted-foreground">
-            · <span className="sm:hidden">iOS</span>
-            <span className="hidden sm:inline">iPhone & iPad</span>
-          </span>
+      <span className="relative min-w-0 truncate font-medium">
+        Get the app <span className="text-muted-foreground">
+          · <span className="sm:hidden">iOS</span>
+          <span className="hidden sm:inline">iPhone & iPad</span>
         </span>
       </span>
-      <ArrowDown className="relative size-4 shrink-0 text-muted-foreground transition-transform duration-300 group-hover:translate-y-0.5 group-hover:text-primary" />
+      <ArrowUpRight className="relative size-4 shrink-0 text-muted-foreground transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" />
     </motion.a>
+  );
+}
+
+function AppleLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 384 512" className={`fill-current ${className ?? ""}`} aria-hidden>
+      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+    </svg>
   );
 }
 
@@ -297,13 +288,13 @@ function MobileApp() {
       <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.15fr] lg:py-28">
         <motion.div {...fadeUp}>
           <span className="inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs font-medium">
-            <Smartphone className="size-3.5 text-primary" /> iPhone & iPad · {IOS_APP.available ? "Out now" : "Coming soon"}
+            <Smartphone className="size-3.5 text-primary" /> iPhone & iPad · Out now on the App Store
           </span>
           <h2 id="app-heading" className="mt-4 font-display text-4xl sm:text-5xl">
             The whole course, <em className="bg-gradient-to-r from-primary to-chart-4 bg-clip-text text-transparent">in your pocket</em>.
           </h2>
           <p className="mt-4 max-w-lg text-muted-foreground">
-            The <Wordmark /> app has all {graph.refs.length} lessons, the same adaptive practice with step-by-step solutions, your daily plan and the weekly leagues, built to feel at home on iOS. Ten minutes in a queue is ten minutes of maths.
+            The <Wordmark /> app is free on the App Store, with all {graph.refs.length} lessons, the same adaptive practice and step-by-step solutions, your daily plan and the weekly leagues, built to feel at home on iOS. Ten minutes in a queue is ten minutes of maths.
           </p>
           <ul className="mt-8 grid gap-5 sm:grid-cols-2">
             {APP_POINTS.map((p, i) => (
@@ -328,13 +319,11 @@ function MobileApp() {
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <AppStoreBadge />
-            {!IOS_APP.available && (
-              <ButtonLink href="/register" variant="outline" size="lg" className="h-12 px-5">
-                Start on the web today <ArrowRight />
-              </ButtonLink>
-            )}
+            <ButtonLink href="/register" variant="outline" size="lg" className="h-12 px-5">
+              Or start on the web <ArrowRight />
+            </ButtonLink>
           </div>
-          {!IOS_APP.available && <p className="mt-3 text-sm text-muted-foreground">Your progress will be waiting in the app when it lands.</p>}
+          <p className="mt-3 text-sm text-muted-foreground">Free, with no ads or in-app purchases. Sign in with the same account and your progress comes with you.</p>
         </motion.div>
         <PhoneShowcase />
       </div>
@@ -520,23 +509,21 @@ function Glyph({ glyph, progress, still }: { glyph: (typeof GLYPHS)[number]; pro
   );
 }
 
-/** Apple's badge, drawn inline so it follows the theme; a link only once the app is live. */
+/** Apple's badge, drawn inline so it follows the theme. */
 function AppStoreBadge() {
-  const badge = (
-    <span className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-foreground px-4 text-background">
-      <svg viewBox="0 0 384 512" className="size-6 fill-current" aria-hidden>
-        <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
-      </svg>
+  return (
+    <a
+      href={IOS_APP.appStoreUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Download FreeMathCamp on the App Store"
+      className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-foreground px-4 text-background transition-opacity hover:opacity-85 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+    >
+      <AppleLogo className="size-6" />
       <span className="text-left leading-none">
-        <span className="block text-[10px] font-medium opacity-80">{IOS_APP.available ? "Download on the" : "Coming soon to the"}</span>
+        <span className="block text-[10px] font-medium opacity-80">Download on the</span>
         <span className="block text-lg font-semibold tracking-tight">App Store</span>
       </span>
-    </span>
-  );
-  if (!IOS_APP.available) return <span aria-label="Coming soon to the App Store">{badge}</span>;
-  return (
-    <a href={IOS_APP.appStoreUrl} target="_blank" rel="noopener noreferrer" aria-label="Download FreeMathCamp on the App Store" className="transition-opacity hover:opacity-85">
-      {badge}
     </a>
   );
 }
