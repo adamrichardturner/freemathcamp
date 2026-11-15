@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LegalLink, LegalPage, LegalSection } from "@/components/legal/legal-page";
-import { AUTHOR } from "@/lib/site";
+import { AUTHOR, IOS_APP } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Support",
@@ -59,6 +59,9 @@ export default function SupportPage() {
 
       <LegalSection id="app" title="The iPhone and iPad app">
         <ul className={list}>
+          <li>
+            Download it free from the <LegalLink href={IOS_APP.appStoreUrl}>App Store</LegalLink>, then sign in with the same account you use on the website.
+          </li>
           <li>The app needs iOS 16.4 or later and an internet connection, since every answer is checked by the server.</li>
           <li>It has the same course, practice, daily plan, leagues and progress as the website.</li>
           <li>Light and dark mode follow your device, or you can choose one in Settings.</li>
