@@ -14,7 +14,6 @@ import { course, exerciseRef } from "@/lib/course";
 import { greeting, minutes, shortMinutes } from "@/lib/format";
 import { plain } from "@/lib/plain";
 import { keys, useCourseProgress, useDashboard, useNotificationCounts, useRefreshOnFocus, useSession } from "@/lib/queries";
-import { widths } from "@/lib/layout";
 import { alpha, radius, toneColor, useTheme, type Tone } from "@/lib/theme";
 import { usePullToRefresh } from "@/lib/pull-to-refresh";
 
@@ -58,7 +57,7 @@ export default function Home() {
 
   // Course progress fills the unit bars, so it lands with the rest rather than after.
   return (
-    <Screen width={widths.wide} refreshControl={data ? refreshControl : undefined}>
+    <Screen refreshControl={data ? refreshControl : undefined}>
       {header}
       <Reveal ready={!!data && progressFetched} error={isError} onRetry={() => void refetch()} gap={20} skeleton={<HomeSkeleton />}>
         {data && <HomeBody data={data} progress={progress} />}

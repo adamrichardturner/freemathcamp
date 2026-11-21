@@ -9,7 +9,7 @@ import { Card, CardHeader, Empty, Grid, Icon, MasteryRing, ProgressBar, Row, Scr
 import type { Analytics } from "@/lib/api";
 import { duration, minutes, pct, relative } from "@/lib/format";
 import { keys, useAnalytics, useRefreshOnFocus } from "@/lib/queries";
-import { useLayout, widths } from "@/lib/layout";
+import { useLayout } from "@/lib/layout";
 import { alpha, useTheme, type Tone } from "@/lib/theme";
 import { usePullToRefresh } from "@/lib/pull-to-refresh";
 
@@ -25,7 +25,7 @@ export default function Progress() {
       </Screen>
     );
   return (
-    <Screen title="Progress" width={widths.wide} refreshControl={data ? refreshControl : undefined}>
+    <Screen title="Progress" refreshControl={data ? refreshControl : undefined}>
       <Reveal ready={!!data} error={isError} onRetry={() => void refetch()} gap={20} skeleton={<ProgressSkeleton />}>
         {data && <ProgressBody data={data} />}
       </Reveal>

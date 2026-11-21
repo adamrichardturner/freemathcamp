@@ -3,15 +3,17 @@ import { useMutation } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState, type ComponentProps, type ComponentRef } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInDown, FadeInRight, FadeOutLeft, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, ZoomIn } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { AnswerKeys, NumberPad } from "@/components/answer-keys";
 import { Reveal, useRevealHold } from "@/components/reveal";
 import { domProps } from "@/components/rich";
 import { SessionSummaryView } from "@/components/session-summary";
 import { useVisualViewer } from "@/components/visual-viewer";
 import { Button, Card, Icon, Input, Skeleton, Text } from "@/components/ui";
 import ProblemContent from "@/dom/problem-content";
+import { answerKeyboard, padKeys, textKeys } from "@/lib/answer-keyboard";
 import { api, type AttemptResponse, type PracticeItem, type PracticeMode, type Resolution, type RevealResponse, type SessionSummary, type StartPracticeResponse } from "@/lib/api";
 import { COURSE_ID, exerciseRef } from "@/lib/course";
 import { plainTex } from "@/lib/plain";
@@ -27,6 +29,21 @@ interface ItemResult {
   cleanSolve: boolean;
   revealed: boolean;
 }
+
+// iPadOS keeps its keyboard shortcut bar on screen for a focused box even with the keyboard
+// hidden, so with the pad up the box is left unfocused there: keys go in at the end, and
+// tapping the box still gives a cursor to move.
+const padUnfocused = Platform.OS === "ios" && Platform.isPad;
+
+/**
+ * Back to where practice was opened from. Opened cold (a link, or a reload that restores
+ * this screen) there is nothing underneath to go back to, so land on the Learn tab instead.
+ */
+const leave = (all = false) => {
+  if (!router.canGoBack()) return router.replace("/");
+  if (all) router.dismissAll();
+  else router.back();
+};
 
 const LEVEL_LABEL = { 1: "Warm-up", 2: "Core", 3: "Stretch" } as const;
 
@@ -55,7 +72,7 @@ export default function Practice() {
     },
     onError: (e) => {
       toast.error(e, "Couldn't start practice.");
-      router.back();
+      leave();
     },
   });
 
@@ -96,11 +113,14 @@ export default function Practice() {
     setState({ phase: "answering" });
   };
 
-  const exit = () => router.back();
+  const exit = () => leave();
   // A finished session is done with this lesson: close the lesson underneath too and
   // land back on the tab it was opened from, which has already refreshed.
-  const done = () => router.dismissAll();
-  // iPadOS doesn't count the keyboard's shortcut bar, which would otherwise cover the Check bar.
+  const done = () => leave(true);
+  // The keyboard is avoided from this view's own frame, which starts below the status bar:
+  // without the offset the Check bar sits that far behind the keyboard, and the number pad
+  // has no return key to check with instead. iPadOS also doesn't count the keyboard's shortcut bar.
+  const insets = useSafeAreaInsets();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={["top", "bottom", "left", "right"]}>
@@ -113,7 +133,7 @@ export default function Practice() {
           <ActivityIndicator color={c.mutedForeground} accessibilityLabel="Loading" />
         </View>
       ) : (
-        <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={Platform.OS === "ios" && Platform.isPad ? 56 : 0} style={{ flex: 1 }}>
+        <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={Platform.OS === "ios" && Platform.isPad ? 56 : insets.top} style={{ flex: 1 }}>
           <SessionHeader total={session.targetItems} results={results} current={item.index} level={item.level} mastery={mastery} mode={mode} onExit={exit} />
           {/* The first problem fades in from its skeleton in place; later ones slide in. */}
           <Animated.View key={item.seed} entering={item.index > 0 ? FadeInRight.duration(250) : undefined} exiting={FadeOutLeft.duration(150)} style={{ flex: 1 }}>
@@ -192,6 +212,32 @@ function ProblemCard({
   const { c, scheme } = useTheme();
   const { medium } = useLayout();
   const [answer, setAnswer] = useState("");
+  // Number-only answers get the app's number pad in place of the system keyboard; either can switch to the other.
+  const [keyboard, setKeyboard] = useState(() => answerKeyboard(problem));
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
+  // The pad edits at the cursor like a keyboard does, so it tracks the text and cursor as it goes.
+  const typed = useRef("");
+  const selection = useRef({ start: 0, end: 0 });
+  const edit = (from: number, to: number, text: string) => {
+    typed.current = typed.current.slice(0, from) + text + typed.current.slice(to);
+    selection.current = { start: from + text.length, end: from + text.length };
+    setAnswer(typed.current);
+    showField();
+  };
+  // A question with a graph pushes the answer box below the fold: typing brings the box
+  // back into view, so what is being typed is never hidden behind the keys.
+  const viewport = useRef<ComponentRef<typeof View>>(null);
+  const field = useRef<ComponentRef<typeof View>>(null);
+  const scrolled = useRef(0);
+  const showField = () =>
+    field.current?.measureInWindow((_x, y, _w, h) =>
+      viewport.current?.measureInWindow((_vx, top, _vw, height) => {
+        const below = y + h + 12 - (top + height);
+        const above = top + 12 - y;
+        if (below > 0) scroll.current?.scrollTo({ y: scrolled.current + below, animated: true });
+        else if (above > 0) scroll.current?.scrollTo({ y: Math.max(0, scrolled.current - above), animated: true });
+      }),
+    );
   const [choice, setChoice] = useState<number | null>(null);
   const [hints, setHints] = useState(0);
   const [wrong, setWrong] = useState(0);
@@ -237,13 +283,26 @@ function ProblemCard({
     setFeedback(null);
     attempt.mutate(value);
   };
+  const insert = (text: string) => edit(selection.current.start, selection.current.end, text);
+  const backspace = () => {
+    const { start, end } = selection.current;
+    if (start !== end) edit(start, end, "");
+    else if (start > 0) edit(start - 1, start, "");
+  };
+  const switchKeyboard = (to: "numeric" | "text") => {
+    setKeyboard(to);
+    // The system keyboard only steps aside for the pad when the box takes focus afresh.
+    if (to === "numeric") input.current?.blur();
+    if (to === "text" || !padUnfocused) requestAnimationFrame(() => input.current?.focus());
+  };
   const preview = !isChoice && answer.trim() ? evaluate(answer.replace(/%\s*$/, "")) : null;
   const zoom = useVisualViewer();
 
   return (
     <View style={{ flex: 1 }}>
       {zoom.viewer}
-      <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 16 }}>
+      <View ref={viewport} collapsable={false} style={{ flex: 1 }}>
+      <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" scrollEventThrottle={16} onScroll={(e) => (scrolled.current = e.nativeEvent.contentOffset.y)} contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 16 }}>
         <Reveal ready skeleton={<ProblemCardSkeleton />}>
           <Animated.View style={shakeStyle}>
             <Card style={{ padding: 16, gap: 16 }}>
@@ -266,16 +325,23 @@ function ProblemCard({
                 dom={domProps}
               />
               {!isChoice && (
-                <View style={{ gap: 6 }}>
+                <View ref={field} collapsable={false} style={{ gap: 6 }}>
                   <Input
+                    ref={input}
                     value={answer}
-                    onChangeText={setAnswer}
+                    onChangeText={(t) => {
+                      typed.current = t;
+                      setAnswer(t);
+                      showField();
+                    }}
+                    onSelectionChange={(e) => (selection.current = e.nativeEvent.selection)}
+                    showSoftInputOnFocus={keyboard === "text"}
                     editable={!resolved && !busy}
                     placeholder={problem.inputHint ?? "Your answer"}
                     autoCapitalize="none"
                     autoCorrect={false}
                     spellCheck={false}
-                    autoFocus
+                    autoFocus={!(padUnfocused && keyboard === "numeric")}
                     maxLength={200}
                     returnKeyType={resolved ? "next" : "done"}
                     submitBehavior="submit"
@@ -300,15 +366,20 @@ function ProblemCard({
                 </Animated.View>
               )}
               {resolved && <ResolvedBanner state={state} seed={problem.prompt.length} />}
-              {(hints > 0 || resolved) && (
+              {/* Mounted from the start, collapsed until there is a hint or solution to show: a web view
+                  takes a moment to start, which would otherwise be a pause after tapping Hint or Solution. */}
+              <View style={hints > 0 || resolved ? undefined : { height: 0, marginTop: -16, overflow: "hidden" }}>
                 <HeldProblemContent courseId={COURSE_ID} exerciseId={exerciseId} seed={item.seed} level={item.level} section="support" scheme={scheme} hints={hints} resolved={resolved} correct={resolved && state.correct} dom={domProps} />
-              )}
+              </View>
             </Card>
           </Animated.View>
         </Reveal>
       </ScrollView>
+      </View>
 
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderColor: c.border, backgroundColor: c.background }}>
+      <View style={{ borderTopWidth: 1, borderColor: c.border, backgroundColor: c.background }}>
+        {!isChoice && !resolved && keyboard === "text" && <AnswerKeys keys={textKeys} disabled={busy} onKey={insert} onSwitch={() => switchKeyboard("numeric")} />}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}>
         {!resolved ? (
           <>
             {hints < problem.hints.length && <Button variant="ghost" size="sm" icon="lightbulb" title={`Hint${problem.hints.length > 1 ? ` ${hints + 1}/${problem.hints.length}` : ""}`} disabled={busy} onPress={() => setHints((h) => h + 1)} />}
@@ -318,6 +389,8 @@ function ProblemCard({
         ) : (
           <Button title={state.resolution.done ? "See results" : "Next problem"} iconRight="arrow.right" style={medium ? { marginLeft: "auto", minWidth: 260 } : { flex: 1 }} size="lg" loading={finishing} onPress={onNext} />
         )}
+      </View>
+        {!isChoice && !resolved && keyboard === "numeric" && <NumberPad extras={padKeys(problem)} disabled={busy} onKey={insert} onBackspace={backspace} onSwitch={() => switchKeyboard("text")} />}
       </View>
     </View>
   );

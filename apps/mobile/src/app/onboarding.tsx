@@ -92,7 +92,7 @@ export default function Onboarding() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.background }}>
-      <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8, gap: 16, width: "100%", maxWidth: wide ? widths.wide - 80 : widths.form + 48, alignSelf: "center" }}>
+      <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8, gap: 16, width: "100%", maxWidth: wide ? 960 : widths.form + 48, alignSelf: "center" }}>
         <View style={{ flexDirection: "row", gap: 6, justifyContent: "center" }}>
           {STEPS.map((s, i) => (
             <View key={s.title} style={{ height: 6, width: i === step ? 28 : 6, borderRadius: 3, backgroundColor: i <= step ? c.primary : c.muted, opacity: i < step ? 0.45 : 1 }} />
