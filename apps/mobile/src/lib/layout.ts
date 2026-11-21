@@ -9,10 +9,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export const widths = {
   /** Forms and the welcome screen. */
   form: 480,
-  /** Reading: lessons, practice, settings, lists. */
+  /** Every tab, and reading: lessons, practice, lists. One width, so the side gutters match from tab to tab. */
   readable: 760,
-  /** Dashboards with cards side by side. */
-  wide: 1040,
 } as const;
 
 /** Wide enough for two columns of cards, a centred column and the title in it (iPad, or the open iPhone Duo held sideways). */
